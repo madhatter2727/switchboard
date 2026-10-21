@@ -146,6 +146,14 @@ enum PortTools {
             let p = d["path"] as? String ?? ""
             guard FileManager.default.fileExists(atPath: p) else { return ["ok": false, "err": "No file at \(p)."] }
             return Attachments.info(p, real: true)
+        case "attachClipboard":   // Cmd+V fallback: read pictures or copied Finder files straight from the Mac clipboard
+            return mainSync {
+                let pb = NSPasteboard.general
+                if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
+                    return ["files": urls.filter { !$0.hasDirectoryPath }.map { Attachments.info($0.path, real: true) }] }
+                if let img = NSImage(pasteboard: pb), let t = img.tiffRepresentation, let rep = NSBitmapImageRep(data: t), let png = rep.representation(using: .png, properties: [:]) {
+                    return ["files": [Attachments.save(name: "pasted-image.png", b64: png.base64EncodedString())]] }
+                return ["files": [[String: Any]]()] }
         case "attachSave":
             return Attachments.save(name: d["name"] as? String ?? "pasted.png", b64: d["b64"] as? String ?? "")
         case "describeImage":

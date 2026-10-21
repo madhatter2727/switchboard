@@ -559,7 +559,10 @@ async function addFiles(files){S.attLoading=true;renderAtts();
  try{for(const f of files){let name=f.name||'pasted.png';if(!/\.[a-z0-9]+$/i.test(name)&&/^image\//.test(f.type))name='pasted-'+new Date().toTimeString().slice(0,8).replace(/:/g,'')+'.'+(f.type.split('/')[1]||'png');
    addAtt(await act('attachSave','',{name,b64:await b64(f)}))}}finally{S.attLoading=false;renderAtts()}}
 $('clip').onclick=async()=>{if(S.busy)return;S.attLoading=true;renderAtts();try{addAtt(await act('attachPick',''))}finally{S.attLoading=false;renderAtts()}};
-$('input').addEventListener('paste',ev=>{const fs=[...(ev.clipboardData&&ev.clipboardData.files||[])];if(!fs.length)return;ev.preventDefault();addFiles(fs)});
+$('input').addEventListener('paste',ev=>{const cd=ev.clipboardData;let fs=[...(cd&&cd.files||[])];
+ if(!fs.length&&cd)fs=[...cd.items].filter(i=>i.kind==='file').map(i=>i.getAsFile()).filter(Boolean);
+ if(fs.length){ev.preventDefault();addFiles(fs);return}
+ const types=cd?[...cd.types]:[];if(!types.includes('text/plain')||types.includes('Files')){ev.preventDefault();S.attLoading=true;renderAtts();act('attachClipboard','').then(r=>{S.attLoading=false;addAtt(r);renderAtts()},()=>{S.attLoading=false;renderAtts()})}});
 // dropping a file must never navigate the app window away
 ['dragover','dragenter'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();document.body.classList.add('dropping')}));
 window.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classList.remove('dropping')});
@@ -610,3 +613,6 @@ window.__selftest=async(mode,eid,mid)=>{if(mode!=='m4')return _st11(mode,eid,mid
  out.nowCollapsed=[...S.collapsed];out.autoVisible=!!document.querySelector('#engines .eng .m');out.autoHasToggle=!!document.querySelector('#engines .eng:first-child .tog');
  out.groups=[...document.querySelectorAll('#engines .eng')].map(x=>x.querySelector('.eh').textContent.trim()+' -> '+x.querySelectorAll('.m').length+' rows');
  out.saved=(await act('prefsGet','',{key:'collapsed'})).value;return JSON.stringify(out,null,1)};
+
+const _st12=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='clip')return _st12(m,e,x);await boot;S.chat=null;newChat();addAtt(await act('attachClipboard',''));await sleep(300);
+ return JSON.stringify({chips:[...document.querySelectorAll('#atts .chip')].map(c=>c.textContent),kinds:S.att.map(a=>a.kind),hasImage:S.att.some(a=>!!a.dataURL)})};
