@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机励志名言</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #6b89ff 0%, #4a6cf7 50%, #3b5bdb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .quote-section {
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .quote-text {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b9d, #ff8a80);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+            margin: 0 auto;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .quote-number {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="quote-section">
+            <div class="quote-number" id="quoteNumber">名言 1</div>
+            <div class="quote-text" id="quoteText">
+                每一个伟大的成就，都始于一个勇敢的起点。
+            </div>
+        </div>
+        <button class="btn" onclick="getRandomQuote()">获取励志名言</button>
+    </div>
+
+    <script>
+        const quotes = [
+            "每一个伟大的成就，都始于一个勇敢的起点。",
+            "坚持是成功的基石，每一次努力都在为未来铺路。",
+            "梦想不会自动成真，但坚持追逐梦想的人终将抵达。",
+            "困难是成长的催化剂，跨越它，你将变得更强大。",
+            "自信是成功的第一秘诀，相信自己，就能创造奇迹。",
+            "时间会证明一切，耐心与坚持终将收获成果。",
+            "勇气不是没有恐惧，而是在恐惧中依然前行。",
+            "成功不是终点，而是不断超越自我的旅程。",
+            "每一份努力都不会被辜负，坚持终将迎来曙光。",
+            "改变从内心开始，积极的心态是改变的第一步。"
+        ];
+
+        function getRandomQuote() {
+            // 清除之前的动画效果
+            const quoteText = document.getElementById('quoteText');
+            const quoteNumber = document.getElementById('quoteNumber');
+            
+            // 随机选择名言
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            const randomQuote = quotes[randomIndex];
+            
+            // 更新显示内容
+            quoteText.textContent = randomQuote;
+            quoteNumber.textContent = `名言 ${randomIndex + 1}`;
+            
+            // 重新触发动画效果
+            quoteText.style.animation = 'none';
+            setTimeout(() => {
+                quoteText.style.animation = 'fadeIn 0.5s ease';
+            }, 10);
+        }
+
+        // 页面加载时自动显示第一条名言
+        window.onload = function() {
+            getRandomQuote();
+        };
+    </script>
+</body>
+</html>

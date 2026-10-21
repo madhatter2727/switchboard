@@ -1,0 +1,109 @@
+{
+ "model": "Bonsai-4B",
+ "id": "bonsai-2-4b",
+ "free_before": 78,
+ "start_secs": 2.6,
+ "free_after_load": 68,
+ "A": {
+  "1 largest 3 + summarize": {
+   "final": "- alpha.txt: Repeated gardening tips about tomatoes needing six hours of sun and regular watering.\n- bravo.txt: Repeated astronomy notes about Jupiter having four large moons discovered by Galileo.\n- charlie.txt: Repeated baking instructions about sourdough needing a long slow rise and a hot oven.",
+   "tools": [
+    "list_folder",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 9,
+   "native_calls": 9,
+   "text_form_calls": 0,
+   "secs": 12.5,
+   "error": null,
+   "pass": true
+  },
+  "2 organize by type": {
+   "final": "All files moved. Preview approved?",
+   "tools": [
+    "list_folder",
+    "move_items",
+    "move_items",
+    "move_items"
+   ],
+   "steps": 4,
+   "native_calls": 4,
+   "text_form_calls": 0,
+   "secs": 5.4,
+   "error": null,
+   "pass": true
+  },
+  "3 find by content": {
+   "final": "File: file4.txt\nPassword: mango-harbor-42",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 6,
+   "native_calls": 6,
+   "text_form_calls": 0,
+   "secs": 5.0,
+   "error": null,
+   "pass": true
+  },
+  "4 list+read+move": {
+   "final": "Total: $200",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "move_items"
+   ],
+   "steps": 4,
+   "native_calls": 4,
+   "text_form_calls": 0,
+   "secs": 4.5,
+   "error": null,
+   "pass": true
+  },
+  "5 missing file": {
+   "final": "The file cannot be read. It may not exist or be inaccessible.",
+   "tools": [
+    "read_file_text"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 1.9,
+   "error": null,
+   "pass": true
+  }
+ },
+ "A_score": 5,
+ "free_min_seen": 68,
+ "B": {
+  "valid_html": true,
+  "js_errors": 40,
+  "loop": true,
+  "keys": true,
+  "score": true,
+  "canvas_or_dom": true,
+  "js_error_sample": [
+   "[1933:70273678:1018/101658.873726:INFO:CONSOLE:164] \"Uncaught TypeError: Cannot read properties of undefined (reading 'x')\", source: file:///Users/madhatter2727/Projects/model-picker/bench/games/Bonsai-4B.html (164)",
+   "[1933:70273678:1018/101658.873793:INFO:CONSOLE:164] \"Uncaught TypeError: Cannot read properties of undefined (reading 'x')\", source: file:///Users/madhatter2727/Projects/model-picker/bench/games/Bonsai-4B.html (164)"
+  ],
+  "pass": false,
+  "secs": 41.0,
+  "timed_out": false,
+  "error": null,
+  "chars": 6724,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/Bonsai-4B.html"
+ },
+ "free_end": 66
+}

@@ -1,0 +1,7 @@
+{
+ "text": "Spent the weekend building a Mac app to chat with any local AI model. \ud83e\udd16\u2728 Learning in public, a little excited, no hashtags.",
+ "first": 0.8,
+ "total": 1.2,
+ "words": 23,
+ "wps": 58.3
+}

@@ -1,0 +1,16 @@
+Bonsai-4B A1 fix bug try 1 True 4 6.3 
+Bonsai-4B A2 write module from spec try 1 True 2 4.1 
+Bonsai-4B B attempt 1 True 39.7 0
+Spark A1 fix bug try 1 True 4 14.6 
+Spark A2 write module from spec try 1 True 5 24.1 
+Spark B attempt 1 True 56.1 0
+Raptor A1 fix bug try 1 True 3 11.1 
+Raptor A2 write module from spec try 1 True 2 10.7 
+Raptor B attempt 1 True 61.6 0
+ornith-9b A1 fix bug try 1 True 3 16.5 
+ornith-9b A2 write module from spec try 1 True 2 13.6 
+ornith-9b B attempt 1 True 109.3 0
+Bonsai-9B A1 fix bug try 1 True 3 12.1 
+Bonsai-9B A2 write module from spec try 1 True 3 9.7 
+Bonsai-9B B attempt 1 True 70.6 0
+ALLDONE3

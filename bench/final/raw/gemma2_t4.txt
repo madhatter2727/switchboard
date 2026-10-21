@@ -1,0 +1,9 @@
+{
+ "text": "",
+ "tools": [],
+ "native": 0,
+ "total": 0.1,
+ "first": null,
+ "words": 0,
+ "error": "HTTP 400 {\"error\":{\"message\":\"registry.ollama.ai/library/gemma2:2b does not support tools\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}\n"
+}

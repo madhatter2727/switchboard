@@ -1,0 +1,7 @@
+{
+ "text": "Spent the weekend building a Mac app that lets me pick any local AI model and chat with it. Learning in public, a little excited.",
+ "first": 2.13,
+ "total": 2.8,
+ "words": 25,
+ "wps": 40.6
+}

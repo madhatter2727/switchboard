@@ -1,0 +1,36 @@
+{
+ "log": [
+  {
+   "step": 1,
+   "pass": true,
+   "tries": [
+    {
+     "step": 1,
+     "problems": [],
+     "obs": {
+      "idle_pixels": 311,
+      "cx": [
+       63.4,
+       77.5,
+       47.6,
+       63.3
+      ]
+     },
+     "errors": [],
+     "pass": true,
+     "attempt": 1,
+     "model_secs": 247.1,
+     "changed": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "free": 56
+    }
+   ]
+  }
+ ],
+ "last_ok": 1,
+ "min_free": 56,
+ "secs": 256
+}

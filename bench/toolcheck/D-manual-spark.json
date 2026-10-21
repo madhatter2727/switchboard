@@ -1,0 +1,19 @@
+{
+ "chatId": "cmvi713yiz955",
+ "lock": null,
+ "note": "Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.",
+ "turns": [
+  {
+   "q": "List the folder ~/Projects/model-picker/test-sandbox/inbox",
+   "engine": "spark",
+   "model": "spark-x2.5-4b-mlx",
+   "agentBox": true,
+   "header": "Spark X2.5 4B · spark-x2.5-4b-mlx  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Looking in ~/Projects/model-picker/test-sandbox/inbox… -> alpha.txt\nbeta.txt\ncmp.txt\ngamma.txt\nt2.txt\nt3.txt\nt4.txt"
+   ],
+   "reply": "The folder `~/Projects/model-picker/test-sandbox/inbox` contains the following files:\n\n- alpha.txt\n- beta.txt\n- cmp.txt\n- gamma.txt\n- t2.txt\n- t3.txt\n- t4.txt"
+  }
+ ]
+}

@@ -1,0 +1,922 @@
+{
+ "bonsai4b": {
+  "name": "Bonsai 4B",
+  "tests": {
+   "1": {
+    "text": "Finally shipped a Mac app that lets me pick any local AI model and chat with it. Learning in public, a little excited, no hashtags. \ud83c\udf4e\ud83e\udd16",
+    "first": 0.17,
+    "total": 0.7,
+    "words": 26,
+    "wps": 45.6
+   },
+   "2": {
+    "text": "Imagine you are the landlord of a small apartment building that has borrowed money to buy the property. The debt service coverage ratio is simply a number that tells you how much extra money the rent from your tenants pays toward paying off that loan and interest. If this number is high, it means your tenants are paying enough to easily cover the loan payments, making the investment safe. Conversely, if the number is low, it suggests the rent might not be enough to handle the debt, which could be risky. Essentially, it is a safety check to ensure the building's income is strong enough to handle its financial obligations without trouble.",
+    "first": 0.15,
+    "total": 2.2,
+    "words": 112,
+    "wps": 55.4
+   },
+   "3": {
+    "text": "Here is the step-by-step logical deduction:\n\n1.  **Analyze the \"Mixed\" Box:**\n    *   We know the label \"Mixed\" is wrong. Therefore, the box does not contain mixed fruits.\n    *   We picked an **apple** from this box. Since it's not mixed, it must be the **Apples** box.\n    *   *Current Status:* The box labeled \"Mixed\" contains Apples.\n\n2.  **Analyze the \"Oranges\" Box:**\n    *   We know the label \"Oranges\" is wrong. Therefore, this box does not contain oranges.\n    *   The only remaining fruit type is **Mixed**. So, the box labeled \"Oranges\" must contain **Mixed** fruits.\n    *   *Current Status:* The box labeled \"Oranges\" contains Mixed fruits.\n\n3.  **Analyze the \"Apples\" Box:**\n    *   By elimination, the box labeled \"Apples\" must contain the remaining fruit type, which is **Oranges**.\n    *   *Check:* Is the label \"Apples\" wrong? Yes, it contains Oranges.\n\n**Final Answer:**\n*   **Apples** box: **Oranges**\n*   **Oranges** box: **Mixed**\n*   **Mixed** box: **Apples**",
+    "first": 0.15,
+    "total": 4.8,
+    "words": 147,
+    "wps": 31.8
+   },
+   "4": {
+    "text": "The 3 folders changed most recently (within 7 days) are:\n\n1. **ask-my-mac-backup-20261018** \u2013 Oct 18, 2026\n2. **model-picker** \u2013 Oct 18, 2026\n3. **mind-map-live-tony** \u2013 Oct 16, 2026",
+    "tools": [
+     [
+      "list_folder",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "folder": "Projects",
+       "days_back": 7
+      }
+     ]
+    ],
+    "native": 2,
+    "total": 6.6,
+    "first": 1.87,
+    "words": 28,
+    "error": null
+   },
+   "5": {
+    "text": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote Generator</title>\n    <style>\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            background-color: #f0f4f8;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            height: 100vh;\n            margin: 0;\n        }\n\n        .container {\n            background-color: white;\n            padding: 2rem;\n            border-radius: 12px;\n            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);\n            text-align: center;\n            max-width: 500px;\n            width: 100%;\n        }\n\n        h1 {\n            color: #333;\n            margin-bottom: 1.5rem;\n            font-size: 1.5rem;\n        }\n\n        #quote-display {\n            font-size: 1.25rem;\n            color: #555;\n            margin-bottom: 2rem;\n            line-height: 1.6;\n            font-style: italic;\n        }\n\n        .author {\n            font-size: 1rem;\n            color: #777;\n            font-weight: bold;\n            margin-top: 0.5rem;\n        }\n\n        button {\n            background-color: #2563eb;\n            color: white;\n            border: none;\n            padding: 12px 24px;\n            font-size: 1rem;\n            border-radius: 6px;\n            cursor: pointer;\n            transition: background-color 0.2s, transform 0.1s;\n            font-weight: 600;\n        }\n\n        button:hover {\n            background-color: #1d4ed8;\n        }\n\n        button:active {\n            transform: scale(0.98);\n        }\n    </style>\n</head>\n<body>\n\n    <div class=\"container\">\n        <h1>Daily Inspiration</h1>\n        <div id=\"quote-display\">Click the button below for a new quote!</div>\n        <p class=\"author\" id=\"author-display\"></p>\n        <button onclick=\"getRandomQuote()\">Get a New Quote</button>\n    </div>\n\n    <script>\n        const quotes = [\n            { text: \"The only way to do great work is to love what you do.\", author: \"Steve Jobs\" },\n            { text: \"Believe you can and you're halfway there.\", author: \"Theodore Roosevelt\" },\n            { text: \"It does not matter how slowly you go as long as you do not stop.\", author: \"Confucius\" },\n            { text: \"Your limitation\u2014it's only your imagination.\", author: \"Unknown\" },\n            { text: \"Act as if what you do makes a difference. It does.\", author: \"William James\" },\n            { text: \"The future belongs to those who believe in the beauty of their dreams.\", author: \"Eleanor Roosevelt\" },\n            { text: \"Don't watch the clock; do what it does. Keep going.\", author: \"Sam Levenson\" },\n            { text: \"It always seems impossible until it's done.\", author: \"Nelson Mandela\" }\n        ];\n\n        function getRandomQuote() {\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            const quote = quotes[randomIndex];\n            \n            document.getElementById('quote-display').textContent = quote.text;\n            document.getElementById('author-display').textContent = `\u2014 ${quote.author}`;\n            \n            // Optional: Add a small animation effect\n            const btn = document.querySelector('button');\n            btn.style.opacity = '0.5';\n            setTimeout(() => {\n                btn.style.opacity = '1';\n            }, 200);\n        }\n    </script>\n\n</body>\n</html>\n```",
+    "first": 0.12,
+    "total": 15.9,
+    "words": 334,
+    "wps": 21.2,
+    "chrome": {
+     "btn": true,
+     "before": "Daily Inspiration\nClick the button below for a new quote!\n\nGet a New Quote",
+     "after": [
+      "Daily Inspiration\nIt does not matter how slowly you go as long as you do not stop.\n\n\u2014 Confucius\n\nGet a New Quote",
+      "Daily Inspiration\nThe future belongs to those who believe in the beauty of their dreams.\n\n\u2014 Eleanor Roosevelt\n\nGet a New Quote",
+      "Daily Inspiration\nYour limitation\u2014it's only your imagination.\n\n\u2014 Unknown\n\nGet a New Quote",
+      "Daily Inspiration\nIt does not matter how slowly you go as long as you do not stop.\n\n\u2014 Confucius\n\nGet a New Quote",
+      "Daily Inspiration\nThe future belongs to those who believe in the beauty of their dreams.\n\n\u2014 Eleanor Roosevelt\n\nGet a New Quote",
+      "Daily Inspiration\nThe future belongs to those who believe in the beauty of their dreams.\n\n\u2014 Eleanor Roosevelt\n\nGet a New Quote",
+      "Daily Inspiration\nBelieve you can and you're halfway there.\n\n\u2014 Theodore Roosevelt\n\nGet a New Quote",
+      "Daily Inspiration\nIt always seems impossible until it's done.\n\n\u2014 Nelson Mandela\n\nGet a New Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 66,
+  "started": false,
+  "free_after": 65,
+  "rss_mb": 3601,
+  "free_after_stop": 66
+ },
+ "gemma2": {
+  "name": "Gemma2 2B",
+  "tests": {
+   "1": {
+    "text": "Just finished building a Mac app where you can literally pick any local AI model and chat with it!  \ud83e\udd2f Feeling pretty proud of myself right now. \ud83e\udd13 #learninginpublic (but not really) \n",
+    "first": 1.28,
+    "total": 2.0,
+    "words": 32,
+    "wps": 46.6
+   },
+   "2": {
+    "text": "Imagine you own a small apartment building and need to pay off your mortgage each month. The debt service coverage ratio tells us how much of your monthly income from rent covers the cost of paying that mortgage.  A higher ratio means you have more money left over after covering rent expenses, which is good for lenders! A lower ratio could mean you're struggling to make ends meet and might need to adjust your budget or find ways to increase rental income. \n",
+    "first": 0.18,
+    "total": 1.6,
+    "words": 82,
+    "wps": 56.1
+   },
+   "3": {
+    "text": "Here's how to solve this logic puzzle:\n\n* **You know:** You picked an apple from the \"Mixed\" box, meaning the label was wrong. \n* **Think about possibilities:**  If the \"Mixed\" box contained apples, then it must have had oranges and mixed fruits. \n* **The solution:** \n    * **Apples** are in the \"Oranges\" box.\n    * **Oranges** are in the \"Apples\" box.\n    * **Mixed** is actually a box with all the other fruits (apples, oranges)\n\nLet me know if you'd like another logic puzzle! \n",
+    "first": 0.18,
+    "total": 2.3,
+    "words": 81,
+    "wps": 38.1
+   },
+   "4": {
+    "text": "",
+    "tools": [],
+    "native": 0,
+    "total": 0.1,
+    "first": null,
+    "words": 0,
+    "error": "HTTP 400 {\"error\":{\"message\":\"registry.ollama.ai/library/gemma2:2b does not support tools\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}\n"
+   },
+   "5": {
+    "text": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote Generator</title>\n    <style>\n        body {\n            font-family: sans-serif;\n            text-align: center;\n        }\n        #quote {\n            margin-top: 20px;\n            font-size: 24px;\n        }\n    </style>\n</head>\n<body>\n\n    <h1>Motivational Quote Generator</h1>\n\n    <button onclick=\"getQuote()\">Get a Quote!</button>\n\n    <div id=\"quote\"></div>\n\n    <script>\n        function getQuote() {\n            const quotes = [\n                \"The only way to do great work is to love what you do.\",\n                \"Believe you can and you're halfway there.\",\n                \"Challenges are what make life interesting. Overcoming them is what makes life meaningful.\",\n                \"Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.\"\n            ];\n\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            const quote = quotes[randomIndex];\n            document.getElementById(\"quote\").innerText = quote;\n        }\n    </script>\n\n</body>\n</html>\n```\n\n**Explanation:**\n\n1. **HTML Structure:** \n   - The code sets up a basic HTML structure with a title, heading (`<h1>`), button (`<button>`), and a `<div>` to display the quote.\n\n2. **CSS Styling:**\n   - Basic CSS styles are added for centering content and setting font size for the quote.\n\n3. **JavaScript Functionality:**\n   - `getQuote()` function:\n     - An array of quotes is defined (`quotes`).\n     - `Math.random()` generates a random number between 0 (inclusive) and 1 (exclusive).\n     -  `Math.floor()` rounds the random number down to an integer.\n     -  The random index is used to get a quote from the array.\n     -  `document.getElementById(\"quote\").innerText` sets the text content of the `div` with the ID \"quote\" to the selected quote.\n\n4. **Button Click Event:**\n   - The button's `onclick` attribute calls the `getQuote()` function when clicked, triggering the random quote generation and display.\n\n\n**How to Use:**\n\n1. Save this code as an HTML file (e.g., `quote_generator.html`).\n2. Open the file in a web browser. \n3. Click the \"Get a Quote!\" button to see a randomly selected motivational quote on the page.  \n\n\n\nLet me know if you have any more questions about this! ",
+    "first": 0.18,
+    "total": 10.3,
+    "words": 306,
+    "wps": 30.3,
+    "chrome": {
+     "btn": true,
+     "before": "Motivational Quote Generator\nGet a Quote!",
+     "after": [
+      "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+      "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+      "Motivational Quote Generator\nGet a Quote!\nThe only way to do great work is to love what you do.",
+      "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+      "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+      "Motivational Quote Generator\nGet a Quote!\nChallenges are what make life interesting. Overcoming them is what makes life meaningful.",
+      "Motivational Quote Generator\nGet a Quote!\nThe only way to do great work is to love what you do.",
+      "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time."
+     ]
+    }
+   }
+  },
+  "free_before": 66,
+  "started": false,
+  "free_after": 51,
+  "rss_mb": 75,
+  "ollama_ps": "NAME         ID              SIZE      PROCESSOR    CONTEXT    UNTIL              \ngemma2:2b    8ccf136fdd52    1.9 GB    100% GPU     8192       4 minutes from now",
+  "free_after_stop": 66
+ },
+ "qwen35_2b": {
+  "name": "Qwen3.5 2B",
+  "tests": {
+   "1": {
+    "text": "Spent the weekend building a Mac app to chat with any local AI model. \ud83e\udd16\u2728 Learning in public, a little excited, no hashtags.",
+    "first": 0.8,
+    "total": 1.2,
+    "words": 23,
+    "wps": 58.3
+   },
+   "2": {
+    "text": "A debt service coverage ratio is a simple financial measure that tells you how much money a building earns from renting out its apartments to pay off its loans and rent to tenants. Think of it as a safety net that ensures the building has enough cash flow to cover its monthly debt payments without needing to borrow more money.\n\nFor example, imagine a small apartment building that collects $100,000 in rent every month. If the building owes $80,000 in interest and principal payments plus $20,000 in new rent, the ratio is calculated by dividing the total income ($100,000) by the total debt payments ($100,000), resulting in a ratio of 1.0. This means the building earns exactly enough to cover its debts, which is a healthy and stable financial position.",
+    "first": 0.09,
+    "total": 2.3,
+    "words": 130,
+    "wps": 59.0
+   },
+   "3": {
+    "text": "Since all labels are wrong, the box labeled **\"Mixed\"** must actually contain **Apples** and **Oranges**.\n\nHere is the step-by-step deduction:\n1.  **Box \"Mixed\"**: Contains Apples and Oranges.\n2.  **Box \"Apples\"**: Cannot contain only Apples (wrong label), so it must contain **Oranges** and **Mixed**.\n3.  **Box \"Oranges\"**: Cannot contain only Oranges (wrong label), so it must contain **Apples** and **Mixed**.\n\n**Final Answer:**\n*   **Apples Box**: Oranges and Mixed\n*   **Oranges Box**: Apples and Mixed\n*   **Mixed Box**: Apples and Oranges",
+    "first": 0.09,
+    "total": 2.0,
+    "words": 79,
+    "wps": 41.1
+   },
+   "4": {
+    "text": "Based on the file modification dates in the Projects folder, the 3 most recently changed folders are:\n\n1. **ask-my-mac-backup-20261018** - modified 2026-10-18 13:51:43\n2. **model-picker** - modified 2026-10-18 18:58:38\n3. **pulse-monitor** - modified 2026-10-14 00:30:03",
+    "tools": [
+     [
+      "list_folder",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/ash-pier-san-francisco"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/ash-pier-sf-flat.tgz"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/ask-my-mac-backup-20261018"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/four-views-explainer"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/magnitude-speed-lab"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/mind-map-live-tony"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/model-picker"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/one-space-mac-air-v2.tgz"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/one-space-mac-air.tgz"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/one-space-mac-sources-backup-20261013"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/os-src.tgz"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/photo-reader-mac"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/pr-src.tgz"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/proof"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/pulse-monitor"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/webbrain-osaurus-local"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/xfer-os.tgz"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/xfer-pr.tgz"
+      }
+     ]
+    ],
+    "native": 19,
+    "total": 10.9,
+    "first": 1.03,
+    "words": 35,
+    "error": null
+   },
+   "5": {
+    "text": "Here is a complete, single-file solution.\n\nI have included a small JavaScript array of quotes so you don't have to worry about finding a specific quote to test it with.\n\nSave the following code as an `.html` file (e.g., `quotes.html`) and open it in your browser.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Random Motivational Quote</title>\n    <style>\n        /* General Page Styling */\n        body {\n            margin: 0;\n            padding: 0;\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);\n            height: 100vh;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            color: #fff;\n        }\n\n        /* The Card Container */\n        .quote-card {\n            background: rgba(255, 255, 255, 0.1);\n            backdrop-filter: blur(10px);\n            padding: 40px;\n            border-radius: 15px;\n            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);\n            text-align: center;\n            max-width: 600px;\n            width: 90%;\n            transition: transform 0.3s ease;\n        }\n\n        .quote-card:hover {\n            transform: translateY(-5px);\n        }\n\n        /* The Quote Text */\n        .quote-text {\n            font-size: 1.5rem;\n            font-style: italic;\n            margin-bottom: 20px;\n            line-height: 1.4;\n        }\n\n        /* The Button Styling */\n        .btn {\n            background-color: #ff6b6b;\n            color: white;\n            border: none;\n            padding: 12px 24px;\n            font-size: 1rem;\n            border-radius: 50px;\n            cursor: pointer;\n            transition: background-color 0.3s, transform 0.2s;\n            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n        }\n\n        .btn:hover {\n            background-color: #ff5252;\n            transform: scale(1.05);\n        }\n\n        .btn:active {\n            transform: scale(0.95);\n        }\n\n        /* Loading Animation */\n        .loader {\n            display: none;\n            border: 4px solid #f3f3f3;\n            border-top: 4px solid #ff6b6b;\n            border-radius: 50%;\n            width: 30px;\n            height: 30px;\n            animation: spin 1s linear infinite;\n            margin: 0 auto;\n        }\n\n        @keyframes spin {\n            0% { transform: rotate(0deg); }\n            100% { transform: rotate(360deg); }\n        }\n    </style>\n</head>\n<body>\n\n    <div class=\"quote-card\">\n        <div class=\"loader\" id=\"loader\"></div>\n        <p class=\"quote-text\" id=\"quoteDisplay\">Loading...</p>\n        <button class=\"btn\" id=\"quoteBtn\">Get a New Quote</button>\n    </div>\n\n    <script>\n        // A list of motivational quotes\n        const quotes = [\n            \"The only way to do great work is to love what you do.\",\n            \"Believe you can and you're halfway there.\",\n            \"It always seems impossible until it's done.\",\n            \"Don't watch the clock; do what it does. Keep going.\",\n            \"Success is not final, failure is not fatal: it is the courage to continue that counts.\",\n            \"The future belongs to those who believe in the beauty of their dreams.\",\n            \"Don't be afraid to give up, don't be afraid to fail.\",\n            \"The only limit to our realization of tomorrow is our doubts of today.\",\n            \"Believe you can and you're halfway there.\",\n            \"Life is what happens when you're busy making other plans.\",\n            \"The future belongs to those who believe in the beauty of their dreams.\",\n            \"It is not the mountain that makes you dare, but the fear of it.\",\n            \"The only way to do great work is to love what you do.\",\n            \"Success is not final, failure is not fatal: it is the courage to continue that counts.\",\n            \"Do not go where the path may lead, go instead where there is no path and leave a trail.\",\n            \"The only way to do great work is to love what you do.\",\n            \"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n        ];\n\n        const quoteDisplay = document.getElementById('quoteDisplay');\n        const quoteBtn = document.getElementById('quoteBtn');\n        const loader = document.getElementById('loader');\n\n        // Function to generate a random quote\n        function getRandomQuote() {\n            // Show loading state\n            quoteDisplay.style.display = 'none';\n            loader.style.display = 'block';\n\n            // Wait 1 second, then pick a random quote\n            setTimeout(() => {\n                const randomIndex = Math.floor(Math.random() * quotes.length);\n                quoteDisplay.textContent = quotes[randomIndex];\n                \n                // Hide loader and show text\n                loader.style.display = 'none';\n                quoteDisplay.style.display = 'block';\n            }, 1000);\n        }\n\n        // Event Listener for the button\n        quoteBtn.addEventListener('click', getRandomQuote);\n    </script>\n</body>\n</html>\n```\n\n### How it works:\n1.  **CSS (Styling):** I used a \"Glassmorphism\" effect (semi-transparent background with blur) to make the card look modern. The background is a nice gradient.\n2.  **JavaScript (Logic):**\n    *   I created an array called `quotes` containing 15 motivational sentences.\n    *   The `getRandomQuote()` function picks a random index from that array.\n    *   It displays the text, hides the button, shows a spinner, waits 1 second, and then shows the text again.\n3.  **The Button:** Clicking the button triggers the function, and the button changes color to indicate it has been clicked.",
+    "first": 0.1,
+    "total": 21.4,
+    "words": 662,
+    "wps": 31.1,
+    "chrome": {
+     "btn": true,
+     "before": "Loading...\n\nGet a New Quote",
+     "after": [
+      "Get a New Quote",
+      "Get a New Quote",
+      "Get a New Quote",
+      "Get a New Quote",
+      "Get a New Quote",
+      "Get a New Quote",
+      "Get a New Quote",
+      "Get a New Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 66,
+  "started": false,
+  "free_after": 56,
+  "rss_mb": 677,
+  "free_after_stop": 56
+ },
+ "gemma4": {
+  "name": "Gemma 4 E2B",
+  "tests": {
+   "1": {
+    "text": "Weekend project done! Built a Mac app to chat with any local AI model. Learning in public and kinda hyped. \ud83e\udd13",
+    "first": 6.97,
+    "total": 7.4,
+    "words": 21,
+    "wps": 47.5
+   },
+   "2": {
+    "text": "The Debt Service Coverage Ratio (DSCR) is a simple way to measure if a property's income is enough to cover its monthly loan payments. Essentially, it tells you how many times the property's income can pay off the debt. For example, if an apartment building earns \\$10,000 in monthly rent and has \\$4,000 in monthly mortgage payments, the DSCR is 2.5 ( \\$10,000 / \\$4,000). A ratio above 1.0 generally means the property is generating enough cash flow to handle its debt obligations comfortably.",
+    "first": 0.3,
+    "total": 2.7,
+    "words": 84,
+    "wps": 34.8
+   },
+   "3": {
+    "text": "Here's how to solve this logic puzzle:\n\n**The Key Information:**\n\n* **All labels are wrong.** This means:\n    * The box labeled \"Apples\" does *not* contain Apples.\n    * The box labeled \"Oranges\" does *not* contain Oranges.\n    * The box labeled \"Mixed\" does *not* contain a Mix.\n* **You pick one fruit from the box labeled \"Mixed\" and it's an Apple.**\n\n**Step-by-Step Deduction:**\n\n1. **Analyze the \"Mixed\" box:** We know the box labeled \"Mixed\" actually contains Apples (because you pulled an apple from it).\n    * **Box Labeled \"Mixed\" $\\rightarrow$ Contains Apples**\n\n2. **Analyze the \"Apples\" box:** Since the label \"Apples\" is wrong, this box cannot contain Apples. It also cannot contain Apples because we just identified that box. Therefore, it must contain either Oranges or Mixed.\n    * If Box Labeled \"Apples\" $\\rightarrow$ Contains Oranges (This is possible)\n    * If Box Labeled \"Apples\" $\\rightarrow$ Contains Mixed (This is impossible, as the Mixed contents are already assigned to the box labeled \"Mixed\")\n    * **Therefore, Box Labeled \"Apples\" $\\rightarrow$ Contains Oranges**\n\n3. **Determine the final box:** The only remaining fruit is \"Mixed,\" and the only remaining label is \"Oranges.\"\n    * **Box Labeled \"Oranges\" $\\rightarrow$ Contains Mixed**\n\n**Conclusion:**\n\n* **Box labeled Apples $\\rightarrow$ Contains Oranges**\n* **Box labeled Oranges $\\rightarrow$ Contains Mixed**\n* **Box labeled Mixed $\\rightarrow$ Contains Apples**",
+    "first": 0.3,
+    "total": 6.1,
+    "words": 213,
+    "wps": 36.7
+   },
+   "4": {
+    "text": "The three most recently changed items in your Projects folder are:\n\n1.  `model-picker/selftest.png` (Oct 18, 2026 at 2:58 PM)\n2.  `model-picker/selftest.json` (Oct 18, 2026 at 2:58 PM)\n3.  `model-picker/bench/bench3.py` (Oct 18, 2026 at 10:46 AM)",
+    "tools": [
+     [
+      "list_files_by_date",
+      {
+       "days_back": 7,
+       "folder": "Projects"
+      }
+     ]
+    ],
+    "native": 1,
+    "total": 5.7,
+    "first": 1.58,
+    "words": 35,
+    "error": null
+   },
+   "5": {
+    "text": "Here is a single HTML file that contains a button to pick a random motivational quote and display it on the page.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote Generator</title>\n    <style>\n        body {\n            font-family: 'Arial', sans-serif;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            min-height: 100vh;\n            margin: 0;\n            background-color: #f4f7f6;\n            text-align: center;\n        }\n\n        .container {\n            background-color: #ffffff;\n            padding: 30px;\n            border-radius: 12px;\n            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);\n            max-width: 600px;\n            width: 90%;\n        }\n\n        h1 {\n            color: #333;\n            margin-bottom: 20px;\n        }\n\n        #quoteDisplay {\n            margin-top: 30px;\n            padding: 20px;\n            border: 2px dashed #4CAF50;\n            border-radius: 8px;\n            min-height: 100px;\n            background-color: #e8f5e9;\n            font-size: 1.3em;\n            color: #2e7d32;\n            font-style: italic;\n            transition: all 0.3s ease;\n        }\n\n        button {\n            background-color: #4CAF50;\n            color: white;\n            padding: 12px 25px;\n            border: none;\n            border-radius: 6px;\n            cursor: pointer;\n            font-size: 1.1em;\n            margin-top: 20px;\n            transition: background-color 0.3s ease, transform 0.1s;\n        }\n\n        button:hover {\n            background-color: #45a049;\n        }\n\n        button:active {\n            transform: scale(0.98);\n        }\n    </style>\n</head>\n<body>\n\n    <div class=\"container\">\n        <h1>\u2728 Daily Motivation \u2728</h1>\n        \n        <!-- Area where the quote will be displayed -->\n        <div id=\"quoteDisplay\">Click the button to get inspired!</div>\n\n        <!-- The button that triggers the action -->\n        <button onclick=\"generateQuote()\">Get New Quote</button>\n    </div>\n\n    <script>\n        // Array of motivational quotes\n        const quotes = [\n            \"The only way to do great work is to love what you do. - Steve Jobs\",\n            \"Believe you can and you're halfway there. - Theodore Roosevelt\",\n            \"The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt\",\n            \"Strive not to be a success, but rather to be of value. - Albert Einstein\",\n            \"The best time to plant a tree was 20 years ago. The second best time is now. - Chinese Proverb\",\n            \"Your time is limited, so don't waste it living someone else's life. - Steve Jobs\",\n            \"The journey of a thousand miles begins with a single step. - Lao Tzu\"\n        ];\n\n        function generateQuote() {\n            // 1. Generate a random index\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            \n            // 2. Select the quote\n            const randomQuote = quotes[randomIndex];\n            \n            // 3. Update the HTML element with the new quote\n            document.getElementById('quoteDisplay').textContent = randomQuote;\n        }\n    </script>\n\n</body>\n</html>\n```",
+    "first": 0.3,
+    "total": 15.0,
+    "words": 348,
+    "wps": 23.6,
+    "chrome": {
+     "btn": true,
+     "before": "\u2728 Daily Motivation \u2728\nClick the button to get inspired!\nGet New Quote",
+     "after": [
+      "\u2728 Daily Motivation \u2728\nThe best time to plant a tree was 20 years ago. The second best time is now. - Chinese Proverb\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nStrive not to be a success, but rather to be of value. - Albert Einstein\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nThe journey of a thousand miles begins with a single step. - Lao Tzu\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nThe future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt\nGet New Quote",
+      "\u2728 Daily Motivation \u2728\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 56,
+  "started": false,
+  "free_after": 16,
+  "rss_mb": 14,
+  "ollama_ps": "NAME          ID              SIZE      PROCESSOR    CONTEXT    UNTIL              \ngemma4:e2b    b37049369adf    338 MB    100% GPU     65536      4 minutes from now",
+  "free_after_stop": 55
+ },
+ "foundation": {
+  "name": "Apple Foundation",
+  "tests": {
+   "1": {
+    "text": "Spent the weekend building a Mac app that lets me pick any local AI model and chat with it. Learning in public, a little excited, no hashtags.",
+    "first": 1.72,
+    "total": 2.0,
+    "words": 27,
+    "wps": 106.0
+   },
+   "2": {
+    "text": "The debt service coverage ratio (DSCR) is a financial metric that measures how much income a company or individual can cover with their monthly debt payments. It's calculated by dividing the company's net operating income by its total debt obligations. A higher DSCR indicates that a company has more income available to pay off its debts, suggesting better financial health. For example, if a small apartment building has monthly net operating income of $10,000 and total debt obligations of $5,000, its DSCR would be 2, meaning it can cover its debts twice a month.",
+    "first": 0.29,
+    "total": 2.1,
+    "words": 94,
+    "wps": 52.3
+   },
+   "3": {
+    "text": "1. **Initial Setup:**\n   - Box 1: Apples\n   - Box 2: Oranges\n   - Box 3: Mixed\n\n2. **Observation:**\n   - You pick an apple from the box labeled Mixed.\n\n3. **Analysis:**\n   - Since the box labeled Mixed contains apples, it cannot be the Mixed box.\n   - Therefore, the box labeled Mixed must contain oranges.\n\n4. **Conclusion:**\n   - Box 1: Apples\n   - Box 2: Oranges\n   - Box 3: Mixed (contains oranges)",
+    "first": 0.29,
+    "total": 1.7,
+    "words": 68,
+    "wps": 49.8
+   },
+   "4": {
+    "text": "",
+    "tools": [
+     [
+      "list_files_by_date",
+      {
+       "days_back": 7,
+       "folder": "Projects"
+      }
+     ],
+     [
+      "rename_item",
+      {
+       "new_name": "model-picker/selftest.png",
+       "path": "model-picker/selftest.json"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "days_back": 7,
+       "folder": "Projects"
+      }
+     ]
+    ],
+    "native": 3,
+    "total": 7.3,
+    "first": 1.0,
+    "words": 0,
+    "error": "HTTP 500 {\"error\":{\"message\":\"prompt exceeds the Foundation Model context window (Content contains 4433 tokens, which exceeds the maximum allowed context size of 4096.)\",\"type\":\"internal_error\"}}"
+   },
+   "5": {
+    "text": "Certainly! Below is a simple HTML file with a button that selects a random motivational quote and displays it on the page.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            text-align: center;\n            margin: 50px;\n        }\n        button {\n            padding: 10px 20px;\n            background-color: #4CAF50;\n            color: white;\n            border: none;\n            cursor: pointer;\n        }\n        button:hover {\n            background-color: #45a049;\n        }\n    </style>\n</head>\n<body>\n\n    <h1>Motivational Quote</h1>\n\n    <button onclick=\"getRandomQuote()\">Get a Quote</button>\n\n    <p id=\"quote\"></p>\n\n    <script>\n        function getRandomQuote() {\n            const quotes = [\n                \"The only way to do great work is to love what you do.\",\n                \"Believe you can and you're halfway there.\",\n                \"Success is not final, failure is not fatal: It is the courage to continue that counts.\",\n                \"Your time is limited, so don't waste it living someone else's life.\",\n                \"Do what you love, and you will never work a day in your life.\",\n            ];\n\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            const quote = quotes[randomIndex];\n\n            document.getElementById('quote').textContent = quote;\n        }\n    </script>\n\n</body>\n</html>\n```\n\nTo use this HTML file, simply copy and paste it into an HTML editor or a text editor, and save it with a `.html` extension. When you open the file in a web browser, you'll see a button that, when clicked, displays a random motivational quote on the page.",
+    "first": 0.24,
+    "total": 6.8,
+    "words": 215,
+    "wps": 32.6,
+    "chrome": {
+     "btn": true,
+     "before": "Motivational Quote\nGet a Quote",
+     "after": [
+      "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.",
+      "Motivational Quote\nGet a Quote\n\nYour time is limited, so don't waste it living someone else's life.",
+      "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.",
+      "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.",
+      "Motivational Quote\nGet a Quote\n\nBelieve you can and you're halfway there.",
+      "Motivational Quote\nGet a Quote\n\nYour time is limited, so don't waste it living someone else's life.",
+      "Motivational Quote\nGet a Quote\n\nBelieve you can and you're halfway there.",
+      "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do."
+     ]
+    }
+   }
+  },
+  "free_before": 55,
+  "started": false,
+  "free_after": 44,
+  "rss_mb": 90,
+  "free_after_stop": 44
+ },
+ "raptor": {
+  "name": "Raptor 0.6",
+  "tests": {
+   "1": {
+    "text": "I spent the weekend building a Mac app that lets me pick any local AI model and chat with it. Learning in public, a little excited, no hashtags.",
+    "first": 1.88,
+    "total": 2.8,
+    "words": 28,
+    "wps": 29.7
+   },
+   "2": {
+    "text": "A debt service coverage ratio is a simple way to measure how much money a building owner has to cover its regular bills, like mortgage payments and property taxes. \n\nImagine you own a small apartment building that needs to pay $1,000 a month for its mortgage and $500 a month for property taxes. \n\nIf your building earns $3,000 a month in rent, your debt service coverage ratio is 3.0, meaning you have three times as much money coming in to pay those bills. \n\nThis ratio tells you how safe your building is financially, showing you have plenty of extra money to cover the costs without worrying about late payments.",
+    "first": 0.46,
+    "total": 5.3,
+    "words": 109,
+    "wps": 22.6
+   },
+   "3": {
+    "text": "The puzzle states that all labels are incorrect, which is the primary constraint. I start by analyzing the box labeled \"Mixed,\" which contains an apple. Since the label is wrong, this box cannot contain a mix; it must contain either only Apples or only Oranges. Because the fruit drawn is an Apple, this box must contain only Apples.\n\nNext, I look at the box labeled \"Oranges.\" Since all labels are wrong, it cannot contain Oranges. I need to determine if it contains Apples or Mixed. Since the \"Apples\" box is already identified, the \"Oranges\" box must contain the Mixed fruit.\n\nFinally, the remaining box is labeled \"Apples,\" and it must contain the remaining fruit, which is Oranges.\n\nBoxes:\nApples: Oranges\nOranges: Mixed\nMixed: Apples",
+    "first": 0.45,
+    "total": 6.9,
+    "words": 124,
+    "wps": 19.3
+   },
+   "4": {
+    "text": "Based on the files changed most recently in the **Projects** folder, the 3 folders with the most recent activity are:\n\n1. **model-picker** \u2014 last changed **Oct 18, 2026 at 2:58 PM** (e.g., `selftest.png`, `selftest.json`, `bench/bench3.py`)\n2. **ask-my-mac-backup-20261018** \u2014 last changed **Oct 18, 2026 at 9:51 AM** (e.g., `defaults-before.txt`, `PLAN.md`, `README.md`)\n3. **magnitude-speed-lab** \u2014 last changed **Oct 17, 2026 at 12:51 PM** (e.g., `race-oll.json`, `index.html`, `style.css`)\n\nNo files were moved or changed \u2014 this is read-only.",
+    "tools": [
+     [
+      "list_folder",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "days_back": 7,
+       "folder": "Projects"
+      }
+     ]
+    ],
+    "native": 2,
+    "total": 13.6,
+    "first": 1.91,
+    "words": 75,
+    "error": null
+   },
+   "5": {
+    "text": "## \u57fa\u672c\u601d\u8def\n\n\u5b9e\u73b0\u968f\u673a\u52b1\u5fd7\u540d\u8a00\u5c55\u793a\u7684\u6838\u5fc3\u601d\u8def\u5982\u4e0b\uff1a\n\n1. **\u6570\u636e\u51c6\u5907**\uff1a\u521b\u5efa\u4e00\u4e2a\u5305\u542b\u591a\u4e2a\u52b1\u5fd7\u540d\u8a00\u7684\u6570\u7ec4\uff0c\u6bcf\u4e2a\u540d\u8a00\u5305\u542b\u6587\u5b57\u5185\u5bb9\n2. **\u968f\u673a\u9009\u62e9\u673a\u5236**\uff1a\u4f7f\u7528JavaScript\u7684`Math.random()`\u51fd\u6570\u4ece\u540d\u8a00\u6570\u7ec4\u4e2d\u968f\u673a\u9009\u53d6\u4e00\u6761\n3. **\u4ea4\u4e92\u903b\u8f91**\uff1a\u5f53\u7528\u6237\u70b9\u51fb\u6309\u94ae\u65f6\uff0c\u89e6\u53d1\u968f\u673a\u9009\u62e9\u5e76\u66f4\u65b0\u9875\u9762\u663e\u793a\n4. **\u754c\u9762\u8bbe\u8ba1**\uff1a\u521b\u5efa\u7b80\u6d01\u7684\u6309\u94ae\u548c\u540d\u8a00\u5c55\u793a\u533a\u57df\uff0c\u786e\u4fdd\u7528\u6237\u4f53\u9a8c\u6d41\u7545\n\n## \u5177\u4f53\u4ee3\u7801\u5b9e\u73b0\n```html\n<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>\u968f\u673a\u52b1\u5fd7\u540d\u8a00</title>\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n\n        body {\n            font-family: 'Arial', 'Microsoft YaHei', sans-serif;\n            background: linear-gradient(135deg, #6b89ff 0%, #4a6cf7 50%, #3b5bdb 100%);\n            min-height: 100vh;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            color: white;\n        }\n\n        .container {\n            text-align: center;\n            padding: 2rem;\n            background: rgba(255, 255, 255, 0.1);\n            border-radius: 20px;\n            backdrop-filter: blur(10px);\n            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);\n            max-width: 600px;\n            width: 90%;\n        }\n\n        .quote-section {\n            margin-bottom: 2rem;\n            padding: 2rem;\n            background: rgba(255, 255, 255, 0.15);\n            border-radius: 15px;\n            border: 1px solid rgba(255, 255, 255, 0.2);\n            transition: all 0.3s ease;\n        }\n\n        .quote-text {\n            font-size: 1.5rem;\n            line-height: 1.8;\n            font-weight: 300;\n            letter-spacing: 0.5px;\n            margin-bottom: 1.5rem;\n            animation: fadeIn 0.5s ease;\n        }\n\n        @keyframes fadeIn {\n            from {\n                opacity: 0;\n                transform: translateY(20px);\n            }\n            to {\n                opacity: 1;\n                transform: translateY(0);\n            }\n        }\n\n        .btn {\n            background: linear-gradient(45deg, #ff6b9d, #ff8a80);\n            color: white;\n            border: none;\n            padding: 1rem 2.5rem;\n            font-size: 1.1rem;\n            font-weight: 600;\n            border-radius: 50px;\n            cursor: pointer;\n            transition: all 0.3s ease;\n            box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);\n            margin: 0 auto;\n        }\n\n        .btn:hover {\n            transform: translateY(-2px);\n            box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);\n        }\n\n        .btn:active {\n            transform: translateY(0);\n        }\n\n        .quote-number {\n            font-size: 0.9rem;\n            opacity: 0.8;\n            margin-bottom: 1rem;\n            font-weight: 300;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"quote-section\">\n            <div class=\"quote-number\" id=\"quoteNumber\">\u540d\u8a00 1</div>\n            <div class=\"quote-text\" id=\"quoteText\">\n                \u6bcf\u4e00\u4e2a\u4f1f\u5927\u7684\u6210\u5c31\uff0c\u90fd\u59cb\u4e8e\u4e00\u4e2a\u52c7\u6562\u7684\u8d77\u70b9\u3002\n            </div>\n        </div>\n        <button class=\"btn\" onclick=\"getRandomQuote()\">\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00</button>\n    </div>\n\n    <script>\n        const quotes = [\n            \"\u6bcf\u4e00\u4e2a\u4f1f\u5927\u7684\u6210\u5c31\uff0c\u90fd\u59cb\u4e8e\u4e00\u4e2a\u52c7\u6562\u7684\u8d77\u70b9\u3002\",\n            \"\u575a\u6301\u662f\u6210\u529f\u7684\u57fa\u77f3\uff0c\u6bcf\u4e00\u6b21\u52aa\u529b\u90fd\u5728\u4e3a\u672a\u6765\u94fa\u8def\u3002\",\n            \"\u68a6\u60f3\u4e0d\u4f1a\u81ea\u52a8\u6210\u771f\uff0c\u4f46\u575a\u6301\u8ffd\u9010\u68a6\u60f3\u7684\u4eba\u7ec8\u5c06\u62b5\u8fbe\u3002\",\n            \"\u56f0\u96be\u662f\u6210\u957f\u7684\u50ac\u5316\u5242\uff0c\u8de8\u8d8a\u5b83\uff0c\u4f60\u5c06\u53d8\u5f97\u66f4\u5f3a\u5927\u3002\",\n            \"\u81ea\u4fe1\u662f\u6210\u529f\u7684\u7b2c\u4e00\u79d8\u8bc0\uff0c\u76f8\u4fe1\u81ea\u5df1\uff0c\u5c31\u80fd\u521b\u9020\u5947\u8ff9\u3002\",\n            \"\u65f6\u95f4\u4f1a\u8bc1\u660e\u4e00\u5207\uff0c\u8010\u5fc3\u4e0e\u575a\u6301\u7ec8\u5c06\u6536\u83b7\u6210\u679c\u3002\",\n            \"\u52c7\u6c14\u4e0d\u662f\u6ca1\u6709\u6050\u60e7\uff0c\u800c\u662f\u5728\u6050\u60e7\u4e2d\u4f9d\u7136\u524d\u884c\u3002\",\n            \"\u6210\u529f\u4e0d\u662f\u7ec8\u70b9\uff0c\u800c\u662f\u4e0d\u65ad\u8d85\u8d8a\u81ea\u6211\u7684\u65c5\u7a0b\u3002\",\n            \"\u6bcf\u4e00\u4efd\u52aa\u529b\u90fd\u4e0d\u4f1a\u88ab\u8f9c\u8d1f\uff0c\u575a\u6301\u7ec8\u5c06\u8fce\u6765\u66d9\u5149\u3002\",\n            \"\u6539\u53d8\u4ece\u5185\u5fc3\u5f00\u59cb\uff0c\u79ef\u6781\u7684\u5fc3\u6001\u662f\u6539\u53d8\u7684\u7b2c\u4e00\u6b65\u3002\"\n        ];\n\n        function getRandomQuote() {\n            // \u6e05\u9664\u4e4b\u524d\u7684\u52a8\u753b\u6548\u679c\n            const quoteText = document.getElementById('quoteText');\n            const quoteNumber = document.getElementById('quoteNumber');\n            \n            // \u968f\u673a\u9009\u62e9\u540d\u8a00\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            const randomQuote = quotes[randomIndex];\n            \n            // \u66f4\u65b0\u663e\u793a\u5185\u5bb9\n            quoteText.textContent = randomQuote;\n            quoteNumber.textContent = `\u540d\u8a00 ${randomIndex + 1}`;\n            \n            // \u91cd\u65b0\u89e6\u53d1\u52a8\u753b\u6548\u679c\n            quoteText.style.animation = 'none';\n            setTimeout(() => {\n                quoteText.style.animation = 'fadeIn 0.5s ease';\n            }, 10);\n        }\n\n        // \u9875\u9762\u52a0\u8f7d\u65f6\u81ea\u52a8\u663e\u793a\u7b2c\u4e00\u6761\u540d\u8a00\n        window.onload = function() {\n            getRandomQuote();\n        };\n    </script>\n</body>\n</html>\n```\n## \u4ee3\u7801\u89e3\u91ca\u8bf4\u660e\n\n**HTML\u7ed3\u6784**\uff1a\n- \u4f7f\u7528\u8bed\u4e49\u5316\u7684\u5bb9\u5668\u7ed3\u6784\uff0c\u5305\u542b\u540d\u8a00\u5c55\u793a\u533a\u57df\u548c\u6309\u94ae\n- \u901a\u8fc7`id`\u5c5e\u6027\u6807\u8bc6\u9700\u8981\u52a8\u6001\u66f4\u65b0\u7684\u5143\u7d20\uff0c\u4fbf\u4e8eJavaScript\u64cd\u4f5c\n\n**CSS\u6837\u5f0f\u8bbe\u8ba1**\uff1a\n- \u91c7\u7528\u73b0\u4ee3\u5316\u7684\u73bb\u7483\u62df\u6001\u6548\u679c\uff08backdrop-filter\u548c\u534a\u900f\u660e\u80cc\u666f\uff09\n- \u4f7f\u7528\u6e10\u53d8\u80cc\u666f\u548c\u5706\u89d2\u8bbe\u8ba1\uff0c\u8425\u9020\u4e13\u4e1a\u4e14\u5bcc\u6709\u6d3b\u529b\u7684\u89c6\u89c9\u4f53\u9a8c\n- \u6dfb\u52a0\u4e86\u6de1\u5165\u52a8\u753b\u6548\u679c\uff0c\u63d0\u5347\u7528\u6237\u4ea4\u4e92\u7684\u89c6\u89c9\u53cd\u9988\n\n**JavaScript\u903b\u8f91**\uff1a\n- `quotes`\u6570\u7ec4\u5b58\u50a8\u6240\u6709\u52b1\u5fd7\u540d\u8a00\uff0c\u4fbf\u4e8e\u7ba1\u7406\u548c\u6269\u5c55\n- `getRandomQuote()`\u51fd\u6570\u5b9e\u73b0\u6838\u5fc3\u529f\u80fd\uff1a\u968f\u673a\u9009\u62e9\u540d\u8a00\u3001\u66f4\u65b0\u9875\u9762\u663e\u793a\u3001\u91cd\u65b0\u89e6\u53d1\u52a8\u753b\n- `Math.random()`\u786e\u4fdd\u6bcf\u6b21\u70b9\u51fb\u90fd\u80fd\u83b7\u5f97\u4e0d\u540c\u7684\u968f\u673a\u7ed3\u679c\n- \u9875\u9762\u52a0\u8f7d\u65f6\u81ea\u52a8\u8c03\u7528\u51fd\u6570\uff0c\u63d0\u4f9b\u5373\u65f6\u4f53\u9a8c\n\n**\u4ea4\u4e92\u4f18\u5316**\uff1a\n- \u6309\u94ae\u5177\u6709\u60ac\u505c\u548c\u70b9\u51fb\u7684\u89c6\u89c9\u53cd\u9988\u6548\u679c\n- \u540d\u8a00\u66f4\u65b0\u65f6\u91cd\u65b0\u89e6\u53d1\u6de1\u5165\u52a8\u753b\uff0c\u589e\u5f3a\u7528\u6237\u4f53\u9a8c\u7684\u6d41\u7545\u6027\n- \u6574\u4f53\u8bbe\u8ba1\u54cd\u5e94\u5f0f\uff0c\u9002\u914d\u4e0d\u540c\u5c4f\u5e55\u5c3a\u5bf8",
+    "first": 0.94,
+    "total": 65.8,
+    "words": 347,
+    "wps": 5.3,
+    "chrome": {
+     "btn": true,
+     "before": "\u540d\u8a00 8\n\u6210\u529f\u4e0d\u662f\u7ec8\u70b9\uff0c\u800c\u662f\u4e0d\u65ad\u8d85\u8d8a\u81ea\u6211\u7684\u65c5\u7a0b\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+     "after": [
+      "\u540d\u8a00 10\n\u6539\u53d8\u4ece\u5185\u5fc3\u5f00\u59cb\uff0c\u79ef\u6781\u7684\u5fc3\u6001\u662f\u6539\u53d8\u7684\u7b2c\u4e00\u6b65\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 6\n\u65f6\u95f4\u4f1a\u8bc1\u660e\u4e00\u5207\uff0c\u8010\u5fc3\u4e0e\u575a\u6301\u7ec8\u5c06\u6536\u83b7\u6210\u679c\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 8\n\u6210\u529f\u4e0d\u662f\u7ec8\u70b9\uff0c\u800c\u662f\u4e0d\u65ad\u8d85\u8d8a\u81ea\u6211\u7684\u65c5\u7a0b\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 10\n\u6539\u53d8\u4ece\u5185\u5fc3\u5f00\u59cb\uff0c\u79ef\u6781\u7684\u5fc3\u6001\u662f\u6539\u53d8\u7684\u7b2c\u4e00\u6b65\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 4\n\u56f0\u96be\u662f\u6210\u957f\u7684\u50ac\u5316\u5242\uff0c\u8de8\u8d8a\u5b83\uff0c\u4f60\u5c06\u53d8\u5f97\u66f4\u5f3a\u5927\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 4\n\u56f0\u96be\u662f\u6210\u957f\u7684\u50ac\u5316\u5242\uff0c\u8de8\u8d8a\u5b83\uff0c\u4f60\u5c06\u53d8\u5f97\u66f4\u5f3a\u5927\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 9\n\u6bcf\u4e00\u4efd\u52aa\u529b\u90fd\u4e0d\u4f1a\u88ab\u8f9c\u8d1f\uff0c\u575a\u6301\u7ec8\u5c06\u8fce\u6765\u66d9\u5149\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00",
+      "\u540d\u8a00 4\n\u56f0\u96be\u662f\u6210\u957f\u7684\u50ac\u5316\u5242\uff0c\u8de8\u8d8a\u5b83\uff0c\u4f60\u5c06\u53d8\u5f97\u66f4\u5f3a\u5927\u3002\n\u83b7\u53d6\u52b1\u5fd7\u540d\u8a00"
+     ]
+    }
+   }
+  },
+  "free_before": 44,
+  "started": false,
+  "free_after": 30,
+  "rss_mb": 295,
+  "free_after_stop": 55
+ },
+ "spark": {
+  "name": "Spark X2.5",
+  "tests": {
+   "1": {
+    "text": "Spent the weekend building a Mac app that lets me pick any local AI model and chat with it. Learning in public, a little excited.",
+    "first": 2.13,
+    "total": 2.8,
+    "words": 25,
+    "wps": 40.6
+   },
+   "2": {
+    "text": "A **debt service coverage ratio (DSR)** is a simple way to check if you can comfortably pay your debt payments on a property, by comparing how much you earn from the property against how much you owe to pay for things like mortgage and property taxes.\n\nImagine you own a small apartment building that earns **$10,000 per month** in rent. If your monthly debt payments (like the mortgage and property taxes) total **$5,000**, the DSR is **2** (because $10,000 divided by $5,000 equals 2).\n\nThis ratio of 2 means you earn twice as much from the property as you spend on debt, showing you have a good balance to cover your obligations without strain.\n\nA higher ratio (like 3 or more) is even better, as it means you have extra income to handle unexpected costs or debt changes without worrying.",
+    "first": 0.62,
+    "total": 5.1,
+    "words": 140,
+    "wps": 31.5
+   },
+   "3": {
+    "text": "First, I determine that the box labeled **Mixed** must contain **Oranges**, because if it contained anything else, the label would be correct.\n\nNext, I look at the box labeled **Apples**. Since all labels are wrong, it cannot contain apples. I also know from the first step that the Mixed box holds oranges, so the Apples box must hold **Mixed** fruits.\n\nFinally, the box labeled **Oranges** must contain the remaining fruit, which is **Apples**.\n\n**Conclusion:**\n*   **Box labeled Apples:** Contains **Oranges**\n*   **Box labeled Oranges:** Contains **Apples**\n*   **Box labeled Mixed:** Contains **Oranges**\n\n**Step-by-Step Explanation:**\n\n1.  **Analyze the \"Mixed\" box:** The label says \"Mixed,\" but all labels are wrong. Therefore, this box does **not** contain mixed fruits. It must contain either Apples or Oranges.\n2.  **Identify the \"Mixed\" box's contents:** We know the box labeled \"Mixed\" has only one type of fruit (since it's not mixed). We also know from the problem that picking a fruit from the \"Mixed\" box yields an **Apple**.\n    *   *Deduction:* The box labeled **Mixed** contains **Apples**.\n3.  **Analyze the \"Apples\" box:** The label says \"Apples,\" but it is wrong. We already know the \"Mixed\" box has Apples. Therefore, the box labeled \"Apples\" cannot have Apples.\n    *   *Deduction:* The box labeled **Apples** must contain **Oranges**.\n4.  **Identify the \"Oranges\" box's contents:** By elimination, the only remaining combination is in the box labeled \"Oranges.\"\n    *   *Deduction:* The box labeled **Oranges** contains **Mixed** fruits.\n\n**Final Answer:**\n*   **Box labeled Apples:** Oranges\n*   **Box labeled Oranges:** Mixed\n*   **Box labeled Mixed:** Apples",
+    "first": 0.17,
+    "total": 12.7,
+    "words": 252,
+    "wps": 20.1
+   },
+   "4": {
+    "text": "Here are the **3 folders changed most recently** in your Projects folder, with their latest modification dates:\n\n| # | Folder | Most Recent Change Date |\n|---|--------|-------------------------|\n| 1 | **model-picker** | Oct 18, 2026 at 2:58 PM |\n| 2 | **ask-my-mac-backup-20261018** | Oct 18, 2026 at 9:50 AM |\n| 3 | **magnitude-speed-lab** | Oct 17, 2026 at 12:51 PM |\n\nNo changes were made \u2014 this is just a read-only report.",
+    "tools": [
+     [
+      "list_folder",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "days_back": 0,
+       "folder": "Projects"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "days_back": 1,
+       "folder": "Projects"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "days_back": 7,
+       "folder": "Projects"
+      }
+     ]
+    ],
+    "native": 5,
+    "total": 15.5,
+    "first": 1.95,
+    "words": 75,
+    "error": null
+   },
+   "5": {
+    "text": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote</title>\n    <style>\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            min-height: 100vh;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            margin: 0;\n            padding: 20px;\n        }\n\n        .container {\n            background: rgba(255, 255, 255, 0.95);\n            border-radius: 20px;\n            padding: 40px;\n            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);\n            text-align: center;\n            max-width: 500px;\n            width: 100%;\n        }\n\n        h1 {\n            color: #333;\n            margin-bottom: 30px;\n            font-size: 2rem;\n        }\n\n        .quote {\n            font-size: 1.5rem;\n            color: #444;\n            line-height: 1.6;\n            margin-bottom: 30px;\n            font-style: italic;\n            transition: all 0.3s ease;\n        }\n\n        .quote:hover {\n            transform: scale(1.02);\n            color: #667eea;\n        }\n\n        .button-container {\n            display: flex;\n            justify-content: center;\n        }\n\n        button {\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            color: white;\n            border: none;\n            padding: 15px 30px;\n            font-size: 1.1rem;\n            font-weight: 600;\n            border-radius: 50px;\n            cursor: pointer;\n            transition: all 0.3s ease;\n            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);\n        }\n\n        button:hover {\n            transform: translateY(-3px);\n            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);\n        }\n\n        button:active {\n            transform: translateY(0);\n        }\n\n        .quote-placeholder {\n            color: #aaa;\n            font-style: normal;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h1>Motivational Quote</h1>\n        <p class=\"quote quote-placeholder\">Click the button to get a random quote!</p>\n        <div class=\"button-container\">\n            <button id=\"getQuoteBtn\">Get a Random Quote</button>\n        </div>\n    </div>\n\n    <script>\n        // Array of motivational quotes\n        const quotes = [\n            \"The only way to have a good day is to accept that the day will end.\",\n            \"Every great achievement was once an idea, and the only way to turn an idea into reality is to take action.\",\n            \"Do not watch the clock; do what it counts of, do what the hour asks of you.\",\n            \"The future belongs to those who believe in the beauty of their dreams.\",\n            \"It is not enough to be able to fight for what you believe in; you must also be able to fight for what you hope for.\",\n            \"The best way to prepare for tomorrow is to act wisely today.\",\n            \"You don't have to be great to be seen, you just have to be true to yourself.\",\n            \"Success is not final, failure is not fatal: it is the courage to continue that counts.\",\n            \"The only limit to our potential is our own beliefs about what we can do.\",\n            \"When you reach your destination, you discover a new destination.\",\n            \"Do not be afraid to fail. Failure is the stepping stone to success.\",\n            \"The future is not a destination; it is a source of inspiration.\",\n            \"Your time is limited, so don't waste it living someone else's life.\",\n            \"Believe you can and you're halfway there. Believe you can't, and you're halfway to success.\",\n            \"The journey of a thousand miles begins with a single step.\",\n            \"Do not let the fear of failure stop you from taking the first step.\",\n            \"In the middle of difficulty lies opportunity.\",\n            \"The only thing worse than being watched is being unwatched.\",\n            \"Success is not the key to happiness. Happiness is the key to success.\",\n            \"When you are running out of time, speed up.\",\n            \"The future is yours to create, not to predict.\"\n        ];\n\n        // Function to get a random quote\n        function getRandomQuote() {\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            return quotes[randomIndex];\n        }\n\n        // DOM elements\n        const quoteElement = document.querySelector('.quote');\n        const button = document.getElementById('getQuoteBtn');\n\n        // Event listener for button click\n        button.addEventListener('click', () => {\n            const quote = getRandomQuote();\n            quoteElement.textContent = quote;\n            // Optional: add a subtle animation\n            quoteElement.style.opacity = '0';\n            setTimeout(() => {\n                quoteElement.style.transition = 'opacity 0.5s ease';\n                quoteElement.style.opacity = '1';\n            }, 100);\n        });\n    </script>\n</body>\n</html>\n```",
+    "first": 0.19,
+    "total": 39.7,
+    "words": 569,
+    "wps": 14.4,
+    "chrome": {
+     "btn": true,
+     "before": "Motivational Quote\n\nClick the button to get a random quote!\n\nGet a Random Quote",
+     "after": [
+      "Motivational Quote\n\nDo not let the fear of failure stop you from taking the first step.\n\nGet a Random Quote",
+      "Motivational Quote\n\nThe only way to have a good day is to accept that the day will end.\n\nGet a Random Quote",
+      "Motivational Quote\n\nThe only way to have a good day is to accept that the day will end.\n\nGet a Random Quote",
+      "Motivational Quote\n\nIt is not enough to be able to fight for what you believe in; you must also be able to fight for what you hope for.\n\nGet a Random Quote",
+      "Motivational Quote\n\nEvery great achievement was once an idea, and the only way to turn an idea into reality is to take action.\n\nGet a Random Quote",
+      "Motivational Quote\n\nIt is not enough to be able to fight for what you believe in; you must also be able to fight for what you hope for.\n\nGet a Random Quote",
+      "Motivational Quote\n\nThe only thing worse than being watched is being unwatched.\n\nGet a Random Quote",
+      "Motivational Quote\n\nThe future belongs to those who believe in the beauty of their dreams.\n\nGet a Random Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 55,
+  "started": true,
+  "free_after": 36,
+  "rss_mb": 2372,
+  "stopped": true,
+  "free_after_stop": 63
+ },
+ "qwencoder": {
+  "name": "Qwen2.5-Coder 7B",
+  "tests": {
+   "1": {
+    "text": "Building a Mac app to chat with local AI models was a fun weekend project! \ud83d\ude80 Excited to share my progress without hashtags. #MacApp #AIChat #LearningInPublic",
+    "first": 2.67,
+    "total": 4.7,
+    "words": 26,
+    "wps": 12.5
+   },
+   "2": {
+    "text": "A debt service coverage ratio (DSCR) measures how well a property can generate income to cover its debts and expenses. It's like checking if you have enough money to pay your bills each month. For instance, imagine you own a small apartment building that rents out 10 units. If the total rent collected is $20,000 per year and your annual expenses (like mortgage, taxes, and maintenance) are $15,000, your DSCR would be $20,000 / $15,000 = 1.33. This means you have $1.33 in income for every dollar of debt or expense, indicating that the building is financially healthy and can cover its debts comfortably.",
+    "first": 0.36,
+    "total": 8.3,
+    "words": 104,
+    "wps": 13.0
+   },
+   "3": {
+    "text": "1. **Initial Setup**: The boxes are labeled as follows:\n   - Box 1: Apples\n   - Box 2: Oranges\n   - Box 3: Mixed\n\n2. **Given Information**: All labels are wrong, and you pick an apple from the box labeled \"Mixed.\"\n\n3. **Deduction**:\n   - Since the label on the \"Mixed\" box is wrong, it cannot contain a mix of fruits; it must be either all apples or all oranges.\n   - You picked an apple from this box, so the \"Mixed\" box must actually contain only apples.\n\n4. **Revised Labels**:\n   - Box 1: Apples (label is correct)\n   - Box 2: Oranges\n   - Box 3: Mixed (now known to be all apples)\n\n5. **Final Answer**: \n   - Box 1 contains Apples.\n   - Box 2 contains Oranges.\n   - Box 3 contains Apples.\n\nSo, the boxes are labeled correctly as follows:\n- Box 1: Apples\n- Box 2: Oranges\n- Box 3: Apples",
+    "first": 0.41,
+    "total": 12.5,
+    "words": 145,
+    "wps": 12.0
+   },
+   "4": {
+    "text": "No recent changes found in the Projects folder.",
+    "tools": [
+     [
+      "list_files_by_date",
+      {
+       "folder": "Projects",
+       "days_back": 0,
+       "name_contains": ""
+      }
+     ]
+    ],
+    "native": 0,
+    "total": 5.9,
+    "first": 4.83,
+    "words": 8,
+    "error": null
+   },
+   "5": {
+    "text": "Sure! Below is an example of an HTML file that includes a button. When you click the button, it will pick a random motivational quote from a predefined list and display it on the page.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote Generator</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            height: 100vh;\n            margin: 0;\n            background-color: #f4f4f9;\n        }\n        #quote {\n            font-size: 24px;\n            color: #333;\n            margin-bottom: 20px;\n        }\n        button {\n            padding: 15px 30px;\n            font-size: 18px;\n            cursor: pointer;\n            background-color: #007BFF;\n            color: white;\n            border: none;\n            border-radius: 5px;\n        }\n        button:hover {\n            background-color: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <div id=\"quote\"></div>\n    <button onclick=\"getRandomQuote()\">Get a Quote</button>\n\n    <script>\n        const quotes = [\n            \"The only limit to our realization of tomorrow is our doubts of today.\",\n            \"Success is not final, failure is not fatal: It is the courage to continue that counts.\",\n            \"You are never too old to set another goal or to dream a new dream.\",\n            \"Believe you can and you're halfway there.\",\n            \"It does not matter how slowly you go as long as you do not stop.\"\n        ];\n\n        function getRandomQuote() {\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            document.getElementById('quote').innerText = quotes[randomIndex];\n        }\n    </script>\n</body>\n</html>\n```\n\n### How It Works:\n1. **HTML Structure**: The HTML file has a `div` element with the ID `quote` where the quote will be displayed, and a button that triggers the JavaScript function when clicked.\n2. **CSS Styling**: Basic styling is applied to center the content on the page and make it visually appealing.\n3. **JavaScript Functionality**: \n   - An array of motivational quotes is defined in the script section.\n   - The `getRandomQuote` function selects a random quote from the array and updates the text inside the `div` with the ID `quote`.\n\nYou can copy this code into an HTML file and open it in your web browser to see it in action.",
+    "first": 0.39,
+    "total": 31.1,
+    "words": 312,
+    "wps": 10.2,
+    "chrome": {
+     "btn": true,
+     "before": "Get a Quote",
+     "after": [
+      "Believe you can and you're halfway there.\nGet a Quote",
+      "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+      "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+      "You are never too old to set another goal or to dream a new dream.\nGet a Quote",
+      "Success is not final, failure is not fatal: It is the courage to continue that counts.\nGet a Quote",
+      "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+      "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+      "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 63,
+  "started": false,
+  "free_after": 34,
+  "rss_mb": 48,
+  "ollama_ps": "NAME                ID              SIZE      PROCESSOR    CONTEXT    UNTIL              \nqwen2.5-coder:7b    dae161e27b0e    5.7 GB    100% GPU     32768      4 minutes from now",
+  "free_after_stop": 70
+ },
+ "bonsai9b": {
+  "name": "Bonsai 9B",
+  "tests": {
+   "1": {
+    "text": "Spent the weekend building a Mac app to chat with any local AI model. Learning in public, feeling pretty excited. No hashtags.",
+    "first": 0.41,
+    "total": 1.1,
+    "words": 22,
+    "wps": 31.9
+   },
+   "2": {
+    "text": "The debt service coverage ratio is a simple financial check that tells you if a property has enough money coming in to pay its bills. Think of it like a safety net: if the ratio is above 1.0, the building earns enough rent to cover its mortgage and taxes; if it's below 1.0, the building is losing money on those payments. For example, if an apartment building earns $100,000 in rent each month and its monthly debt payments (mortgage plus taxes) total $90,000, the ratio is 1.11, meaning the building is financially safe. However, if the rent drops to $80,000 while the bills stay the same, the ratio falls to 0.89, signaling that the building cannot afford its debts and might need help or a loan refinance.",
+    "first": 0.24,
+    "total": 6.1,
+    "words": 127,
+    "wps": 21.5
+   },
+   "3": {
+    "text": "Here is the step-by-step logical deduction:\n\n1.  **Analyze the Clue**: You picked an **Apple** from the box labeled **Mixed**.\n2.  **Deduce the Mixed Box**: Since the label is wrong, and you found an apple, the box labeled \"Mixed\" must actually contain only **Apples**.\n3.  **Analyze the Remaining Boxes**: We are left with the box labeled \"Apples\" and the box labeled \"Oranges\". We know one of them contains Oranges, and the other contains Mixed fruit.\n4.  **Test the \"Apples\" Label**: Look at the box labeled \"Apples\".\n    *   *Scenario A*: If this box contained Apples, then the label would be correct. But we know all labels are wrong. Therefore, this box cannot contain Apples.\n    *   *Scenario B*: Since it cannot contain Apples, and the only remaining fruit type is Mixed, this box must contain **Mixed** fruit.\n5.  **Determine the Last Box**: By elimination, the box labeled \"Oranges\" must contain the remaining fruit type, which is **Oranges**.\n\n**Final Answer:**\n*   **Mixed** (labeled): **Apples**\n*   **Apples** (labeled): **Mixed**\n*   **Oranges** (labeled): **Oranges**",
+    "first": 0.37,
+    "total": 11.3,
+    "words": 168,
+    "wps": 15.4
+   },
+   "4": {
+    "text": "Based on the files changed in the Projects folder, here are the 3 folders with the most recent changes:\n\n1. **ask-my-mac-backup-20261018** - Most recent files changed on **Oct 18, 2026** (9:51 AM - 2:58 PM)\n2. **model-picker** - Most recent files changed on **Oct 18, 2026** (9:44 AM - 2:58 PM)\n3. **magnitude-speed-lab** - Most recent files changed on **Oct 17, 2026** (12:51 PM)\n\nThe ask-my-mac-backup-20261018 folder has the most recent activity with files modified throughout the day on October 18th, followed by model-picker which also had activity on October 18th, and magnitude-speed-lab which had its most recent changes on October 17th.",
+    "tools": [
+     [
+      "list_files_by_date",
+      {
+       "folder": "Projects",
+       "days_back": 0
+      }
+     ],
+     [
+      "list_folder",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "list_files_by_date",
+      {
+       "folder": "Projects",
+       "days_back": 7
+      }
+     ]
+    ],
+    "native": 3,
+    "total": 25.6,
+    "first": 5.21,
+    "words": 102,
+    "error": null
+   },
+   "5": {
+    "text": "Here is a complete, single-file HTML solution. You can save this code as an `.html` file (e.g., `quote.html`) and open it in any web browser.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Random Motivator</title>\n    <style>\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            background-color: #f4f4f9;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            height: 100vh;\n            margin: 0;\n        }\n\n        .container {\n            text-align: center;\n            background: white;\n            padding: 2rem;\n            border-radius: 15px;\n            box-shadow: 0 4px 15px rgba(0,0,0,0.1);\n            max-width: 600px;\n            width: 90%;\n        }\n\n        #quote-text {\n            font-size: 1.5rem;\n            font-style: italic;\n            color: #333;\n            margin-bottom: 20px;\n            line-height: 1.4;\n            min-height: 80px; /* Keeps layout stable */\n        }\n\n        .author {\n            font-size: 1rem;\n            color: #666;\n            font-weight: 600;\n            margin-bottom: 25px;\n        }\n\n        button {\n            background-color: #2c3e50;\n            color: white;\n            border: none;\n            padding: 12px 30px;\n            font-size: 1rem;\n            border-radius: 25px;\n            cursor: pointer;\n            transition: background-color 0.3s ease, transform 0.1s ease;\n        }\n\n        button:hover {\n            background-color: #34495e;\n        }\n\n        button:active {\n            transform: scale(0.98);\n        }\n    </style>\n</head>\n<body>\n\n    <div class=\"container\">\n        <div id=\"quote-text\">\"Loading quote...\"</div>\n        <div class=\"author\" id=\"author-text\"></div>\n        <button onclick=\"getNewQuote()\">Get New Quote</button>\n    </div>\n\n    <script>\n        // Array of motivational quotes and authors\n        const quotes = [\n            { text: \"The only way to do great work is to love what you do.\", author: \"Steve Jobs\" },\n            { text: \"Believe you can and you're halfway there.\", author: \"Theodore Roosevelt\" },\n            { text: \"It does not matter how slowly you go as long as you do not stop.\", author: \"Confucius\" },\n            { text: \"Success is not final, failure is not fatal: it is the courage to continue that counts.\", author: \"Winston Churchill\" },\n            { text: \"You are never too old to set another goal or to dream a new dream.\", author: \"C.S. Lewis\" },\n            { text: \"Don't watch the clock; do what it does. Keep going.\", author: \"Sam Levenson\" },\n            { text: \"The future belongs to those who believe in the beauty of their dreams.\", author: \"Eleanor Roosevelt\" },\n            { text: \"Act as if what you do makes a difference. It does.\", author: \"William James\" },\n            { text: \"Life is what happens when you're busy making other plans.\", author: \"John Lennon\" },\n            { text: \"The best way to predict the future is to create it.\", author: \"Peter Drucker\" }\n        ];\n\n        function getNewQuote() {\n            // 1. Pick a random index from the array\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            \n            // 2. Get the quote data\n            const quote = quotes[randomIndex];\n            \n            // 3. Update the HTML elements\n            document.getElementById('quote-text').textContent = `\"${quote.text}\"`;\n            document.getElementById('author-text').textContent = `- ${quote.author}`;\n        }\n\n        // Run once on page load\n        getNewQuote();\n    </script>\n</body>\n</html>\n```",
+    "first": 0.24,
+    "total": 39.2,
+    "words": 410,
+    "wps": 10.5,
+    "chrome": {
+     "btn": true,
+     "before": "\"You are never too old to set another goal or to dream a new dream.\"\n- C.S. Lewis\nGet New Quote",
+     "after": [
+      "\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n- Winston Churchill\nGet New Quote",
+      "\"The only way to do great work is to love what you do.\"\n- Steve Jobs\nGet New Quote",
+      "\"Believe you can and you're halfway there.\"\n- Theodore Roosevelt\nGet New Quote",
+      "\"Life is what happens when you're busy making other plans.\"\n- John Lennon\nGet New Quote",
+      "\"Believe you can and you're halfway there.\"\n- Theodore Roosevelt\nGet New Quote",
+      "\"The only way to do great work is to love what you do.\"\n- Steve Jobs\nGet New Quote",
+      "\"It does not matter how slowly you go as long as you do not stop.\"\n- Confucius\nGet New Quote",
+      "\"Act as if what you do makes a difference. It does.\"\n- William James\nGet New Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 70,
+  "started": true,
+  "free_after": 51,
+  "rss_mb": 3779,
+  "stopped": true,
+  "free_after_stop": 71
+ },
+ "ornith": {
+  "name": "ornith 9B",
+  "tests": {
+   "1": {
+    "text": "Spent the weekend building a Mac app where you can load *any* local AI model and just chat with it. \ud83e\udde0\u2728\n\nLearning in public \u2014 still figuring out how this all fits together, but man, I'm genuinely excited about what's possible when you run models right on your own machine. No cloud, no waiting, just me and the model.\n\nHere's a sneak peek of what it looks like:\n\n[Image placeholder \u2013 screenshot of the app UI showing a chat window with a local model running smoothly]\n\nIf anyone wants to take this further or has ideas for features I haven't thought of \u2014 drop them in the replies! \ud83d\ude80",
+    "first": 3.58,
+    "total": 11.3,
+    "words": 109,
+    "wps": 14.1
+   },
+   "2": {
+    "text": "The debt service coverage ratio (DSCR) tells you whether a property has enough income from rent and other sources to cover its loan payments\u2014like checking if your salary can pay your mortgage. For example, imagine a small apartment building that earns $120,000 per year in rent but owes $90,000 annually in loan payments; the DSCR would be 1.33, meaning the property generates 33% more income than needed to service its debt. A ratio above 1.0 means the building is financially healthy and can comfortably pay its debts, while a ratio below 1.0 signals trouble because the income isn't enough to cover the loan payments. Lenders usually require a DSCR of at least 1.2 or higher before approving a loan, giving them confidence that even if some tenants leave, the property can still meet its financial obligations.",
+    "first": 0.67,
+    "total": 12.8,
+    "words": 136,
+    "wps": 11.2
+   },
+   "3": {
+    "text": "**Step-by-step reasoning:**\n\n1. **All labels are wrong.** So:\n   - Box labeled \"Apples\" \u2192 contains Oranges or Mixed.\n   - Box labeled \"Oranges\" \u2192 contains Apples or Mixed.\n   - Box labeled \"Mixed\" \u2192 contains Apples or Oranges (not Mixed).\n\n2. You pick a fruit from the box labeled **\"Mixed\"** and it's an **apple**.  \n   Since all labels are wrong, this box cannot contain only Mixed \u2014 but more importantly, since we found an apple here, this box must contain either:\n   - Only Apples, or\n   - A mix of Apples and Oranges.\n\n   But wait \u2014 if the label \"Mixed\" is wrong, then it can't be Mixed. It could still be *only* Apples or *only* Oranges... but we just found an apple in it. So this box contains **Apples** (either pure apples or mixed with oranges). Let's hold that thought.\n\n3. Actually, let\u2019s re-examine: The key insight is to pick from the box whose label is **\"Mixed\"**, because since all labels are wrong, picking one fruit tells us definitively what kind of contents it has \u2014 if we find an apple, then this box contains **Apples** (possibly mixed with oranges). But here's the trick:\n\n   > Since all labels are wrong, and you picked from the \"Mixed\" box and found an apple \u2192 this box must contain **only Apples**. Why? Because if it contained a mix of apples and oranges, then there would be no way to distinguish \u2014 but actually that\u2019s not necessary. Let's think again carefully:\n\n   The standard version of this puzzle works like this:  \n   You pick from the box labeled **\"Mixed\"** (which is wrong), so it must contain either all Apples or all Oranges. If you pull out an apple, then this box contains **only Apples**.\n\n4. So:\n   - Box labeled \"Mixed\" \u2192 contains **Apples** only.\n\n5. Now consider the remaining two boxes:\n   - Box labeled \"Apples\" (wrong) \u2192 must contain Oranges or Mixed.\n   - Box labeled \"Oranges\" (wrong) \u2192 must contain Apples or Mixed.\n\n   But we already know that the box labeled \"Mixed\" contains only Apples. So now, among the remaining two boxes:\n   - One contains **Oranges** only.\n   - The other contains **Mixed**.\n\n6. Take a fruit from the box labeled **\"Apples\"** (which is wrong). Suppose you pull out an orange \u2192 then this box must contain Oranges only or Mixed. But if it were Mixed, then pulling one fruit could give either result \u2014 ambiguous. However, in the standard version of this puzzle, you're supposed to pick just **one** fruit and deduce everything from that.\n\n   Wait \u2014 actually, let me re-read your question: You picked **one fruit** from the box labeled \"Mixed\" and got an apple. That\u2019s all we know. We don\u2019t get to pick another fruit. So how can we solve it?\n\n7. Re-evaluate: In the classic version of this riddle, you are told that **all labels are wrong**, and you pick one fruit from each box \u2014 but usually only one pick is needed if done cleverly. Here, you picked from the \"Mixed\" box and got an apple. Since all labels are wrong, the \"Mixed\" label is incorrect \u2192 so this box does NOT contain Mixed fruits. It contains either all Apples or all Oranges. You found an apple \u2192 therefore, this box contains **only Apples**.\n\n8. Now:\n   - Box labeled \"Mixed\" \u2192 **Apples only** \u2705\n   - Remaining boxes: labeled \"Apples\" and \"Oranges\", both wrong.\n     - Contents left: Oranges-only and Mixed.\n   - Pick one fruit from the box labeled **\"Apples\"** (wrong). If you get an orange \u2192 it's either Oranges or Mixed. But if it were Mixed, then getting an apple is also possible \u2014 so unless you know what half looks like, you can't tell from one draw whether it's pure Oranges or Mixed.\n\n   Hmm \u2014 this suggests that with",
+    "first": 0.66,
+    "total": 61.3,
+    "words": 622,
+    "wps": 10.2
+   },
+   "4": {
+    "text": "Here are the **3 most recently changed folders** in your Projects folder:\n\n| # | Folder | Last Modified |\n|---|--------|---------------|\n| 1 | **model-picker** | Oct 18, 2026 \u2014 18:58 UTC |\n| 2 | **magnitude-speed-lab** | Oct 17, 2026 \u2014 16:51 UTC |\n| 3 | **photo-reader** | Oct 15, 2026 \u2014 00:41 UTC |",
+    "tools": [
+     [
+      "list_folder",
+      {
+       "path": "Projects"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/ash-pier-san-francisco"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/ask-my-mac"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/magnitude-speed-lab"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/model-picker"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/one-space-mac-sources-backup-20261013"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/photo-reader"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/photo-reader-mac"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/proof"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/pulse-monitor"
+      }
+     ],
+     [
+      "file_info",
+      {
+       "path": "Projects/webbrain-osaurus-local"
+      }
+     ]
+    ],
+    "native": 11,
+    "total": 38.7,
+    "first": 5.57,
+    "words": 57,
+    "error": null
+   },
+   "5": {
+    "text": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <title>Motivational Quotes</title>\n  <style>\n    body {\n      font-family: system-ui, sans-serif;\n      display: flex;\n      justify-content: center;\n      align-items: center;\n      min-height: 100vh;\n      margin: 0;\n      background: #f5f7fa;\n      color: #2d3436;\n    }\n    .card {\n      text-align: center;\n      max-width: 600px;\n      padding: 2rem;\n      border-radius: 16px;\n      background: white;\n      box-shadow: 0 8px 32px rgba(0,0,0,.08);\n    }\n    h1 { margin-top: 0; font-size: 1.4rem; color: #555; }\n    #quote {\n      min-height: 6em;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      padding: 1em;\n      font-style: italic;\n      line-height: 1.5;\n      color: #333;\n    }\n    button {\n      margin-top: 1rem;\n      padding: .6rem 1.4rem;\n      border: none;\n      border-radius: 8px;\n      background: #4a90d9;\n      color: white;\n      font-size: 1rem;\n      cursor: pointer;\n      transition: background .2s;\n    }\n    button:hover { background: #357abd; }\n  </style>\n</head>\n<body>\n  <div class=\"card\">\n    <h1>Daily Motivation</h1>\n    <p id=\"quote\">Click the button to get inspired!</p>\n    <button id=\"btn\" onclick=\"newQuote()\">New Quote</button>\n  </div>\n\n  <script>\n    const quotes = [\n      \"The only way to do great work is to love what you do.\",\n      \"Believe you can and you're halfway there.\",\n      \"It does not matter how slowly you go as long as you do not stop.\",\n      \"In the middle of difficulty lies opportunity.\",\n      \"Success is not final, failure is not fatal: it is the courage to continue that counts.\",\n      \"The future belongs to those who believe in the beauty of their dreams.\",\n      \"Act as if what you do makes a difference. It does.\",\n      \"You are never too old to set another goal or to dream a new dream.\",\n      \"Keep your face always toward the sunshine and shadows will fall behind you.\",\n      \"Everything you've ever wanted is on the other side of fear.\"\n    ];\n\n    function newQuote() {\n      const idx = Math.floor(Math.random() * quotes.length);\n      document.getElementById('quote').textContent = '\"' + quotes[idx] + '\"';\n    }\n\n    // Show a random quote immediately so the page isn't empty.\n    newQuote();\n  </script>\n</body>\n</html>\n```",
+    "first": 0.73,
+    "total": 50.8,
+    "words": 285,
+    "wps": 5.7,
+    "chrome": {
+     "btn": true,
+     "before": "Daily Motivation\n\n\"Act as if what you do makes a difference. It does.\"\n\nNew Quote",
+     "after": [
+      "Daily Motivation\n\n\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"Keep your face always toward the sunshine and shadows will fall behind you.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"Everything you've ever wanted is on the other side of fear.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"The only way to do great work is to love what you do.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"Act as if what you do makes a difference. It does.\"\n\nNew Quote",
+      "Daily Motivation\n\n\"Everything you've ever wanted is on the other side of fear.\"\n\nNew Quote"
+     ]
+    }
+   }
+  },
+  "free_before": 71,
+  "started": false,
+  "free_after": 24,
+  "rss_mb": 47,
+  "ollama_ps": "NAME         ID              SIZE      PROCESSOR    CONTEXT    UNTIL              \nornith:9b    a75697c14589    6.4 GB    100% GPU     65536      4 minutes from now",
+  "free_after_stop": 69
+ }
+}

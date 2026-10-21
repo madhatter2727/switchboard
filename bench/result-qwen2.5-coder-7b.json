@@ -1,0 +1,68 @@
+{
+ "model": "qwen2.5-coder-7b",
+ "id": "qwen2.5-coder:7b",
+ "prompts": {
+  "1 list folder": {
+   "final": "The files in the folder Projects/mp-sandbox/docs are:\n\n1. budget-notes.txt\n2. old-archive.txt\n3. shopping.txt\n4. trip-plan.txt\n\nWhat would you like to do with these files?",
+   "tools": [
+    "list_folder"
+   ],
+   "steps": 1,
+   "native_calls": 0,
+   "text_form_calls": 1,
+   "secs": 5.4,
+   "error": null,
+   "pass": true
+  },
+  "2 changed this week": {
+   "final": "These files were changed in the last 7 days:\n\n- shopping.txt\n- trip-plan.txt\n- budget-notes.txt\n\nWould you like to move them somewhere else or rename any of them?",
+   "tools": [
+    "list_files_by_date"
+   ],
+   "steps": 1,
+   "native_calls": 0,
+   "text_form_calls": 1,
+   "secs": 5.6,
+   "error": null,
+   "pass": true
+  },
+  "3 read+summarize": {
+   "final": "The Q4 budget includes $4,200 for marketing in October. The design contractor, Priya, will be paid on the 15th, and there's a risk that the printer quote might expire by November 3.",
+   "tools": [
+    "read_file_text"
+   ],
+   "steps": 1,
+   "native_calls": 0,
+   "text_form_calls": 1,
+   "secs": 5.6,
+   "error": null,
+   "pass": true
+  },
+  "4 move file": {
+   "final": "Move complete. The file has been moved to ~/Projects/mp-sandbox/archive/scratch-delete-me.txt.",
+   "tools": [
+    "move_items"
+   ],
+   "steps": 1,
+   "native_calls": 0,
+   "text_form_calls": 1,
+   "secs": 5.2,
+   "error": null,
+   "pass": true
+  },
+  "5 two-step": {
+   "final": "No files matching the query \"trip hotel\" found in ~/Projects/mp-sandbox/docs.",
+   "tools": [
+    "search_files"
+   ],
+   "steps": 1,
+   "native_calls": 0,
+   "text_form_calls": 1,
+   "secs": 4.4,
+   "error": null,
+   "pass": false
+  }
+ },
+ "start_secs": 5.0,
+ "score": 4
+}

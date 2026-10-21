@@ -1,0 +1,72 @@
+{
+ "model": "Bonsai-4B",
+ "id": "bonsai-2-4b",
+ "free_before": 77,
+ "start_secs": 2.9,
+ "free_after_load": 66,
+ "A": {
+  "A1 fix bug": {
+   "pass": true,
+   "tries": 1,
+   "secs": 6.3,
+   "detail": [
+    {
+     "final": "Fixed. The test should now pass.",
+     "tools": [
+      "read_file_text",
+      "read_file_text",
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 4,
+     "secs": 6.3,
+     "error": null,
+     "pass": true
+    }
+   ]
+  },
+  "A2 write module from spec": {
+   "pass": true,
+   "tries": 1,
+   "secs": 4.1,
+   "detail": [
+    {
+     "final": "Done. The file has been written with the two functions matching the test expectations.",
+     "tools": [
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 2,
+     "secs": 4.1,
+     "error": null,
+     "pass": true
+    }
+   ]
+  }
+ },
+ "free_mid": 66,
+ "B": {
+  "attempts": [
+   {
+    "valid_html": true,
+    "js_errors": 0,
+    "loop": true,
+    "keys": true,
+    "score": true,
+    "canvas_or_dom": true,
+    "js_error_sample": [],
+    "pass": true,
+    "shoot": true,
+    "enemies": true,
+    "secs": 39.7,
+    "timed_out": false,
+    "error": null,
+    "chars": 8685
+   }
+  ],
+  "pass": true,
+  "tries": 1,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/shooter-Bonsai-4B.html"
+ },
+ "free_end": 66
+}

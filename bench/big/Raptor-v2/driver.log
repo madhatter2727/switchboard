@@ -1,0 +1,8 @@
+[    0s] start mem free 73%
+[   96s] step 3 try 1 ok=True problems=[] model=69s mem=46%
+[  246s] step 3.5 try 1 ok=False problems=['Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3'] model=77s mem=43%
+[  404s] step 3.5 try 2 ok=True problems=[] model=67s mem=44%
+[  639s] step 4 try 1 ok=False problems=['Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3', 'game over never appeared within idle wait (lives not decreasing / no gameover overlay)'] model=89s mem=43%
+[  891s] step 4 try 2 ok=False problems=['Score did not rise: bullets shot at enemies for 32s but score stayed 0', 'Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3', 'game over never appeared within idle wait (lives not decreasing / no gameover overlay)'] model=86s mem=43%
+[ 1123s] step 4 try 3 ok=False problems=['Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3', 'game over never appeared within idle wait (lives not decreasing / no gameover overlay)'] model=85s mem=42%
+[ 1123s] FINISHED stopped: step 4 failed 3 times

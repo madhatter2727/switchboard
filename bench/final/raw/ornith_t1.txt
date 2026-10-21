@@ -1,0 +1,7 @@
+{
+ "text": "Spent the weekend building a Mac app where you can load *any* local AI model and just chat with it. \ud83e\udde0\u2728\n\nLearning in public \u2014 still figuring out how this all fits together, but man, I'm genuinely excited about what's possible when you run models right on your own machine. No cloud, no waiting, just me and the model.\n\nHere's a sneak peek of what it looks like:\n\n[Image placeholder \u2013 screenshot of the app UI showing a chat window with a local model running smoothly]\n\nIf anyone wants to take this further or has ideas for features I haven't thought of \u2014 drop them in the replies! \ud83d\ude80",
+ "first": 3.58,
+ "total": 11.3,
+ "words": 109,
+ "wps": 14.1
+}

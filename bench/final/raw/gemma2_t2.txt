@@ -1,0 +1,7 @@
+{
+ "text": "Imagine you own a small apartment building and need to pay off your mortgage each month. The debt service coverage ratio tells us how much of your monthly income from rent covers the cost of paying that mortgage.  A higher ratio means you have more money left over after covering rent expenses, which is good for lenders! A lower ratio could mean you're struggling to make ends meet and might need to adjust your budget or find ways to increase rental income. \n",
+ "first": 0.18,
+ "total": 1.6,
+ "words": 82,
+ "wps": 56.1
+}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Motivational Quote</title>
+    <style>
+        /* General Page Styling */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        /* The Card Container */
+        .quote-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            transition: transform 0.3s ease;
+        }
+
+        .quote-card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* The Quote Text */
+        .quote-text {
+            font-size: 1.5rem;
+            font-style: italic;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        /* The Button Styling */
+        .btn {
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            background-color: #ff5252;
+            transform: scale(1.05);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Loading Animation */
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quote-card">
+        <div class="loader" id="loader"></div>
+        <p class="quote-text" id="quoteDisplay">Loading...</p>
+        <button class="btn" id="quoteBtn">Get a New Quote</button>
+    </div>
+
+    <script>
+        // A list of motivational quotes
+        const quotes = [
+            "The only way to do great work is to love what you do.",
+            "Believe you can and you're halfway there.",
+            "It always seems impossible until it's done.",
+            "Don't watch the clock; do what it does. Keep going.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "The future belongs to those who believe in the beauty of their dreams.",
+            "Don't be afraid to give up, don't be afraid to fail.",
+            "The only limit to our realization of tomorrow is our doubts of today.",
+            "Believe you can and you're halfway there.",
+            "Life is what happens when you're busy making other plans.",
+            "The future belongs to those who believe in the beauty of their dreams.",
+            "It is not the mountain that makes you dare, but the fear of it.",
+            "The only way to do great work is to love what you do.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "Do not go where the path may lead, go instead where there is no path and leave a trail.",
+            "The only way to do great work is to love what you do.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts."
+        ];
+
+        const quoteDisplay = document.getElementById('quoteDisplay');
+        const quoteBtn = document.getElementById('quoteBtn');
+        const loader = document.getElementById('loader');
+
+        // Function to generate a random quote
+        function getRandomQuote() {
+            // Show loading state
+            quoteDisplay.style.display = 'none';
+            loader.style.display = 'block';
+
+            // Wait 1 second, then pick a random quote
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * quotes.length);
+                quoteDisplay.textContent = quotes[randomIndex];
+                
+                // Hide loader and show text
+                loader.style.display = 'none';
+                quoteDisplay.style.display = 'block';
+            }, 1000);
+        }
+
+        // Event Listener for the button
+        quoteBtn.addEventListener('click', getRandomQuote);
+    </script>
+</body>
+</html>

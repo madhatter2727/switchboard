@@ -1,0 +1,7 @@
+{
+ "text": "A **debt service coverage ratio (DSR)** is a simple way to check if you can comfortably pay your debt payments on a property, by comparing how much you earn from the property against how much you owe to pay for things like mortgage and property taxes.\n\nImagine you own a small apartment building that earns **$10,000 per month** in rent. If your monthly debt payments (like the mortgage and property taxes) total **$5,000**, the DSR is **2** (because $10,000 divided by $5,000 equals 2).\n\nThis ratio of 2 means you earn twice as much from the property as you spend on debt, showing you have a good balance to cover your obligations without strain.\n\nA higher ratio (like 3 or more) is even better, as it means you have extra income to handle unexpected costs or debt changes without worrying.",
+ "first": 0.62,
+ "total": 5.1,
+ "words": 140,
+ "wps": 31.5
+}

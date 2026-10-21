@@ -1,0 +1,7 @@
+{
+ "text": "Here is the step-by-step logical deduction:\n\n1.  **Analyze the \"Mixed\" Box:**\n    *   We know the label \"Mixed\" is wrong. Therefore, the box does not contain mixed fruits.\n    *   We picked an **apple** from this box. Since it's not mixed, it must be the **Apples** box.\n    *   *Current Status:* The box labeled \"Mixed\" contains Apples.\n\n2.  **Analyze the \"Oranges\" Box:**\n    *   We know the label \"Oranges\" is wrong. Therefore, this box does not contain oranges.\n    *   The only remaining fruit type is **Mixed**. So, the box labeled \"Oranges\" must contain **Mixed** fruits.\n    *   *Current Status:* The box labeled \"Oranges\" contains Mixed fruits.\n\n3.  **Analyze the \"Apples\" Box:**\n    *   By elimination, the box labeled \"Apples\" must contain the remaining fruit type, which is **Oranges**.\n    *   *Check:* Is the label \"Apples\" wrong? Yes, it contains Oranges.\n\n**Final Answer:**\n*   **Apples** box: **Oranges**\n*   **Oranges** box: **Mixed**\n*   **Mixed** box: **Apples**",
+ "first": 0.15,
+ "total": 4.8,
+ "words": 147,
+ "wps": 31.8
+}

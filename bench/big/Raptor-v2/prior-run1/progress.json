@@ -1,0 +1,139 @@
+{
+ "started": "13:59:59",
+ "steps": {
+  "1": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 35,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640
+      },
+      "problems": [],
+      "ok": true
+     }
+    }
+   ],
+   "goal": "Canvas page: a full page with a canvas (id game) 800x600 on a dark background, a ship drawn on the canvas near the bottom, which moves left/right with the Arrow keys AND A/D (also allow up/down with W/S/Arrows), staying inside the canvas. Game loop with requestAnimationFrame. Include HUD elements id score (text 'Score: 0') and id lives.",
+   "result": "pass"
+  },
+  "2": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 44,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "shoot_diff": 96
+      },
+      "problems": [],
+      "ok": true
+     }
+    }
+   ],
+   "goal": "Add shooting: Space fires bullets upward from the ship (with a short cooldown, holding Space keeps firing). Bullets are drawn and removed when off-screen.",
+   "result": "pass"
+  },
+  "3": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 58,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 2220,
+       "move_diff_left_a": 2534,
+       "score": 0,
+       "lives": 3,
+       "score_or_lives_changed": false
+      },
+      "problems": [
+       "score/lives never changed while shooting+moving 28s (enemies/collisions not working)"
+      ],
+      "ok": false
+     }
+    },
+    {
+     "try": 2,
+     "model_s": 59,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 2221,
+       "move_diff_left_a": 2221,
+       "score": 0,
+       "lives": 3,
+       "score_or_lives_changed": false
+      },
+      "problems": [
+       "score/lives never changed while shooting+moving 28s (enemies/collisions not working)"
+      ],
+      "ok": false
+     }
+    },
+    {
+     "try": 3,
+     "model_s": 58,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 2229,
+       "move_diff_left_a": 2537,
+       "score": 0,
+       "lives": 3,
+       "score_or_lives_changed": false
+      },
+      "problems": [
+       "score/lives never changed while shooting+moving 28s (enemies/collisions not working)"
+      ],
+      "ok": false
+     }
+    }
+   ],
+   "goal": "Add ONE enemy type that spawns at the top and falls down. Bullets that hit enemies destroy them and add 10 to the score (update the #score text as 'Score: N'). Enemies that touch the ship remove one life (update #lives as 'Lives: N') and disappear. Enemies that leave the bottom are removed.",
+   "result": "FAILED 3 times"
+  }
+ },
+ "last_good_step": 2,
+ "status": "stopped: step 3 failed 3 times",
+ "current": null,
+ "mem_free_pct": {
+  "start": 76,
+  "min_seen": 46,
+  "end": 74
+ },
+ "elapsed_s": 376,
+ "finished": "14:06:15"
+}

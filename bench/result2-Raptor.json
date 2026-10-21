@@ -1,0 +1,110 @@
+{
+ "model": "Raptor",
+ "id": "raptor-0.6-4b-jang_6m",
+ "free_before": 79,
+ "start_secs": 1.7,
+ "free_after_load": 53,
+ "A": {
+  "1 largest 3 + summarize": {
+   "final": "The 3 largest text files in `Projects/mp-sandbox/big` are:\n\n1. **alpha.txt** (8 KB) \u2014 a regular text file\n2. **bravo.txt** (6 KB) \u2014 a regular text file\n3. **charlie.txt** (4 KB) \u2014 a regular text file\n\n(For reference, delta.txt is 970 B and echo.txt is 428 B.)",
+   "tools": [
+    "list_folder",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info"
+   ],
+   "steps": 6,
+   "native_calls": 6,
+   "text_form_calls": 0,
+   "secs": 9.9,
+   "error": null,
+   "pass": false
+  },
+  "2 organize by type": {
+   "final": "All files have been moved successfully. Here's the organization:\n\n**Projects/mp-sandbox/mixed/documents/**\n- notes.txt\n- report.pdf\n- todo.txt\n\n**Projects/mp-sandbox/mixed/images/**\n- photo1.jpg\n- photo2.png\n\n**Projects/mp-sandbox/mixed/audio/**\n- song.mp3\n\nThe mixed folder is now organized by file type.",
+   "tools": [
+    "list_folder",
+    "file_info",
+    "move_items",
+    "move_items",
+    "move_items"
+   ],
+   "steps": 5,
+   "native_calls": 5,
+   "text_form_calls": 0,
+   "secs": 15.6,
+   "error": null,
+   "pass": true
+  },
+  "3 find by content": {
+   "final": "The file is **file4.txt**, and the guest wifi password is **mango-harbor-42**.",
+   "tools": [
+    "search_files",
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 7,
+   "native_calls": 7,
+   "text_form_calls": 0,
+   "secs": 8.6,
+   "error": null,
+   "pass": true
+  },
+  "4 list+read+move": {
+   "final": "Done. Here's the summary:\n\n**Files moved:**\n- `invoice-a.txt` \u2192 `Projects/mp-sandbox/inbox/invoices/`\n- `invoice-b.txt` \u2192 `Projects/mp-sandbox/inbox/invoices/`\n\n**Non-invoice files left in place:**\n- `memo.txt`\n- `recipe.txt`\n\n**Total invoice amount: $200.00** ($120 + $80)",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "move_items"
+   ],
+   "steps": 6,
+   "native_calls": 6,
+   "text_form_calls": 0,
+   "secs": 16.7,
+   "error": null,
+   "pass": true
+  },
+  "5 missing file": {
+   "final": "The file `Projects/mp-sandbox/docs/tax-2025.txt` does **not exist**. The `Projects/mp-sandbox/docs/` folder exists but is **empty** \u2014 there are no files inside it.\n\nSo I can't read it or tell you the total number written in it. If you'd like, you can confirm the correct path, or I can look for the file elsewhere (e.g., in `~/` or other locations).",
+   "tools": [
+    "read_file_text",
+    "search_files",
+    "list_folder",
+    "list_folder"
+   ],
+   "steps": 4,
+   "native_calls": 4,
+   "text_form_calls": 0,
+   "secs": 10.1,
+   "error": null,
+   "pass": true
+  }
+ },
+ "A_score": 4,
+ "free_min_seen": 48,
+ "B": {
+  "valid_html": true,
+  "js_errors": 0,
+  "loop": true,
+  "keys": true,
+  "score": true,
+  "canvas_or_dom": true,
+  "js_error_sample": [],
+  "pass": true,
+  "secs": 55.3,
+  "timed_out": false,
+  "error": null,
+  "chars": 5736,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/Raptor.html"
+ },
+ "free_end": 53
+}

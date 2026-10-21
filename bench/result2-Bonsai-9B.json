@@ -1,0 +1,111 @@
+{
+ "model": "Bonsai-9B",
+ "id": "bonsai-2-9b",
+ "free_before": 75,
+ "start_secs": 5.3,
+ "free_after_load": 56,
+ "A": {
+  "1 largest 3 + summarize": {
+   "final": "Based on the file sizes, here are the 3 largest text files in Projects/mp-sandbox/big:\n\n1. **alpha.txt** (8 KB) - Gardening tips about tomatoes needing six hours of sun and regular watering\n2. **bravo.txt** (6 KB) - Astronomy information about Jupiter's four large moons discovered by Galileo\n3. **charlie.txt** (4 KB) - Baking instructions for sourdough bread requiring a long slow rise and hot oven",
+   "tools": [
+    "list_files_by_date",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 4,
+   "native_calls": 4,
+   "text_form_calls": 0,
+   "secs": 17.0,
+   "error": null,
+   "pass": true
+  },
+  "2 organize by type": {
+   "final": "Done! I've organized the files into three subfolders:\n\n- **images/**: photo1.jpg, photo2.png\n- **documents/**: notes.txt, report.pdf, todo.txt\n- **audio/**: song.mp3",
+   "tools": [
+    "list_folder",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "move_items",
+    "move_items",
+    "move_items"
+   ],
+   "steps": 10,
+   "native_calls": 10,
+   "text_form_calls": 0,
+   "secs": 19.9,
+   "error": null,
+   "pass": true
+  },
+  "3 find by content": {
+   "final": "The file is **file4.txt** and the guest wifi password is **mango-harbor-42**.",
+   "tools": [
+    "search_files",
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 7,
+   "native_calls": 7,
+   "text_form_calls": 0,
+   "secs": 10.9,
+   "error": null,
+   "pass": true
+  },
+  "4 list+read+move": {
+   "final": "The invoices have been moved to the new folder. The total amount of the invoices is $200 ($120 + $80).",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "move_items"
+   ],
+   "steps": 4,
+   "native_calls": 4,
+   "text_form_calls": 0,
+   "secs": 9.4,
+   "error": null,
+   "pass": true
+  },
+  "5 missing file": {
+   "final": "The file doesn't seem to exist in the system. The search returned no results. The file path you provided may be incorrect or the file may not be present.",
+   "tools": [
+    "read_file_text",
+    "search_files"
+   ],
+   "steps": 2,
+   "native_calls": 2,
+   "text_form_calls": 0,
+   "secs": 7.1,
+   "error": null,
+   "pass": false
+  }
+ },
+ "A_score": 4,
+ "free_min_seen": 57,
+ "B": {
+  "valid_html": true,
+  "js_errors": 1,
+  "loop": false,
+  "keys": true,
+  "score": true,
+  "canvas_or_dom": true,
+  "js_error_sample": [
+   "[3771:70287268:1018/103030.109163:INFO:CONSOLE:208] \"Uncaught SyntaxError: Identifier 'gameLoop' has already been declared\", source: file:///Users/madhatter2727/Projects/model-picker/bench/games/Bonsai-9B.html (208)"
+  ],
+  "pass": false,
+  "secs": 100.6,
+  "timed_out": false,
+  "error": null,
+  "chars": 7292,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/Bonsai-9B.html"
+ },
+ "free_end": 56
+}

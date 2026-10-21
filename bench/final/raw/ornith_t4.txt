@@ -1,0 +1,76 @@
+{
+ "text": "Here are the **3 most recently changed folders** in your Projects folder:\n\n| # | Folder | Last Modified |\n|---|--------|---------------|\n| 1 | **model-picker** | Oct 18, 2026 \u2014 18:58 UTC |\n| 2 | **magnitude-speed-lab** | Oct 17, 2026 \u2014 16:51 UTC |\n| 3 | **photo-reader** | Oct 15, 2026 \u2014 00:41 UTC |",
+ "tools": [
+  [
+   "list_folder",
+   {
+    "path": "Projects"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/ash-pier-san-francisco"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/ask-my-mac"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/magnitude-speed-lab"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/model-picker"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/one-space-mac-sources-backup-20261013"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/photo-reader"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/photo-reader-mac"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/proof"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/pulse-monitor"
+   }
+  ],
+  [
+   "file_info",
+   {
+    "path": "Projects/webbrain-osaurus-local"
+   }
+  ]
+ ],
+ "native": 11,
+ "total": 38.7,
+ "first": 5.57,
+ "words": 57,
+ "error": null
+}

@@ -1,0 +1,39 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #000;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+}
+
+#game {
+    display: block;
+    background-color: #000;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    color: #fff;
+    pointer-events: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#score, #lives {
+    font-size: 24px;
+    text-shadow: 2px 2px 4px #000;
+}

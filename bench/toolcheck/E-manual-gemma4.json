@@ -1,0 +1,19 @@
+{
+ "chatId": "cmvi737kouges",
+ "lock": null,
+ "note": "Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.",
+ "turns": [
+  {
+   "q": "List the folder ~/Projects/model-picker/test-sandbox/inbox",
+   "engine": "ollama",
+   "model": "gemma4:e2b",
+   "agentBox": true,
+   "header": "Ollama · gemma4:e2b  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Looking in ~/Projects/model-picker/test-sandbox/inbox… -> alpha.txt\nbeta.txt\ncmp.txt\ngamma.txt\nt2.txt\nt3.txt\nt4.txt"
+   ],
+   "reply": "The folder `~/Projects/model-picker/test-sandbox/inbox` contains the following files: alpha.txt, beta.txt, cmp.txt, gamma.txt, t2.txt, t3.txt, and t4.txt."
+  }
+ ]
+}

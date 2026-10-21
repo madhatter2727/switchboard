@@ -1,0 +1,1 @@
+step 2 attempt 1 pass False changed [] secs 2297.0 problems ['Space does not create bullets above the ship (topmost drawn row stayed at 125).'] free 52

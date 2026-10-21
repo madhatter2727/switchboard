@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Motivational Quotes</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f5f7fa;
+      color: #2d3436;
+    }
+    .card {
+      text-align: center;
+      max-width: 600px;
+      padding: 2rem;
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 8px 32px rgba(0,0,0,.08);
+    }
+    h1 { margin-top: 0; font-size: 1.4rem; color: #555; }
+    #quote {
+      min-height: 6em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1em;
+      font-style: italic;
+      line-height: 1.5;
+      color: #333;
+    }
+    button {
+      margin-top: 1rem;
+      padding: .6rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      background: #4a90d9;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    button:hover { background: #357abd; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Daily Motivation</h1>
+    <p id="quote">Click the button to get inspired!</p>
+    <button id="btn" onclick="newQuote()">New Quote</button>
+  </div>
+
+  <script>
+    const quotes = [
+      "The only way to do great work is to love what you do.",
+      "Believe you can and you're halfway there.",
+      "It does not matter how slowly you go as long as you do not stop.",
+      "In the middle of difficulty lies opportunity.",
+      "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+      "The future belongs to those who believe in the beauty of their dreams.",
+      "Act as if what you do makes a difference. It does.",
+      "You are never too old to set another goal or to dream a new dream.",
+      "Keep your face always toward the sunshine and shadows will fall behind you.",
+      "Everything you've ever wanted is on the other side of fear."
+    ];
+
+    function newQuote() {
+      const idx = Math.floor(Math.random() * quotes.length);
+      document.getElementById('quote').textContent = '"' + quotes[idx] + '"';
+    }
+
+    // Show a random quote immediately so the page isn't empty.
+    newQuote();
+  </script>
+</body>
+</html>

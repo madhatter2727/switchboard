@@ -1,0 +1,136 @@
+{
+ "model": "Bonsai-9B",
+ "id": "bonsai-2-9b",
+ "free_before": 76,
+ "turns": [
+  {
+   "steps": 8,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 1,
+   "secs": 221.0,
+   "files": {},
+   "js_errors": null,
+   "js_error_sample": [
+    "index.html missing"
+   ],
+   "features": 0,
+   "free": 59
+  },
+  {
+   "steps": 8,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 2,
+   "secs": 264.8,
+   "files": {
+    "game.js": 1,
+    "index.html": 29,
+    "style.css": 1
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 6,
+   "free": 57
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 3,
+   "secs": 313.2,
+   "files": {
+    "game.js": 1,
+    "index.html": 29,
+    "style.css": 13
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 6,
+   "free": 57
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 4,
+   "secs": 462.5,
+   "files": {
+    "game.js": 306,
+    "index.html": 29,
+    "style.css": 1
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 11,
+   "free": 58
+  },
+  {
+   "steps": 8,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 5,
+   "secs": 487.3,
+   "files": {
+    "game.js": 306,
+    "index.html": 29,
+    "style.css": 1
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 11,
+   "free": 58
+  },
+  {
+   "steps": 8,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 6,
+   "secs": 535.2,
+   "files": {
+    "game.js": 306,
+    "index.html": 29,
+    "style.css": 9
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 11,
+   "free": 57
+  }
+ ],
+ "start_secs": 5.3,
+ "free_after_load": 58,
+ "final_files": {
+  "game.js": 306,
+  "index.html": 29,
+  "style.css": 9
+ },
+ "final_loc": 344,
+ "final_js_errors": 0,
+ "final_js_error_sample": [],
+ "features": {
+  "controls_arrows_wasd": true,
+  "space_shoot": true,
+  "three_enemy_types": false,
+  "waves": true,
+  "powerups": true,
+  "lives": true,
+  "score": true,
+  "high_score_localstorage": true,
+  "start_screen": true,
+  "game_over_screen": true,
+  "webaudio_beeps": true,
+  "pause_key": true
+ },
+ "features_count": 11,
+ "total_secs": 535.6,
+ "free_min_seen": 57,
+ "free_end": 57,
+ "path": "/Users/madhatter2727/Projects/model-picker/bench/big/Bonsai-9B/index.html"
+}

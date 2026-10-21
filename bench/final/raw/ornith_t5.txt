@@ -1,0 +1,21 @@
+{
+ "text": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <title>Motivational Quotes</title>\n  <style>\n    body {\n      font-family: system-ui, sans-serif;\n      display: flex;\n      justify-content: center;\n      align-items: center;\n      min-height: 100vh;\n      margin: 0;\n      background: #f5f7fa;\n      color: #2d3436;\n    }\n    .card {\n      text-align: center;\n      max-width: 600px;\n      padding: 2rem;\n      border-radius: 16px;\n      background: white;\n      box-shadow: 0 8px 32px rgba(0,0,0,.08);\n    }\n    h1 { margin-top: 0; font-size: 1.4rem; color: #555; }\n    #quote {\n      min-height: 6em;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      padding: 1em;\n      font-style: italic;\n      line-height: 1.5;\n      color: #333;\n    }\n    button {\n      margin-top: 1rem;\n      padding: .6rem 1.4rem;\n      border: none;\n      border-radius: 8px;\n      background: #4a90d9;\n      color: white;\n      font-size: 1rem;\n      cursor: pointer;\n      transition: background .2s;\n    }\n    button:hover { background: #357abd; }\n  </style>\n</head>\n<body>\n  <div class=\"card\">\n    <h1>Daily Motivation</h1>\n    <p id=\"quote\">Click the button to get inspired!</p>\n    <button id=\"btn\" onclick=\"newQuote()\">New Quote</button>\n  </div>\n\n  <script>\n    const quotes = [\n      \"The only way to do great work is to love what you do.\",\n      \"Believe you can and you're halfway there.\",\n      \"It does not matter how slowly you go as long as you do not stop.\",\n      \"In the middle of difficulty lies opportunity.\",\n      \"Success is not final, failure is not fatal: it is the courage to continue that counts.\",\n      \"The future belongs to those who believe in the beauty of their dreams.\",\n      \"Act as if what you do makes a difference. It does.\",\n      \"You are never too old to set another goal or to dream a new dream.\",\n      \"Keep your face always toward the sunshine and shadows will fall behind you.\",\n      \"Everything you've ever wanted is on the other side of fear.\"\n    ];\n\n    function newQuote() {\n      const idx = Math.floor(Math.random() * quotes.length);\n      document.getElementById('quote').textContent = '\"' + quotes[idx] + '\"';\n    }\n\n    // Show a random quote immediately so the page isn't empty.\n    newQuote();\n  </script>\n</body>\n</html>\n```",
+ "first": 0.73,
+ "total": 50.8,
+ "words": 285,
+ "wps": 5.7,
+ "chrome": {
+  "btn": true,
+  "before": "Daily Motivation\n\n\"Act as if what you do makes a difference. It does.\"\n\nNew Quote",
+  "after": [
+   "Daily Motivation\n\n\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"Keep your face always toward the sunshine and shadows will fall behind you.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"Everything you've ever wanted is on the other side of fear.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"The only way to do great work is to love what you do.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"Success is not final, failure is not fatal: it is the courage to continue that counts.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"Act as if what you do makes a difference. It does.\"\n\nNew Quote",
+   "Daily Motivation\n\n\"Everything you've ever wanted is on the other side of fear.\"\n\nNew Quote"
+  ]
+ }
+}

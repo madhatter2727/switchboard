@@ -1,0 +1,69 @@
+{
+ "model": "Magnitude-gemma4-e2b",
+ "id": "gemma-4-e2b-it-qat:gguf:q4",
+ "prompts": {
+  "1 list folder": {
+   "final": "(no answer)",
+   "tools": [
+    "list_folder"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 0.4,
+   "error": null,
+   "pass": false
+  },
+  "2 changed this week": {
+   "final": "The following files in `Projects/mp-sandbox/docs` changed in the last 7 days:\n*   `shopping.txt`\n*   `trip-plan.txt`\n*   `budget-notes.txt`",
+   "tools": [
+    "list_files_by_date"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 0.8,
+   "error": null,
+   "pass": true
+  },
+  "3 read+summarize": {
+   "final": "The Q4 budget notes state that Marketing is allocated $4,200 for the October launch, and the design contractor, Priya, is paid on the 15th. There is an open risk regarding the printer quote expiring on November 3.",
+   "tools": [
+    "read_file_text"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 0.7,
+   "error": null,
+   "pass": true
+  },
+  "4 move file": {
+   "final": "(no answer)",
+   "tools": [
+    "move_items"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 0.6,
+   "error": null,
+   "pass": true
+  },
+  "5 two-step": {
+   "final": "The hotel name written in the file is Casa Azul.",
+   "tools": [
+    "list_folder",
+    "read_file_text"
+   ],
+   "steps": 2,
+   "native_calls": 2,
+   "text_form_calls": 0,
+   "secs": 0.8,
+   "error": null,
+   "pass": true
+  }
+ },
+ "start_secs": 5.5,
+ "score": 4
+}

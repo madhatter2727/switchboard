@@ -1,0 +1,21 @@
+{
+ "text": "Certainly! Below is a simple HTML file with a button that selects a random motivational quote and displays it on the page.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            text-align: center;\n            margin: 50px;\n        }\n        button {\n            padding: 10px 20px;\n            background-color: #4CAF50;\n            color: white;\n            border: none;\n            cursor: pointer;\n        }\n        button:hover {\n            background-color: #45a049;\n        }\n    </style>\n</head>\n<body>\n\n    <h1>Motivational Quote</h1>\n\n    <button onclick=\"getRandomQuote()\">Get a Quote</button>\n\n    <p id=\"quote\"></p>\n\n    <script>\n        function getRandomQuote() {\n            const quotes = [\n                \"The only way to do great work is to love what you do.\",\n                \"Believe you can and you're halfway there.\",\n                \"Success is not final, failure is not fatal: It is the courage to continue that counts.\",\n                \"Your time is limited, so don't waste it living someone else's life.\",\n                \"Do what you love, and you will never work a day in your life.\",\n            ];\n\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            const quote = quotes[randomIndex];\n\n            document.getElementById('quote').textContent = quote;\n        }\n    </script>\n\n</body>\n</html>\n```\n\nTo use this HTML file, simply copy and paste it into an HTML editor or a text editor, and save it with a `.html` extension. When you open the file in a web browser, you'll see a button that, when clicked, displays a random motivational quote on the page.",
+ "first": 0.24,
+ "total": 6.8,
+ "words": 215,
+ "wps": 32.6,
+ "chrome": {
+  "btn": true,
+  "before": "Motivational Quote\nGet a Quote",
+  "after": [
+   "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.",
+   "Motivational Quote\nGet a Quote\n\nYour time is limited, so don't waste it living someone else's life.",
+   "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.",
+   "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.",
+   "Motivational Quote\nGet a Quote\n\nBelieve you can and you're halfway there.",
+   "Motivational Quote\nGet a Quote\n\nYour time is limited, so don't waste it living someone else's life.",
+   "Motivational Quote\nGet a Quote\n\nBelieve you can and you're halfway there.",
+   "Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do."
+  ]
+ }
+}

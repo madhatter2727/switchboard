@@ -1,0 +1,7 @@
+{
+ "text": "A debt service coverage ratio is a simple financial measure that tells you how much money a building earns from renting out its apartments to pay off its loans and rent to tenants. Think of it as a safety net that ensures the building has enough cash flow to cover its monthly debt payments without needing to borrow more money.\n\nFor example, imagine a small apartment building that collects $100,000 in rent every month. If the building owes $80,000 in interest and principal payments plus $20,000 in new rent, the ratio is calculated by dividing the total income ($100,000) by the total debt payments ($100,000), resulting in a ratio of 1.0. This means the building earns exactly enough to cover its debts, which is a healthy and stable financial position.",
+ "first": 0.09,
+ "total": 2.3,
+ "words": 130,
+ "wps": 59.0
+}

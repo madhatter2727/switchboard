@@ -1,0 +1,69 @@
+{
+ "model": "Bonsai-27B",
+ "id": "bonsai-2-27b",
+ "prompts": {
+  "1 list folder": {
+   "final": "Files in `Projects/mp-sandbox/docs`:\n\n- budget-notes.txt\n- old-archive.txt\n- shopping.txt\n- trip-plan.txt",
+   "tools": [
+    "list_folder"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 7.7,
+   "error": null,
+   "pass": true
+  },
+  "2 changed this week": {
+   "final": "Three files changed in the last 7 days in Projects/mp-sandbox/docs:\n\n- shopping.txt (19 B, Oct 18, 2026 at 10:04 AM)\n- trip-plan.txt (66 B, Oct 18, 2026 at 10:04 AM)\n- budget-notes.txt (166 B, Oct 18, 2026 at 10:04 AM)",
+   "tools": [
+    "list_files_by_date"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 15.4,
+   "error": null,
+   "pass": true
+  },
+  "3 read+summarize": {
+   "final": "The Q4 budget allocates $4,200 to marketing for the October launch, with the design contractor Priya paid on the 15th. A key risk is that the printer quote expires on November 3.",
+   "tools": [
+    "read_file_text"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 9.6,
+   "error": null,
+   "pass": true
+  },
+  "4 move file": {
+   "final": "Prepared to move `Projects/mp-sandbox/scratch-delete-me.txt` into the new folder `Projects/mp-sandbox/archive`. Nothing has been changed yet \u2014 please approve to complete the move.",
+   "tools": [
+    "move_items"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 11.4,
+   "error": null,
+   "pass": true
+  },
+  "5 two-step": {
+   "final": "The hotel name is **Casa Azul**.",
+   "tools": [
+    "list_folder",
+    "read_file_text"
+   ],
+   "steps": 2,
+   "native_calls": 2,
+   "text_form_calls": 0,
+   "secs": 10.0,
+   "error": null,
+   "pass": true
+  }
+ },
+ "start_secs": 49.6,
+ "score": 5
+}

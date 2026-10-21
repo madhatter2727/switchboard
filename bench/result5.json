@@ -1,0 +1,94 @@
+{
+ "log": [
+  {
+   "step": 2,
+   "pass": false,
+   "tries": [
+    {
+     "step": 2,
+     "problems": [
+      "Space does not create bullets above the ship (topmost drawn row stayed at 125).",
+      "JavaScript error: Uncaught TypeError: Assignment to constant variable."
+     ],
+     "obs": {
+      "idle_pixels": 311,
+      "cx": [
+       63.4,
+       89.5,
+       34.5,
+       68.8
+      ],
+      "ship_top": 125,
+      "top_while_shooting": 125
+     },
+     "errors": [
+      "Uncaught TypeError: Assignment to constant variable."
+     ],
+     "pass": false,
+     "attempt": 1,
+     "model_secs": 212.9,
+     "changed": [
+      "game.js"
+     ],
+     "free": 58
+    },
+    {
+     "step": 2,
+     "problems": [
+      "Space does not create bullets above the ship (topmost drawn row stayed at 125).",
+      "JavaScript error: Uncaught TypeError: Assignment to constant variable."
+     ],
+     "obs": {
+      "idle_pixels": 311,
+      "cx": [
+       63.4,
+       89.5,
+       34.5,
+       68.8
+      ],
+      "ship_top": 125,
+      "top_while_shooting": 125
+     },
+     "errors": [
+      "Uncaught TypeError: Assignment to constant variable."
+     ],
+     "pass": false,
+     "attempt": 2,
+     "model_secs": 112.4,
+     "changed": [],
+     "free": 57
+    },
+    {
+     "step": 2,
+     "problems": [
+      "Space does not create bullets above the ship (topmost drawn row stayed at 125).",
+      "JavaScript error: Uncaught TypeError: Assignment to constant variable."
+     ],
+     "obs": {
+      "idle_pixels": 311,
+      "cx": [
+       63.4,
+       89.5,
+       34.5,
+       68.8
+      ],
+      "ship_top": 125,
+      "top_while_shooting": 125
+     },
+     "errors": [
+      "Uncaught TypeError: Assignment to constant variable."
+     ],
+     "pass": false,
+     "attempt": 3,
+     "model_secs": 127.5,
+     "changed": [],
+     "free": 57
+    }
+   ]
+  }
+ ],
+ "last_ok": 1,
+ "min_free": 57,
+ "secs": 484,
+ "done": true
+}

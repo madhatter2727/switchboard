@@ -1,0 +1,71 @@
+{
+ "model": "ornith-9b",
+ "id": "ornith:9b",
+ "free_before": 78,
+ "start_secs": 6.9,
+ "free_after_load": 27,
+ "A": {
+  "A1 fix bug": {
+   "pass": true,
+   "tries": 1,
+   "secs": 16.5,
+   "detail": [
+    {
+     "final": "Fixed. The original `range(n)` iterated over `[0, 1, ..., n-1]`, missing the last term `n`. Changed to `range(1, n+1)` so it sums exactly `1 + 2 + ... + n`.",
+     "tools": [
+      "read_file_text",
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 3,
+     "secs": 16.5,
+     "error": null,
+     "pass": true
+    }
+   ]
+  },
+  "A2 write module from spec": {
+   "pass": true,
+   "tries": 1,
+   "secs": 13.6,
+   "detail": [
+    {
+     "final": "Saved `Projects/mp-sandbox/proj2/textutils.py`. The two functions:\n\n- **`slugify(text)`** \u2014 lowercases, replaces every run of non-alphanumeric chars with a single `-`, then strips leading/trailing hyphens.\n- **`word_count(text)`** \u2014 splits on whitespace and returns the count (empty string or only-whitespace \u2192 0).",
+     "tools": [
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 2,
+     "secs": 13.6,
+     "error": null,
+     "pass": true
+    }
+   ]
+  }
+ },
+ "free_mid": 32,
+ "B": {
+  "attempts": [
+   {
+    "valid_html": true,
+    "js_errors": 0,
+    "loop": true,
+    "keys": true,
+    "score": true,
+    "canvas_or_dom": true,
+    "js_error_sample": [],
+    "pass": true,
+    "shoot": true,
+    "enemies": true,
+    "secs": 109.3,
+    "timed_out": false,
+    "error": null,
+    "chars": 5722
+   }
+  ],
+  "pass": true,
+  "tries": 1,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/shooter-ornith-9b.html"
+ },
+ "free_end": 26
+}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Motivator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        #quote-text {
+            font-size: 1.5rem;
+            font-style: italic;
+            color: #333;
+            margin-bottom: 20px;
+            line-height: 1.4;
+            min-height: 80px; /* Keeps layout stable */
+        }
+
+        .author {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        button {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+
+        button:hover {
+            background-color: #34495e;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="quote-text">"Loading quote..."</div>
+        <div class="author" id="author-text"></div>
+        <button onclick="getNewQuote()">Get New Quote</button>
+    </div>
+
+    <script>
+        // Array of motivational quotes and authors
+        const quotes = [
+            { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+            { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+            { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+            { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
+            { text: "You are never too old to set another goal or to dream a new dream.", author: "C.S. Lewis" },
+            { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+            { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+            { text: "Act as if what you do makes a difference. It does.", author: "William James" },
+            { text: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
+            { text: "The best way to predict the future is to create it.", author: "Peter Drucker" }
+        ];
+
+        function getNewQuote() {
+            // 1. Pick a random index from the array
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            
+            // 2. Get the quote data
+            const quote = quotes[randomIndex];
+            
+            // 3. Update the HTML elements
+            document.getElementById('quote-text').textContent = `"${quote.text}"`;
+            document.getElementById('author-text').textContent = `- ${quote.author}`;
+        }
+
+        // Run once on page load
+        getNewQuote();
+    </script>
+</body>
+</html>

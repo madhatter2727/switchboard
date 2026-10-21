@@ -1,0 +1,7 @@
+{
+ "text": "The debt service coverage ratio is a simple financial check that tells you if a property has enough money coming in to pay its bills. Think of it like a safety net: if the ratio is above 1.0, the building earns enough rent to cover its mortgage and taxes; if it's below 1.0, the building is losing money on those payments. For example, if an apartment building earns $100,000 in rent each month and its monthly debt payments (mortgage plus taxes) total $90,000, the ratio is 1.11, meaning the building is financially safe. However, if the rent drops to $80,000 while the bills stay the same, the ratio falls to 0.89, signaling that the building cannot afford its debts and might need help or a loan refinance.",
+ "first": 0.24,
+ "total": 6.1,
+ "words": 127,
+ "wps": 21.5
+}

@@ -1,0 +1,110 @@
+{
+ "model": "ornith-9b",
+ "id": "ornith:9b",
+ "free_before": 79,
+ "start_secs": 7.5,
+ "free_after_load": 26,
+ "A": {
+  "1 largest 3 + summarize": {
+   "final": "Here are the 3 largest text files in `Projects/mp-sandbox/big/`, ranked by size:\n\n1. **alpha.txt (8 KB)** \u2014 Repeated gardening notes about tomatoes needing six hours of sun and regular watering.\n2. **bravo.txt (6 KB)** \u2014 Repeated astronomy facts stating Jupiter has four large moons discovered by Galileo.\n3. **charlie.txt (4 KB)** \u2014 Repeated baking instructions for sourdough, mentioning a long slow rise and a hot oven.",
+   "tools": [
+    "list_folder",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "file_info",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 9,
+   "native_calls": 9,
+   "text_form_calls": 0,
+   "secs": 31.8,
+   "error": null,
+   "pass": true
+  },
+  "2 organize by type": {
+   "final": "Done! Here's how the files are organized now:\n\n- **images/** \u2014 photo1.jpg, photo2.png\n- **documents/** \u2014 notes.txt, todo.txt, report.pdf\n- **audio/** \u2014 song.mp3",
+   "tools": [
+    "list_folder",
+    "move_items",
+    "move_items",
+    "move_items",
+    "move_items"
+   ],
+   "steps": 5,
+   "native_calls": 5,
+   "text_form_calls": 0,
+   "secs": 22.1,
+   "error": null,
+   "pass": true
+  },
+  "3 find by content": {
+   "final": "**File:** `file4.txt`  \n**Password:** `mango-harbor-42`",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 6,
+   "native_calls": 6,
+   "text_form_calls": 0,
+   "secs": 15.1,
+   "error": null,
+   "pass": true
+  },
+  "4 list+read+move": {
+   "final": "Done. The two invoices are now in `Projects/mp-sandbox/inbox/invoices/`. The other files (`memo.txt`, `recipe.txt`) stayed put.\n\nTotal invoice amount: **$200** ($120 + $80).",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "move_items"
+   ],
+   "steps": 6,
+   "native_calls": 6,
+   "text_form_calls": 0,
+   "secs": 22.9,
+   "error": null,
+   "pass": true
+  },
+  "5 missing file": {
+   "final": "The file doesn't exist at that path, and I couldn't find a matching file via search. The directory `Projects/mp-sandbox/docs/` may not exist yet or the filename might be different. Could you double-check the exact path?",
+   "tools": [
+    "read_file_text",
+    "search_files"
+   ],
+   "steps": 2,
+   "native_calls": 2,
+   "text_form_calls": 0,
+   "secs": 10.1,
+   "error": null,
+   "pass": true
+  }
+ },
+ "A_score": 5,
+ "free_min_seen": 27,
+ "B": {
+  "valid_html": true,
+  "js_errors": 0,
+  "loop": true,
+  "keys": true,
+  "score": true,
+  "canvas_or_dom": true,
+  "js_error_sample": [],
+  "pass": true,
+  "secs": 86.7,
+  "timed_out": false,
+  "error": null,
+  "chars": 3880,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/ornith-9b.html"
+ },
+ "free_end": 25
+}

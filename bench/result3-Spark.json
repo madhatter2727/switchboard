@@ -1,0 +1,75 @@
+{
+ "model": "Spark",
+ "id": "spark-x2.5-4b-mlx",
+ "free_before": 77,
+ "start_secs": 3.0,
+ "free_after_load": 61,
+ "A": {
+  "A1 fix bug": {
+   "pass": true,
+   "tries": 1,
+   "secs": 14.6,
+   "detail": [
+    {
+     "final": "The bug has been fixed. Here's a summary:\n\n**Bug:** In `sum_to(n)`, the loop used `range(n)`, which starts at 0 and ends at `n-1`. This summed `0 + 1 + ... + (n-1)` instead of `1 + 2 + ... + n`. For example, `sum_to(5)` returned `10` instead of `15`.\n\n**Fix:** Changed the loop to `range(1, n + 1)`, so it sums `1 + 2 + ... + n` correctly.\n\nThe corrected `calc.py` has been saved to `Projects/mp-sand",
+     "tools": [
+      "read_file_text",
+      "read_file_text",
+      "write_file",
+      "write_file"
+     ],
+     "steps": 4,
+     "secs": 14.6,
+     "error": null,
+     "pass": true
+    }
+   ]
+  },
+  "A2 write module from spec": {
+   "pass": true,
+   "tries": 1,
+   "secs": 24.1,
+   "detail": [
+    {
+     "final": "The module is created correctly. Here's a summary of what was done:\n\n**Created `Projects/mp-sandbox/proj2/textutils.py`** with the two required functions:\n\n1. **`slugify(text)`**\n   - Lowercases the input text.\n   - Replaces every run of non-letter/non-digit characters with a single hyphen (`re.sub(r'[^a-z0-9]+', '-', s)`).\n   - Strips hyphens from both ends (`s.strip('-')`).\n\n2. **`word_count(tex",
+     "tools": [
+      "read_file_text",
+      "list_folder",
+      "write_file",
+      "write_file",
+      "read_file_text"
+     ],
+     "steps": 5,
+     "secs": 24.1,
+     "error": null,
+     "pass": true
+    }
+   ]
+  }
+ },
+ "free_mid": 52,
+ "B": {
+  "attempts": [
+   {
+    "valid_html": true,
+    "js_errors": 0,
+    "loop": true,
+    "keys": true,
+    "score": true,
+    "canvas_or_dom": true,
+    "js_error_sample": [],
+    "pass": true,
+    "shoot": true,
+    "enemies": true,
+    "secs": 56.1,
+    "timed_out": false,
+    "error": null,
+    "chars": 8111
+   }
+  ],
+  "pass": true,
+  "tries": 1,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/shooter-Spark.html"
+ },
+ "free_end": 52
+}

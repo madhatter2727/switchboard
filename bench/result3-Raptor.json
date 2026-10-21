@@ -1,0 +1,71 @@
+{
+ "model": "Raptor",
+ "id": "raptor-0.6-4b-jang_6m",
+ "free_before": 77,
+ "start_secs": 2.4,
+ "free_after_load": 48,
+ "A": {
+  "A1 fix bug": {
+   "pass": true,
+   "tries": 1,
+   "secs": 11.1,
+   "detail": [
+    {
+     "final": "Fixed `calc.py`. The loop now runs from `1` to `n` inclusive, so `sum_to(5)` returns `15`, `sum_to(0)` returns `0`, and `sum_to(1)` returns `1` \u2014 matching the test expectations.",
+     "tools": [
+      "read_file_text",
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 3,
+     "secs": 11.1,
+     "error": null,
+     "pass": true
+    }
+   ]
+  },
+  "A2 write module from spec": {
+   "pass": true,
+   "tries": 1,
+   "secs": 10.7,
+   "detail": [
+    {
+     "final": "Created `Projects/mp-sandbox/proj2/textutils.py` with both functions:\n\n- **slugify(text)**: lowercases, replaces runs of non-letter/non-digit chars with a single hyphen, and strips hyphens from both ends.\n- **word_count(text)**: counts whitespace-separated words.\n\nThe implementation matches the test expectations (e.g., `\"***\"` \u2192 `\"\"`, `\"one two  three\\nfour\"` \u2192 4). You can run the tests with `pyth",
+     "tools": [
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 2,
+     "secs": 10.7,
+     "error": null,
+     "pass": true
+    }
+   ]
+  }
+ },
+ "free_mid": 48,
+ "B": {
+  "attempts": [
+   {
+    "valid_html": true,
+    "js_errors": 0,
+    "loop": true,
+    "keys": true,
+    "score": true,
+    "canvas_or_dom": true,
+    "js_error_sample": [],
+    "pass": true,
+    "shoot": true,
+    "enemies": true,
+    "secs": 61.6,
+    "timed_out": false,
+    "error": null,
+    "chars": 7132
+   }
+  ],
+  "pass": true,
+  "tries": 1,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/shooter-Raptor.html"
+ },
+ "free_end": 51
+}

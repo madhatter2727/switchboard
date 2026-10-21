@@ -1,0 +1,21 @@
+{
+ "text": "Sure! Below is an example of an HTML file that includes a button. When you click the button, it will pick a random motivational quote from a predefined list and display it on the page.\n\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote Generator</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            height: 100vh;\n            margin: 0;\n            background-color: #f4f4f9;\n        }\n        #quote {\n            font-size: 24px;\n            color: #333;\n            margin-bottom: 20px;\n        }\n        button {\n            padding: 15px 30px;\n            font-size: 18px;\n            cursor: pointer;\n            background-color: #007BFF;\n            color: white;\n            border: none;\n            border-radius: 5px;\n        }\n        button:hover {\n            background-color: #0056b3;\n        }\n    </style>\n</head>\n<body>\n    <div id=\"quote\"></div>\n    <button onclick=\"getRandomQuote()\">Get a Quote</button>\n\n    <script>\n        const quotes = [\n            \"The only limit to our realization of tomorrow is our doubts of today.\",\n            \"Success is not final, failure is not fatal: It is the courage to continue that counts.\",\n            \"You are never too old to set another goal or to dream a new dream.\",\n            \"Believe you can and you're halfway there.\",\n            \"It does not matter how slowly you go as long as you do not stop.\"\n        ];\n\n        function getRandomQuote() {\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            document.getElementById('quote').innerText = quotes[randomIndex];\n        }\n    </script>\n</body>\n</html>\n```\n\n### How It Works:\n1. **HTML Structure**: The HTML file has a `div` element with the ID `quote` where the quote will be displayed, and a button that triggers the JavaScript function when clicked.\n2. **CSS Styling**: Basic styling is applied to center the content on the page and make it visually appealing.\n3. **JavaScript Functionality**: \n   - An array of motivational quotes is defined in the script section.\n   - The `getRandomQuote` function selects a random quote from the array and updates the text inside the `div` with the ID `quote`.\n\nYou can copy this code into an HTML file and open it in your web browser to see it in action.",
+ "first": 0.39,
+ "total": 31.1,
+ "words": 312,
+ "wps": 10.2,
+ "chrome": {
+  "btn": true,
+  "before": "Get a Quote",
+  "after": [
+   "Believe you can and you're halfway there.\nGet a Quote",
+   "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+   "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+   "You are never too old to set another goal or to dream a new dream.\nGet a Quote",
+   "Success is not final, failure is not fatal: It is the courage to continue that counts.\nGet a Quote",
+   "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+   "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote",
+   "The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote"
+  ]
+ }
+}

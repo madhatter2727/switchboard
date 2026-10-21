@@ -1,0 +1,7 @@
+{
+ "text": "The puzzle states that all labels are incorrect, which is the primary constraint. I start by analyzing the box labeled \"Mixed,\" which contains an apple. Since the label is wrong, this box cannot contain a mix; it must contain either only Apples or only Oranges. Because the fruit drawn is an Apple, this box must contain only Apples.\n\nNext, I look at the box labeled \"Oranges.\" Since all labels are wrong, it cannot contain Oranges. I need to determine if it contains Apples or Mixed. Since the \"Apples\" box is already identified, the \"Oranges\" box must contain the Mixed fruit.\n\nFinally, the remaining box is labeled \"Apples,\" and it must contain the remaining fruit, which is Oranges.\n\nBoxes:\nApples: Oranges\nOranges: Mixed\nMixed: Apples",
+ "first": 0.45,
+ "total": 6.9,
+ "words": 124,
+ "wps": 19.3
+}

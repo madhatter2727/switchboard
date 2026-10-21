@@ -1,0 +1,7 @@
+{
+ "text": "A debt service coverage ratio is a simple way to measure how much money a building owner has to cover its regular bills, like mortgage payments and property taxes. \n\nImagine you own a small apartment building that needs to pay $1,000 a month for its mortgage and $500 a month for property taxes. \n\nIf your building earns $3,000 a month in rent, your debt service coverage ratio is 3.0, meaning you have three times as much money coming in to pay those bills. \n\nThis ratio tells you how safe your building is financially, showing you have plenty of extra money to cover the costs without worrying about late payments.",
+ "first": 0.46,
+ "total": 5.3,
+ "words": 109,
+ "wps": 22.6
+}

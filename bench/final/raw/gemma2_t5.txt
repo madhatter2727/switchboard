@@ -1,0 +1,21 @@
+{
+ "text": "```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Motivational Quote Generator</title>\n    <style>\n        body {\n            font-family: sans-serif;\n            text-align: center;\n        }\n        #quote {\n            margin-top: 20px;\n            font-size: 24px;\n        }\n    </style>\n</head>\n<body>\n\n    <h1>Motivational Quote Generator</h1>\n\n    <button onclick=\"getQuote()\">Get a Quote!</button>\n\n    <div id=\"quote\"></div>\n\n    <script>\n        function getQuote() {\n            const quotes = [\n                \"The only way to do great work is to love what you do.\",\n                \"Believe you can and you're halfway there.\",\n                \"Challenges are what make life interesting. Overcoming them is what makes life meaningful.\",\n                \"Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.\"\n            ];\n\n            const randomIndex = Math.floor(Math.random() * quotes.length);\n            const quote = quotes[randomIndex];\n            document.getElementById(\"quote\").innerText = quote;\n        }\n    </script>\n\n</body>\n</html>\n```\n\n**Explanation:**\n\n1. **HTML Structure:** \n   - The code sets up a basic HTML structure with a title, heading (`<h1>`), button (`<button>`), and a `<div>` to display the quote.\n\n2. **CSS Styling:**\n   - Basic CSS styles are added for centering content and setting font size for the quote.\n\n3. **JavaScript Functionality:**\n   - `getQuote()` function:\n     - An array of quotes is defined (`quotes`).\n     - `Math.random()` generates a random number between 0 (inclusive) and 1 (exclusive).\n     -  `Math.floor()` rounds the random number down to an integer.\n     -  The random index is used to get a quote from the array.\n     -  `document.getElementById(\"quote\").innerText` sets the text content of the `div` with the ID \"quote\" to the selected quote.\n\n4. **Button Click Event:**\n   - The button's `onclick` attribute calls the `getQuote()` function when clicked, triggering the random quote generation and display.\n\n\n**How to Use:**\n\n1. Save this code as an HTML file (e.g., `quote_generator.html`).\n2. Open the file in a web browser. \n3. Click the \"Get a Quote!\" button to see a randomly selected motivational quote on the page.  \n\n\n\nLet me know if you have any more questions about this! ",
+ "first": 0.18,
+ "total": 10.3,
+ "words": 306,
+ "wps": 30.3,
+ "chrome": {
+  "btn": true,
+  "before": "Motivational Quote Generator\nGet a Quote!",
+  "after": [
+   "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+   "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+   "Motivational Quote Generator\nGet a Quote!\nThe only way to do great work is to love what you do.",
+   "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+   "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.",
+   "Motivational Quote Generator\nGet a Quote!\nChallenges are what make life interesting. Overcoming them is what makes life meaningful.",
+   "Motivational Quote Generator\nGet a Quote!\nThe only way to do great work is to love what you do.",
+   "Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time."
+  ]
+ }
+}

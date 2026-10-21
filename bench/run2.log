@@ -1,0 +1,31 @@
+Bonsai-4B A 1 largest 3 + summarize True 9 12.5 
+Bonsai-4B A 2 organize by type True 4 5.4 
+Bonsai-4B A 3 find by content True 6 5.0 
+Bonsai-4B A 4 list+read+move True 4 4.5 
+Bonsai-4B A 5 missing file True 1 1.9 
+Bonsai-4B B game False 41.0 40
+Spark A 1 largest 3 + summarize True 4 20.1 
+Spark A 2 organize by type False 2 30.3 
+Spark A 3 find by content True 9 13.3 
+Spark A 4 list+read+move True 6 17.7 
+Spark A 5 missing file True 7 15.1 
+Spark B game False 160.6 0
+Raptor A 1 largest 3 + summarize False 6 9.9 
+Raptor A 2 organize by type True 5 15.6 
+Raptor A 3 find by content True 7 8.6 
+Raptor A 4 list+read+move True 6 16.7 
+Raptor A 5 missing file True 4 10.1 
+Raptor B game True 55.3 0
+ornith-9b A 1 largest 3 + summarize True 9 31.8 
+ornith-9b A 2 organize by type True 5 22.1 
+ornith-9b A 3 find by content True 6 15.1 
+ornith-9b A 4 list+read+move True 6 22.9 
+ornith-9b A 5 missing file True 2 10.1 
+ornith-9b B game True 86.7 0
+Bonsai-9B A 1 largest 3 + summarize True 4 17.0 
+Bonsai-9B A 2 organize by type True 10 19.9 
+Bonsai-9B A 3 find by content True 7 10.9 
+Bonsai-9B A 4 list+read+move True 4 9.4 
+Bonsai-9B A 5 missing file False 2 7.1 
+Bonsai-9B B game False 100.6 1
+ALLDONE2

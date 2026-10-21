@@ -1,0 +1,7 @@
+{
+ "text": "Here is the step-by-step logical deduction:\n\n1.  **Analyze the Clue**: You picked an **Apple** from the box labeled **Mixed**.\n2.  **Deduce the Mixed Box**: Since the label is wrong, and you found an apple, the box labeled \"Mixed\" must actually contain only **Apples**.\n3.  **Analyze the Remaining Boxes**: We are left with the box labeled \"Apples\" and the box labeled \"Oranges\". We know one of them contains Oranges, and the other contains Mixed fruit.\n4.  **Test the \"Apples\" Label**: Look at the box labeled \"Apples\".\n    *   *Scenario A*: If this box contained Apples, then the label would be correct. But we know all labels are wrong. Therefore, this box cannot contain Apples.\n    *   *Scenario B*: Since it cannot contain Apples, and the only remaining fruit type is Mixed, this box must contain **Mixed** fruit.\n5.  **Determine the Last Box**: By elimination, the box labeled \"Oranges\" must contain the remaining fruit type, which is **Oranges**.\n\n**Final Answer:**\n*   **Mixed** (labeled): **Apples**\n*   **Apples** (labeled): **Mixed**\n*   **Oranges** (labeled): **Oranges**",
+ "first": 0.37,
+ "total": 11.3,
+ "words": 168,
+ "wps": 15.4
+}

@@ -1,0 +1,7 @@
+{
+ "text": "Imagine you are the landlord of a small apartment building that has borrowed money to buy the property. The debt service coverage ratio is simply a number that tells you how much extra money the rent from your tenants pays toward paying off that loan and interest. If this number is high, it means your tenants are paying enough to easily cover the loan payments, making the investment safe. Conversely, if the number is low, it suggests the rent might not be enough to handle the debt, which could be risky. Essentially, it is a safety check to ensure the building's income is strong enough to handle its financial obligations without trouble.",
+ "first": 0.15,
+ "total": 2.2,
+ "words": 112,
+ "wps": 55.4
+}

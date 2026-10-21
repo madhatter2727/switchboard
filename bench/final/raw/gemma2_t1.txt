@@ -1,0 +1,7 @@
+{
+ "text": "Just finished building a Mac app where you can literally pick any local AI model and chat with it!  \ud83e\udd2f Feeling pretty proud of myself right now. \ud83e\udd13 #learninginpublic (but not really) \n",
+ "first": 1.28,
+ "total": 2.0,
+ "words": 32,
+ "wps": 46.6
+}

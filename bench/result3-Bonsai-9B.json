@@ -1,0 +1,72 @@
+{
+ "model": "Bonsai-9B",
+ "id": "bonsai-2-9b",
+ "free_before": 75,
+ "start_secs": 5.6,
+ "free_after_load": 56,
+ "A": {
+  "A1 fix bug": {
+   "pass": true,
+   "tries": 1,
+   "secs": 12.1,
+   "detail": [
+    {
+     "final": "Fixed. The bug was that `range(n)` started from 0 and went to n-1, but we needed 1 to n inclusive. Changed to `range(1, n + 1)`.",
+     "tools": [
+      "read_file_text",
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 3,
+     "secs": 12.1,
+     "error": null,
+     "pass": true
+    }
+   ]
+  },
+  "A2 write module from spec": {
+   "pass": true,
+   "tries": 1,
+   "secs": 9.7,
+   "detail": [
+    {
+     "final": "Done. I created `textutils.py` with `slugify()` and `word_count()` functions. The tests should pass now.",
+     "tools": [
+      "list_folder",
+      "read_file_text",
+      "write_file"
+     ],
+     "steps": 3,
+     "secs": 9.7,
+     "error": null,
+     "pass": true
+    }
+   ]
+  }
+ },
+ "free_mid": 56,
+ "B": {
+  "attempts": [
+   {
+    "valid_html": true,
+    "js_errors": 0,
+    "loop": true,
+    "keys": true,
+    "score": true,
+    "canvas_or_dom": true,
+    "js_error_sample": [],
+    "pass": true,
+    "shoot": true,
+    "enemies": true,
+    "secs": 70.6,
+    "timed_out": false,
+    "error": null,
+    "chars": 9237
+   }
+  ],
+  "pass": true,
+  "tries": 1,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/shooter-Bonsai-9B.html"
+ },
+ "free_end": 56
+}

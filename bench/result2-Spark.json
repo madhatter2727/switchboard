@@ -1,0 +1,110 @@
+{
+ "model": "Spark",
+ "id": "spark-x2.5-4b-mlx",
+ "free_before": 78,
+ "start_secs": 4.5,
+ "free_after_load": 63,
+ "A": {
+  "1 largest 3 + summarize": {
+   "final": "Here are the 3 largest text files in `Projects/mp-sandbox/big`, each summarized in one line:\n\n1. **alpha.txt** (8 KB) \u2014 A gardening topic note: *Tomatoes need six hours of sun and regular watering.*\n2. **bravo.txt** (6 KB) \u2014 An astronomy topic note: *Jupiter has four large moons discovered by Galileo.*\n3. **charlie.txt** (4 KB) \u2014 A baking topic note: *Sourdough needs a long slow rise and a hot oven.*\n\nAll three files contain the same topic sentence repeated multiple times.",
+   "tools": [
+    "list_files_by_date",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 4,
+   "native_calls": 4,
+   "text_form_calls": 0,
+   "secs": 20.1,
+   "error": null,
+   "pass": true
+  },
+  "2 organize by type": {
+   "final": "(no answer)",
+   "tools": [
+    "list_folder",
+    "move_items"
+   ],
+   "steps": 2,
+   "native_calls": 2,
+   "text_form_calls": 0,
+   "secs": 30.3,
+   "error": null,
+   "pass": false
+  },
+  "3 find by content": {
+   "final": "The file is **`Projects/mp-sadbox/clues/file4.txt`**, and the guest WiFi password is **`mango-harbor-42`**.\n\n(Note: the path is `Projects/mp-sandbox/clues/file4.txt` \u2014 I corrected the typo in your query.)",
+   "tools": [
+    "search_files",
+    "list_folder",
+    "list_folder",
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text"
+   ],
+   "steps": 9,
+   "native_calls": 9,
+   "text_form_calls": 0,
+   "secs": 13.3,
+   "error": null,
+   "pass": true
+  },
+  "4 list+read+move": {
+   "final": "Done. Here's the summary:\n\n**Files moved:**\n- `invoice-a.txt` \u2192 `Projects/mp-sandbox/inbox/invoices/invoice-a.txt`\n- `invoice-b.txt` \u2192 `Projects/mp-sandbox/inbox/invoices/invoice-b.txt`\n\n**Files left in place:**\n- `memo.txt`\n- `recipe.txt`\n\n**Total amount of invoices:** **$200.00** ($120.00 + $80.00)",
+   "tools": [
+    "list_folder",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "read_file_text",
+    "move_items"
+   ],
+   "steps": 6,
+   "native_calls": 6,
+   "text_form_calls": 0,
+   "secs": 17.7,
+   "error": null,
+   "pass": true
+  },
+  "5 missing file": {
+   "final": "I can't read that file. The path `Projects/mp-sandbox/docs/tax-2025.txt` doesn't exist \u2014 the `Projects/mp-sandbox/docs` folder is empty (confirmed via `list_folder`), and a search for `tax-2025` and `tax` found no matching file.\n\nSo there's no total number in that file to report. If you can confirm the correct path or provide the file elsewhere, let me know and I'll try again.",
+   "tools": [
+    "read_file_text",
+    "list_files_by_date",
+    "search_files",
+    "list_folder",
+    "file_info",
+    "search_files",
+    "search_files"
+   ],
+   "steps": 7,
+   "native_calls": 7,
+   "text_form_calls": 0,
+   "secs": 15.1,
+   "error": null,
+   "pass": true
+  }
+ },
+ "A_score": 4,
+ "free_min_seen": 54,
+ "B": {
+  "valid_html": false,
+  "js_errors": 0,
+  "loop": false,
+  "keys": false,
+  "score": false,
+  "canvas_or_dom": false,
+  "js_error_sample": [],
+  "pass": false,
+  "secs": 160.6,
+  "timed_out": false,
+  "error": null,
+  "chars": 0,
+  "path": "/Users/madhatter2727/Projects/model-picker/bench/games/Spark.html"
+ },
+ "free_end": 54
+}

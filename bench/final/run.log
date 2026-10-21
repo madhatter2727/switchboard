@@ -1,0 +1,62 @@
+== Bonsai 4B
+1 0.17 45.6 0.7
+2 0.15 55.4 2.2
+3 0.15 31.8 4.8
+4 6.6 None
+5 0.12 21.2 15.9 {'btn': True, 'before': 'Daily Inspiration\nClick the button below for a new quote!\n\nGet a New Quote', 'after': ['Daily Inspiration\nIt does not matter how slowly you go as long as you do not stop.\n\n— Confucius\n\nGet a New Quote', 'Daily Inspiration\nThe future belongs to those who believe in the beauty of their dreams.\n\n— Eleanor Roosevelt\n\nGet a New Quote', "Daily Inspiration\nYour limitation—it's only your imagination.\n\n— Unknown\n\nGet a New Quote", 'Daily Inspiration\nIt does not matter how slowly you go as long as you do not stop.\n\n— Confucius\n\nGet a New Quote', 'Daily Inspiration\nThe future belongs to those who believe in the beauty of their dreams.\n\n— Eleanor Roosevelt\n\nGet a New Quote', 'Daily Inspiration\nThe future belongs to those who believe in the beauty of their dreams.\n\n— Eleanor Roosevelt\n\nGet a New Quote', "Daily Inspiration\nBelieve you can and you're halfway there.\n\n— Theodore Roosevelt\n\nGet a New Quote", "Daily Inspiration\nIt always seems impossible until it's done.\n\n— Nelson Mandela\n\nGet a New Quote"]}
+== Gemma2 2B
+1 1.28 46.6 2.0
+2 0.18 56.1 1.6
+3 0.18 38.1 2.3
+4 0.1 HTTP 400 {"error":{"message":"registry.ollama.ai/library/gemma2:2b does not support tools","type":"invalid_request_error","param":null,"code":null}}
+
+5 0.18 30.3 10.3 {'btn': True, 'before': 'Motivational Quote Generator\nGet a Quote!', 'after': ['Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.', 'Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.', 'Motivational Quote Generator\nGet a Quote!\nThe only way to do great work is to love what you do.', 'Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.', 'Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.', 'Motivational Quote Generator\nGet a Quote!\nChallenges are what make life interesting. Overcoming them is what makes life meaningful.', 'Motivational Quote Generator\nGet a Quote!\nThe only way to do great work is to love what you do.', 'Motivational Quote Generator\nGet a Quote!\nOur greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.']}
+== Qwen3.5 2B
+1 0.8 58.3 1.2
+2 0.09 59.0 2.3
+3 0.09 41.1 2.0
+4 10.9 None
+5 0.1 31.1 21.4 {'btn': True, 'before': 'Loading...\n\nGet a New Quote', 'after': ['Get a New Quote', 'Get a New Quote', 'Get a New Quote', 'Get a New Quote', 'Get a New Quote', 'Get a New Quote', 'Get a New Quote', 'Get a New Quote']}
+== Gemma 4 E2B
+1 6.97 47.5 7.4
+2 0.3 34.8 2.7
+3 0.3 36.7 6.1
+4 5.7 None
+5 0.3 23.6 15.0 {'btn': True, 'before': '✨ Daily Motivation ✨\nClick the button to get inspired!\nGet New Quote', 'after': ['✨ Daily Motivation ✨\nThe best time to plant a tree was 20 years ago. The second best time is now. - Chinese Proverb\nGet New Quote', '✨ Daily Motivation ✨\nStrive not to be a success, but rather to be of value. - Albert Einstein\nGet New Quote', "✨ Daily Motivation ✨\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote", "✨ Daily Motivation ✨\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote", "✨ Daily Motivation ✨\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote", '✨ Daily Motivation ✨\nThe journey of a thousand miles begins with a single step. - Lao Tzu\nGet New Quote', '✨ Daily Motivation ✨\nThe future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt\nGet New Quote', "✨ Daily Motivation ✨\nBelieve you can and you're halfway there. - Theodore Roosevelt\nGet New Quote"]}
+== Apple Foundation
+1 1.72 106.0 2.0
+2 0.29 52.3 2.1
+3 0.29 49.8 1.7
+4 7.3 HTTP 500 {"error":{"message":"prompt exceeds the Foundation Model context window (Content contains 4433 tokens, which exceeds the maximum allowed context size of 4096.)","type":"internal_error"}}
+5 0.24 32.6 6.8 {'btn': True, 'before': 'Motivational Quote\nGet a Quote', 'after': ['Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.', "Motivational Quote\nGet a Quote\n\nYour time is limited, so don't waste it living someone else's life.", 'Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.', 'Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.', "Motivational Quote\nGet a Quote\n\nBelieve you can and you're halfway there.", "Motivational Quote\nGet a Quote\n\nYour time is limited, so don't waste it living someone else's life.", "Motivational Quote\nGet a Quote\n\nBelieve you can and you're halfway there.", 'Motivational Quote\nGet a Quote\n\nThe only way to do great work is to love what you do.']}
+== Raptor 0.6
+1 1.88 29.7 2.8
+2 0.46 22.6 5.3
+3 0.45 19.3 6.9
+4 13.6 None
+5 0.94 5.3 65.8 {'btn': True, 'before': '名言 8\n成功不是终点，而是不断超越自我的旅程。\n获取励志名言', 'after': ['名言 10\n改变从内心开始，积极的心态是改变的第一步。\n获取励志名言', '名言 6\n时间会证明一切，耐心与坚持终将收获成果。\n获取励志名言', '名言 8\n成功不是终点，而是不断超越自我的旅程。\n获取励志名言', '名言 10\n改变从内心开始，积极的心态是改变的第一步。\n获取励志名言', '名言 4\n困难是成长的催化剂，跨越它，你将变得更强大。\n获取励志名言', '名言 4\n困难是成长的催化剂，跨越它，你将变得更强大。\n获取励志名言', '名言 9\n每一份努力都不会被辜负，坚持终将迎来曙光。\n获取励志名言', '名言 4\n困难是成长的催化剂，跨越它，你将变得更强大。\n获取励志名言']}
+== Spark X2.5
+1 2.13 40.6 2.8
+2 0.62 31.5 5.1
+3 0.17 20.1 12.7
+4 15.5 None
+5 0.19 14.4 39.7 {'btn': True, 'before': 'Motivational Quote\n\nClick the button to get a random quote!\n\nGet a Random Quote', 'after': ['Motivational Quote\n\nDo not let the fear of failure stop you from taking the first step.\n\nGet a Random Quote', 'Motivational Quote\n\nThe only way to have a good day is to accept that the day will end.\n\nGet a Random Quote', 'Motivational Quote\n\nThe only way to have a good day is to accept that the day will end.\n\nGet a Random Quote', 'Motivational Quote\n\nIt is not enough to be able to fight for what you believe in; you must also be able to fight for what you hope for.\n\nGet a Random Quote', 'Motivational Quote\n\nEvery great achievement was once an idea, and the only way to turn an idea into reality is to take action.\n\nGet a Random Quote', 'Motivational Quote\n\nIt is not enough to be able to fight for what you believe in; you must also be able to fight for what you hope for.\n\nGet a Random Quote', 'Motivational Quote\n\nThe only thing worse than being watched is being unwatched.\n\nGet a Random Quote', 'Motivational Quote\n\nThe future belongs to those who believe in the beauty of their dreams.\n\nGet a Random Quote']}
+== Qwen2.5-Coder 7B
+1 2.67 12.5 4.7
+2 0.36 13.0 8.3
+3 0.41 12.0 12.5
+4 5.9 None
+5 0.39 10.2 31.1 {'btn': True, 'before': 'Get a Quote', 'after': ["Believe you can and you're halfway there.\nGet a Quote", 'The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote', 'The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote', 'You are never too old to set another goal or to dream a new dream.\nGet a Quote', 'Success is not final, failure is not fatal: It is the courage to continue that counts.\nGet a Quote', 'The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote', 'The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote', 'The only limit to our realization of tomorrow is our doubts of today.\nGet a Quote']}
+== Bonsai 9B
+1 0.41 31.9 1.1
+2 0.24 21.5 6.1
+3 0.37 15.4 11.3
+4 25.6 None
+5 0.24 10.5 39.2 {'btn': True, 'before': '"You are never too old to set another goal or to dream a new dream."\n- C.S. Lewis\nGet New Quote', 'after': ['"Success is not final, failure is not fatal: it is the courage to continue that counts."\n- Winston Churchill\nGet New Quote', '"The only way to do great work is to love what you do."\n- Steve Jobs\nGet New Quote', '"Believe you can and you\'re halfway there."\n- Theodore Roosevelt\nGet New Quote', '"Life is what happens when you\'re busy making other plans."\n- John Lennon\nGet New Quote', '"Believe you can and you\'re halfway there."\n- Theodore Roosevelt\nGet New Quote', '"The only way to do great work is to love what you do."\n- Steve Jobs\nGet New Quote', '"It does not matter how slowly you go as long as you do not stop."\n- Confucius\nGet New Quote', '"Act as if what you do makes a difference. It does."\n- William James\nGet New Quote']}
+== ornith 9B
+1 3.58 14.1 11.3
+2 0.67 11.2 12.8
+3 0.66 10.2 61.3
+4 38.7 None
+5 0.73 5.7 50.8 {'btn': True, 'before': 'Daily Motivation\n\n"Act as if what you do makes a difference. It does."\n\nNew Quote', 'after': ['Daily Motivation\n\n"Success is not final, failure is not fatal: it is the courage to continue that counts."\n\nNew Quote', 'Daily Motivation\n\n"Keep your face always toward the sunshine and shadows will fall behind you."\n\nNew Quote', 'Daily Motivation\n\n"Success is not final, failure is not fatal: it is the courage to continue that counts."\n\nNew Quote', 'Daily Motivation\n\n"Everything you\'ve ever wanted is on the other side of fear."\n\nNew Quote', 'Daily Motivation\n\n"The only way to do great work is to love what you do."\n\nNew Quote', 'Daily Motivation\n\n"Success is not final, failure is not fatal: it is the courage to continue that counts."\n\nNew Quote', 'Daily Motivation\n\n"Act as if what you do makes a difference. It does."\n\nNew Quote', 'Daily Motivation\n\n"Everything you\'ve ever wanted is on the other side of fear."\n\nNew Quote']}
+DONE 676

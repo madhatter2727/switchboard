@@ -1,0 +1,216 @@
+{
+ "started": "14:13:59",
+ "steps": {
+  "3": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 69,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        1,
+        0
+       ]
+      },
+      "problems": [],
+      "ok": true
+     }
+    }
+   ],
+   "goal": "Add ONE enemy type: enemies (red circles or squares about 24px) spawn at the top at a random x every ~1 second and fall straight down at a steady speed. Keep them in an array named enemies. Remove an enemy from the array when it leaves the bottom of the canvas. Do not add collisions or scoring yet.",
+   "result": "pass"
+  },
+  "3.5": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 77,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        1,
+        0
+       ],
+       "score_before": 0,
+       "score_after": 10,
+       "score_rose": true,
+       "lives_before": 3,
+       "lives_after": 3,
+       "lives_dropped": false
+      },
+      "problems": [
+       "Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3"
+      ],
+      "ok": false
+     }
+    },
+    {
+     "try": 2,
+     "model_s": 67,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        1,
+        0
+       ],
+       "score_before": 0,
+       "score_after": 10,
+       "score_rose": true,
+       "lives_before": 3,
+       "lives_after": 2,
+       "lives_dropped": true
+      },
+      "problems": [],
+      "ok": true
+     }
+    }
+   ],
+   "goal": "Add collisions and score. (1) Bullet-vs-enemy: loop over bullets and enemies; if their axis-aligned bounding boxes overlap, remove BOTH and do score += 10, then update the #score text as 'Score: N'. (2) Ship-vs-enemy: if the ship's bounding box overlaps an enemy, remove the enemy and do lives -= 1, then update the #lives text as 'Lives: N'. Use a helper function overlaps(a,b) with x,y,w,h rectangles; store w and h on the ship, bullets and enemies.",
+   "result": "pass"
+  },
+  "4": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 89,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        0,
+        0
+       ],
+       "score_before": 0,
+       "score_after": 10,
+       "score_rose": true,
+       "lives_before": 3,
+       "lives_after": 3,
+       "lives_dropped": false,
+       "game_over_seen": false
+      },
+      "problems": [
+       "Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3",
+       "game over never appeared within idle wait (lives not decreasing / no gameover overlay)"
+      ],
+      "ok": false
+     }
+    },
+    {
+     "try": 2,
+     "model_s": 86,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        0,
+        0
+       ],
+       "score_before": 0,
+       "score_after": 0,
+       "score_rose": false,
+       "lives_before": 3,
+       "lives_after": 3,
+       "lives_dropped": false,
+       "game_over_seen": false
+      },
+      "problems": [
+       "Score did not rise: bullets shot at enemies for 32s but score stayed 0",
+       "Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3",
+       "game over never appeared within idle wait (lives not decreasing / no gameover overlay)"
+      ],
+      "ok": false
+     }
+    },
+    {
+     "try": 3,
+     "model_s": 85,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        0,
+        0
+       ],
+       "score_before": 0,
+       "score_after": 10,
+       "score_rose": true,
+       "lives_before": 3,
+       "lives_after": 3,
+       "lives_dropped": false,
+       "game_over_seen": false
+      },
+      "problems": [
+       "Lives did not drop: ship swept across the field for 35s without shooting but lives stayed 3",
+       "game over never appeared within idle wait (lives not decreasing / no gameover overlay)"
+      ],
+      "ok": false
+     }
+    }
+   ],
+   "goal": "Add lives (start with 3), a game over state and restart. When lives reach 0, stop the game and show the DOM overlay #gameover-screen (class overlay, show by removing class hidden) with the final score and a button #restart-btn; pressing the button or Enter restarts a fresh game and hides the overlay.",
+   "result": "FAILED 3 times"
+  }
+ },
+ "last_good_step": 3.5,
+ "status": "stopped: step 4 failed 3 times",
+ "current": null,
+ "mem_free_pct": {
+  "start": 73,
+  "min_seen": 42,
+  "end": 72
+ },
+ "elapsed_s": 1123,
+ "finished": "14:32:43"
+}

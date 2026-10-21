@@ -1,0 +1,69 @@
+{
+ "model": "ornith-9b",
+ "id": "ornith:9b",
+ "prompts": {
+  "1 list folder": {
+   "final": "The folder `Projects/mp-sandbox/docs` contains:\n\n- budget-notes.txt\n- old-archive.txt\n- shopping.txt\n- trip-plan.txt",
+   "tools": [
+    "list_folder"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 4.9,
+   "error": null,
+   "pass": true
+  },
+  "2 changed this week": {
+   "final": "Three files changed in the last 7 days in `Projects/mp-sandbox/docs`:\n\n- **shopping.txt** (19 B)\n- **trip-plan.txt** (66 B)\n- **budget-notes.txt** (166 B)\n\nAll were modified today, Oct 18.",
+   "tools": [
+    "list_files_by_date"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 7.3,
+   "error": null,
+   "pass": true
+  },
+  "3 read+summarize": {
+   "final": "The Q4 budget allocates $4,200 to marketing for the October launch and schedules payment of the design contractor Priya on the 15th, with a key risk that the printer quote expires November 3.",
+   "tools": [
+    "read_file_text"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 6.0,
+   "error": null,
+   "pass": true
+  },
+  "4 move file": {
+   "final": "Done \u2014 `scratch-delete-me.txt` is now in `~/Projects/mp-sandbox/archive/`.",
+   "tools": [
+    "move_items"
+   ],
+   "steps": 1,
+   "native_calls": 1,
+   "text_form_calls": 0,
+   "secs": 5.6,
+   "error": null,
+   "pass": true
+  },
+  "5 two-step": {
+   "final": "The hotel is **Casa Azul**.",
+   "tools": [
+    "list_folder",
+    "read_file_text"
+   ],
+   "steps": 2,
+   "native_calls": 2,
+   "text_form_calls": 0,
+   "secs": 6.6,
+   "error": null,
+   "pass": true
+  }
+ },
+ "start_secs": 6.3,
+ "score": 5
+}

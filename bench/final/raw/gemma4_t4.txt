@@ -1,0 +1,17 @@
+{
+ "text": "The three most recently changed items in your Projects folder are:\n\n1.  `model-picker/selftest.png` (Oct 18, 2026 at 2:58 PM)\n2.  `model-picker/selftest.json` (Oct 18, 2026 at 2:58 PM)\n3.  `model-picker/bench/bench3.py` (Oct 18, 2026 at 10:46 AM)",
+ "tools": [
+  [
+   "list_files_by_date",
+   {
+    "days_back": 7,
+    "folder": "Projects"
+   }
+  ]
+ ],
+ "native": 1,
+ "total": 5.7,
+ "first": 1.58,
+ "words": 35,
+ "error": null
+}

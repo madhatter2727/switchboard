@@ -1,0 +1,10 @@
+/Users/madhatter2727/Projects/model-picker/bench/big/Raptor-v2/driver.py:108: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  return sum(1 for v in d.getdata() if v)
+/Users/madhatter2727/Projects/model-picker/bench/big/Raptor-v2/driver.py:108: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  return sum(1 for v in d.getdata() if v)
+/Users/madhatter2727/Projects/model-picker/bench/big/Raptor-v2/driver.py:108: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  return sum(1 for v in d.getdata() if v)
+/Users/madhatter2727/Projects/model-picker/bench/big/Raptor-v2/driver.py:108: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  return sum(1 for v in d.getdata() if v)
+/Users/madhatter2727/Projects/model-picker/bench/big/Raptor-v2/driver.py:108: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  return sum(1 for v in d.getdata() if v)

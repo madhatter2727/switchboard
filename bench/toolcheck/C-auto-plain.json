@@ -1,0 +1,33 @@
+{
+ "chatId": "cmvi70k54919h",
+ "lock": {
+  "e": "bonsai4b",
+  "m": "bonsai-2-4b",
+  "name": "Bonsai 4B",
+  "why": "quick chat",
+  "agent": true
+ },
+ "note": "Auto locked this chat to Bonsai 4B with Agent mode (file and folder tools) on. Start a new chat for a fresh pick.",
+ "turns": [
+  {
+   "q": "Hi! Tell me a fun fact about otters.",
+   "engine": "bonsai4b",
+   "model": "bonsai-2-4b",
+   "agentBox": true,
+   "header": "Auto · locked to Bonsai 4B for this chat",
+   "label": "Auto picked Bonsai 4B (quick chat) · locked for this chat",
+   "steps": [],
+   "reply": "Otters are unique because they have webbed feet that help them swim, but unlike most other mammals, they don't have eyelids that close completely—instead, they have \"nictitating membranes\" that sweep across their eyes to keep them clean while swimming."
+  },
+  {
+   "q": "Nice, give me one more fun fact",
+   "engine": "bonsai4b",
+   "model": "bonsai-2-4b",
+   "agentBox": true,
+   "header": "Auto · locked to Bonsai 4B for this chat",
+   "label": "Auto picked Bonsai 4B (quick chat) · locked for this chat",
+   "steps": [],
+   "reply": "Otters are the only mammals that groom each other! They spend a lot of time bathing and cleaning their fur together, which helps keep their skin healthy and their fur fluffy."
+  }
+ ]
+}

@@ -1,0 +1,221 @@
+import Cocoa
+import ServiceManagement
+import WebKit
+
+final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHandler, URLSessionDataDelegate {
+    weak var web: WKWebView?
+    var tasks: [Int: URLSessionDataTask] = [:]
+    var bufs: [Int: Data] = [:]
+    var session: URLSession!
+    override init() { super.init(); session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil) }
+
+    func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        let d = m.body as? [String: Any] ?? [:]
+        if m.name == "net" {
+            guard let us = d["url"] as? String, let url = localOK(us) else { replyHandler(["error": "blocked", "status": 0, "body": ""], nil); return }
+            var r = URLRequest(url: url); r.httpMethod = (d["method"] as? String) ?? "GET"; r.timeoutInterval = (d["timeout"] as? Double) ?? 5
+            if let b = d["body"] as? String { r.httpBody = b.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+            let cfg = URLSessionConfiguration.ephemeral; cfg.timeoutIntervalForRequest = r.timeoutInterval
+            URLSession(configuration: cfg).dataTask(with: r) { data, resp, err in
+                if err != nil { replyHandler(["error": "unreachable", "status": 0, "body": ""], nil); return }
+                replyHandler(["status": (resp as? HTTPURLResponse)?.statusCode ?? 0, "body": String(data: data ?? Data(), encoding: .utf8) ?? ""], nil)
+            }.resume()
+        } else if m.name == "act" {
+            let op = d["op"] as? String ?? "", eng = d["engine"] as? String ?? ""
+            DispatchQueue.global().async { replyHandler(self.act(op, eng, d), nil) }
+        } else { replyHandler(nil, "unknown") }
+    }
+
+    func act(_ op: String, _ eng: String, _ d: [String: Any]) -> [String: Any] {
+        ensureDirs()
+        let fm = FileManager.default
+        switch op {
+        case "list":
+            let (_, _) = (0, 0)
+            let ids = modelIds(ENGINE_DEFS.first { $0.id == eng } ?? ENGINE_DEFS[0])
+            return ["lines": ids]
+        case "saveChat":
+            if let id = d["id"] as? String, let t = d["json"] as? String, id.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }) {
+                try? t.write(toFile: CHATS + "/" + id + ".json", atomically: true, encoding: .utf8) }
+            return ["ok": true]
+        case "listChats":
+            let files = ((try? fm.contentsOfDirectory(atPath: CHATS)) ?? []).filter { $0.hasSuffix(".json") }
+            return ["chats": files.compactMap { try? String(contentsOfFile: CHATS + "/" + $0, encoding: .utf8) }]
+        case "trashChat":
+            if let id = d["id"] as? String, id.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }) {
+                try? fm.trashItem(at: URL(fileURLWithPath: CHATS + "/" + id + ".json"), resultingItemURL: nil) }
+            return ["ok": true]
+        case "toolRun": return AgentTools.run(d["name"] as? String ?? "", d["args"] as? String ?? "{}")
+        case "toolApply" where (d["pendingId"] as? String ?? "") != "": return PortTools.apply(pendingId: d["pendingId"] as! String)
+        case "toolApply": return ["text": AgentTools.apply(d["name"] as? String ?? "", d["args"] as? String ?? "{}")]
+        case "state":
+            if let t = d["json"] as? String { try? t.write(toFile: STATE, atomically: true, encoding: .utf8) }
+            return ["ok": true]
+        default: if let r = PortTools.handle(op, d) { return r }; return engineAct(op, eng, d)
+        }
+    }
+
+    // ---- streaming chat ----
+    func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
+        let d = m.body as? [String: Any] ?? [:]
+        guard let id = d["id"] as? Int else { return }
+        if (d["cmd"] as? String) == "cancel" { tasks[id]?.cancel(); return }
+        guard let us = d["url"] as? String, let url = localOK(us) else { emit(id, "error", "blocked"); return }
+        var r = URLRequest(url: url); r.httpMethod = "POST"; r.timeoutInterval = 600
+        r.httpBody = (d["body"] as? String)?.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let t = session.dataTask(with: r); tasks[id] = t; bufs[id] = Data(); t.taskDescription = "\(id)"; t.resume()
+    }
+    func idOf(_ t: URLSessionTask) -> Int { Int(t.taskDescription ?? "") ?? -1 }
+    func urlSession(_ s: URLSession, dataTask t: URLSessionDataTask, didReceive resp: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        if let h = resp as? HTTPURLResponse, h.statusCode >= 400 { emit(idOf(t), "error", "The engine answered with error \(h.statusCode).") }
+        completionHandler(.allow)
+    }
+    func urlSession(_ s: URLSession, dataTask t: URLSessionDataTask, didReceive data: Data) {
+        let id = idOf(t); var b = bufs[id] ?? Data(); b.append(data)
+        while let nl = b.firstIndex(of: 10) {
+            let line = String(data: b[b.startIndex..<nl], encoding: .utf8) ?? ""
+            b = Data(b[(nl + 1)...]); emit(id, "line", line)
+        }
+        bufs[id] = b
+    }
+    func urlSession(_ s: URLSession, task t: URLSessionTask, didCompleteWithError e: Error?) {
+        let id = idOf(t)
+        if let rest = bufs[id], !rest.isEmpty, let l = String(data: rest, encoding: .utf8) { emit(id, "line", l) }
+        if let e = e as NSError?, e.code != NSURLErrorCancelled { emit(id, "error", "Could not reach the engine.") }
+        emit(id, "done", ""); tasks[id] = nil; bufs[id] = nil
+    }
+    func emit(_ id: Int, _ type: String, _ text: String) {
+        guard let j = try? JSONSerialization.data(withJSONObject: ["id": id, "type": type, "text": text]), let s = String(data: j, encoding: .utf8) else { return }
+        DispatchQueue.main.async { self.web?.evaluateJavaScript("window.__stream && window.__stream(\(s))", completionHandler: nil) }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation {
+    var window: NSWindow!
+    var web: WKWebView!
+    let bridge = Bridge()
+    func applicationDidFinishLaunching(_ n: Notification) {
+        let cfg = WKWebViewConfiguration(); let ucc = WKUserContentController()
+        ucc.addScriptMessageHandler(bridge, contentWorld: .page, name: "net")
+        ucc.addScriptMessageHandler(bridge, contentWorld: .page, name: "act")
+        ucc.add(bridge, name: "stream"); cfg.userContentController = ucc; mainSync { Speech.shared.pages = [{ [weak self] in self?.web }] }
+        web = WKWebView(frame: .zero, configuration: cfg); bridge.web = web
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window.title = "Model Picker"; window.contentView = web; window.center(); window.setFrameAutosaveName("ModelPicker"); window.delegate = self; window.isReleasedWhenClosed = false; setUpStatusItem()
+        if SMAppService.mainApp.status != .enabled { try? SMAppService.mainApp.register() }
+        window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        if let res = Bundle.main.resourceURL?.appendingPathComponent("web") { web.loadFileURL(res.appendingPathComponent("index.html"), allowingReadAccessTo: res) }
+        let menu = NSMenu(); let appItem = NSMenuItem(); menu.addItem(appItem)
+        let sub = NSMenu(); sub.addItem(withTitle: "Quit Model Picker", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); appItem.submenu = sub
+        let editItem = NSMenuItem(); menu.addItem(editItem); let em = NSMenu(title: "Edit")
+        em.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"); em.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        em.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"); em.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        em.addItem(.separator()); let ue = NSMenuItem(title: "Undo Last Action", action: #selector(undoLastFromMenu), keyEquivalent: ""); ue.target = self; em.insertItem(ue, at: 0)
+        editItem.submenu = em; NSApp.mainMenu = menu
+        if CommandLine.arguments.contains("--show-popover") { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self.quickChat() } }
+        if let i = CommandLine.arguments.firstIndex(of: "--mini-send"), CommandLine.arguments.count > i + 1 {
+            let t = CommandLine.arguments[i + 1].replacingOccurrences(of: "'", with: "")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 7) { self.miniWeb?.evaluateJavaScript("send('\(t)')", completionHandler: nil) }
+        }
+        if CommandLine.arguments.contains("--selftest") { selftest() }
+    }
+    /// `open -n app --args --selftest ENGINE MODEL` : drives the real page, writes selftest.json
+    func selftest() {
+        let a = CommandLine.arguments; let i = a.firstIndex(of: "--selftest")!
+        let mode = a.count > i + 1 ? a[i + 1] : "chat", eng = a.count > i + 2 ? a[i + 2] : "", model = a.count > i + 3 ? a[i + 3] : ""
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+            self.web.callAsyncJavaScript("return await window.__selftest('\(mode)','\(eng)','\(model)')", arguments: [:], in: nil, in: .page) { r in
+                var out = ""
+                switch r { case .success(let v): out = "\(v ?? "null")"; case .failure(let e): out = "ERR \(e)" }
+                try? out.write(toFile: NSHomeDirectory() + "/Projects/model-picker/selftest.json", atomically: true, encoding: .utf8)
+                let snap = WKSnapshotConfiguration()
+                self.web.takeSnapshot(with: snap) { img, _ in if let img = img, let t = img.tiffRepresentation, let rep = NSBitmapImageRep(data: t), let png = rep.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: NSHomeDirectory() + "/Projects/model-picker/selftest.png")) } }
+            }
+        }
+    }
+    var statusItem: NSStatusItem?
+    var popover: NSPopover?
+    var miniWeb: WKWebView?
+    let miniBridge = Bridge()
+    func makeMini() {
+        let cfg = WKWebViewConfiguration(); let ucc = WKUserContentController()
+        ucc.addScriptMessageHandler(miniBridge, contentWorld: .page, name: "net")
+        ucc.addScriptMessageHandler(miniBridge, contentWorld: .page, name: "act")
+        ucc.add(miniBridge, name: "stream")
+        ucc.addUserScript(WKUserScript(source: "window.__MINI=true;", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        cfg.userContentController = ucc
+        let w = WKWebView(frame: NSRect(x: 0, y: 0, width: 400, height: 560), configuration: cfg); miniBridge.web = w; miniWeb = w
+        if let res = Bundle.main.resourceURL?.appendingPathComponent("web") { w.loadFileURL(res.appendingPathComponent("index.html"), allowingReadAccessTo: res) }
+        let vc = NSViewController(); vc.view = w
+        let po = NSPopover(); po.contentSize = NSSize(width: 400, height: 560); po.behavior = .transient; po.contentViewController = vc; popover = po
+        mainSync { Speech.shared.pages = [{ [weak self] in self?.web }, { [weak self] in self?.miniWeb }] }
+    }
+    @objc func statusClicked(_ sender: NSStatusBarButton) {
+        let ev = NSApp.currentEvent
+        if ev?.type == .rightMouseUp || (ev?.modifierFlags.contains(.control) ?? false) {
+            statusItem?.menu = statusMenu; statusItem?.button?.performClick(nil); statusItem?.menu = nil; return }
+        if popover == nil { makeMini() }
+        if popover!.isShown { popover!.performClose(nil) } else {
+            popover!.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY); NSApp.activate(ignoringOtherApps: true)
+            miniWeb?.evaluateJavaScript("window.__miniOpen && window.__miniOpen()", completionHandler: nil) }
+    }
+    var statusMenu: NSMenu?
+    var undoStatusItem: NSMenuItem?
+    var undoEditItem: NSMenuItem?
+    func refreshUndoMenu() {}
+    @objc func quickChat() { if let b = statusItem?.button { statusClicked(b) } }
+    @objc func openSettings() { showWindow(); web.evaluateJavaScript("window.__openSettings && window.__openSettings()", completionHandler: nil) }
+    @objc func undoLastFromMenu() {
+        DispatchQueue.global().async {
+            let r = PortTools.handle("undoLast", [:]) ?? [:]
+            let msg = (r["text"] as? String ?? "").replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'").replacingOccurrences(of: "\n", with: " ")
+            DispatchQueue.main.async { self.web.evaluateJavaScript("window.__undoDone && window.__undoDone('\(msg)')", completionHandler: nil) }
+        }
+    }
+    func validateMenuItem(_ i: NSMenuItem) -> Bool { if i.action == #selector(undoLastFromMenu) { return mainSync { UndoLog.hasEntries } }; return true }
+    func setUpStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let b = item.button { b.image = NSImage(systemSymbolName: "rectangle.3.group.bubble", accessibilityDescription: "Model Picker"); b.toolTip = "Model Picker" }
+        let m = NSMenu()
+        let o = NSMenuItem(title: "Open Model Picker", action: #selector(showWindow), keyEquivalent: ""); o.target = self
+        let q = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let u = NSMenuItem(title: "Undo Last Action", action: #selector(undoLastFromMenu), keyEquivalent: ""); u.target = self; undoStatusItem = u
+        let qc = NSMenuItem(title: "Quick Chat", action: #selector(quickChat), keyEquivalent: ""); qc.target = self
+        let st = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ""); st.target = self
+        m.addItem(qc); m.addItem(o); m.addItem(u); m.addItem(st); m.addItem(.separator()); m.addItem(q); statusMenu = m; statusItem = item
+        item.button?.target = self; item.button?.action = #selector(statusClicked(_:)); item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    }
+    @objc func showWindow() { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
+    func applicationShouldHandleReopen(_ s: NSApplication, hasVisibleWindows f: Bool) -> Bool { showWindow(); return true }
+    func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { false }
+}
+// Test harness (benchmark): `ModelPicker --tool NAME 'ARGS_JSON' [--apply]` runs one agent tool and prints JSON.
+if let i = CommandLine.arguments.firstIndex(of: "--tool"), CommandLine.arguments.count > i + 2 {
+    let n = CommandLine.arguments[i + 1], a = CommandLine.arguments[i + 2]
+    DispatchQueue.global().async {
+        var r = AgentTools.run(n, a)
+        if CommandLine.arguments.contains("--apply"), r["pending"] as? Bool == true, let pid = r["pendingId"] as? String { let ap = PortTools.apply(pendingId: pid); r = ["text": ap["text"] ?? "", "applied": true, "ok": ap["ok"] ?? false, "undoId": ap["undoId"] ?? ""] }
+        if let d = try? JSONSerialization.data(withJSONObject: r), let t = String(data: d, encoding: .utf8) { print(t) }
+        fflush(stdout); exit(0)
+    }
+    RunLoop.main.run()
+}
+if let i = CommandLine.arguments.firstIndex(of: "--undo-last") {
+    _ = i; DispatchQueue.global().async { let r = PortTools.handle("undoLast", [:]) ?? [:]; print(r["text"] ?? ""); fflush(stdout); exit(0) }; RunLoop.main.run()
+}
+if let i = CommandLine.arguments.firstIndex(of: "--preroute"), CommandLine.arguments.count > i + 1 {
+    let t = CommandLine.arguments[i + 1]
+    DispatchQueue.global().async {
+        var r = PortTools.handle("preroute", ["text": t]) ?? [:]
+        if CommandLine.arguments.contains("--apply"), r["pending"] as? Bool == true, let pid = r["pendingId"] as? String { r["applied"] = PortTools.apply(pendingId: pid) }
+        if let d = try? JSONSerialization.data(withJSONObject: r), let s = String(data: d, encoding: .utf8) { print(s) }
+        fflush(stdout); exit(0) }
+    RunLoop.main.run()
+}
+let app = NSApplication.shared
+if CommandLine.arguments.contains("--proxy") {
+    app.setActivationPolicy(.prohibited)
+    let px = Proxy(); px.start(); app.run()
+} else {
+    let del = AppDelegate(); app.delegate = del; app.setActivationPolicy(.regular); app.run()
+}

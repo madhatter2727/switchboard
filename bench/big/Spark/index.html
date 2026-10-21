@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Defender</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game-canvas" width="800" height="600"></canvas>
+  <div id="overlay">
+    <div id="start-screen" class="screen">
+      <h1>Space Defender</h1>
+      <p>Arrow keys / WASD to move</p>
+      <p>Space to shoot</p>
+      <p>P to pause</p>
+      <button id="start-btn">Start</button>
+    </div>
+    <div id="pause-screen" class="screen hidden">
+      <h2>Paused</h2>
+      <button id="resume-btn">Resume</button>
+    </div>
+    <div id="game-over-screen" class="screen hidden">
+      <h2>Game Over</h2>
+      <p id="final-score">Score: 0</p>
+      <button id="restart-btn">Restart</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

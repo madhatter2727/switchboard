@@ -1,0 +1,151 @@
+{
+ "model": "ornith-9b",
+ "id": "ornith:9b",
+ "free_before": 78,
+ "turns": [
+  {
+   "steps": 8,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 1,
+   "secs": 74.4,
+   "files": {
+    "game.js": 1,
+    "style.css": 9
+   },
+   "js_errors": null,
+   "js_error_sample": [
+    "index.html missing"
+   ],
+   "features": 0,
+   "free": 28
+  },
+  {
+   "steps": 7,
+   "final": "All three files are now in place. Here's what each provides:\n\n**index.html** \u2014 loads `style.css` and `game.js`, has the `<canvas>` plus overlay screens (start + game-over) and HUD.\n\n**style.css** \u2014 dark space theme, centered canvas, visible overlay styling, HUD bar at top-left.\n\n**game.js** \u2014 full e",
+   "error": null,
+   "aborted": null,
+   "turn": 2,
+   "secs": 326.4,
+   "files": {
+    "game.js": 122,
+    "index.html": 17,
+    "style.css": 9
+   },
+   "js_errors": 2,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: Unexpected token '*'\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/style.css (1)",
+    "\"Uncaught SyntaxError: Unexpected token '+'\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/game.js (28)"
+   ],
+   "features": 11,
+   "free": 24
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 3,
+   "secs": 434.3,
+   "files": {
+    "game.js": 1,
+    "index.html": 1,
+    "style.css": 1
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 0,
+   "free": 23
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 4,
+   "secs": 500.6,
+   "files": {
+    "game.js": 1,
+    "index.html": 13,
+    "style.css": 9
+   },
+   "js_errors": 2,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: Unexpected token '*'\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/style.css (1)",
+    "\"Uncaught ReferenceError: saved is not defined\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/game.js (1)"
+   ],
+   "features": 1,
+   "free": 26
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 5,
+   "secs": 607.3,
+   "files": {
+    "game.js": 1,
+    "index.html": 23,
+    "style.css": 9
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught ReferenceError: saved is not defined\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/game.js (1)"
+   ],
+   "features": 1,
+   "free": 27
+  },
+  {
+   "steps": 4,
+   "final": "Done. Here's what's in the new `game.js`:\n\n- **Canvas + state machine** \u2014 starts on a title screen (`showTitle()`), then enters the game loop when you press any key or click.\n- **Player ship** \u2014 WASD / arrow keys move it; space bar shoots projectiles.\n- **Three enemy types:**\n  - `basic` \u2014 straight ",
+   "error": null,
+   "aborted": null,
+   "turn": 6,
+   "secs": 845.7,
+   "files": {
+    "game.js": 116,
+    "index.html": 23,
+    "style.css": 9
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: Unexpected token '}'\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/game.js (12)"
+   ],
+   "features": 11,
+   "free": 24
+  }
+ ],
+ "start_secs": 6.4,
+ "free_after_load": 29,
+ "final_files": {
+  "game.js": 116,
+  "index.html": 23,
+  "style.css": 9
+ },
+ "final_loc": 148,
+ "final_js_errors": 1,
+ "final_js_error_sample": [
+  "\"Uncaught SyntaxError: Unexpected token '}'\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/game.js (12)"
+ ],
+ "features": {
+  "controls_arrows_wasd": true,
+  "space_shoot": true,
+  "three_enemy_types": false,
+  "waves": true,
+  "powerups": true,
+  "lives": true,
+  "score": true,
+  "high_score_localstorage": true,
+  "start_screen": true,
+  "game_over_screen": true,
+  "webaudio_beeps": true,
+  "pause_key": true
+ },
+ "features_count": 11,
+ "total_secs": 846.1,
+ "free_min_seen": 23,
+ "free_end": 23,
+ "path": "/Users/madhatter2727/Projects/model-picker/bench/big/ornith-9b/index.html"
+}

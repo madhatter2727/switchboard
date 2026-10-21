@@ -1,0 +1,7 @@
+{
+ "text": "1. **Initial Setup:**\n   - Box 1: Apples\n   - Box 2: Oranges\n   - Box 3: Mixed\n\n2. **Observation:**\n   - You pick an apple from the box labeled Mixed.\n\n3. **Analysis:**\n   - Since the box labeled Mixed contains apples, it cannot be the Mixed box.\n   - Therefore, the box labeled Mixed must contain oranges.\n\n4. **Conclusion:**\n   - Box 1: Apples\n   - Box 2: Oranges\n   - Box 3: Mixed (contains oranges)",
+ "first": 0.29,
+ "total": 1.7,
+ "words": 68,
+ "wps": 49.8
+}

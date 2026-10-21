@@ -1,0 +1,19 @@
+{
+ "chatId": "cmvi73tbqtrvb",
+ "lock": null,
+ "note": "Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.",
+ "turns": [
+  {
+   "q": "List the folder ~/Projects/model-picker/test-sandbox/inbox",
+   "engine": "ollama",
+   "model": "qwen2.5-coder:7b",
+   "agentBox": true,
+   "header": "Ollama · qwen2.5-coder:7b  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Looking in ~/Projects/model-picker/test-sandbox/inbox… -> alpha.txt\nbeta.txt\ncmp.txt\ngamma.txt\nt2.txt\nt3.txt\nt4.txt"
+   ],
+   "reply": "Here are the items in the folder ~/Projects/model-picker/test-sandbox/inbox:\n\n- alpha.txt\n- beta.txt\n- cmp.txt\n- gamma.txt\n- t2.txt\n- t3.txt\n- t4.txt\n\nDo you want to move or rename any of these files?"
+  }
+ ]
+}

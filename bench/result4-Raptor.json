@@ -1,0 +1,146 @@
+{
+ "model": "Raptor",
+ "id": "raptor-0.6-4b-jang_6m",
+ "free_before": 75,
+ "turns": [
+  {
+   "steps": 3,
+   "final": "Done. Three files written to `Projects/model-picker/bench/big/Raptor/`:\n\n- **index.html** \u2014 loads `style.css` and `game.js`, has the canvas plus start/game-over/pause overlays.\n- **style.css** \u2014 styling for overlays, canvas, and UI.\n- **game.js** \u2014 full game logic.\n\nFeatures implemented:\n- Arrow key",
+   "error": null,
+   "aborted": null,
+   "turn": 1,
+   "secs": 199.1,
+   "files": {
+    "game.js": 341,
+    "index.html": 37,
+    "style.css": 82
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught TypeError: Cannot read properties of null (reading 'getContext')\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Raptor/game.js (3)"
+   ],
+   "features": 11,
+   "free": 47
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 2,
+   "secs": 236.7,
+   "files": {
+    "game.js": 341,
+    "index.html": 37,
+    "style.css": 82
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught TypeError: Cannot read properties of null (reading 'getContext')\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Raptor/game.js (3)"
+   ],
+   "features": 11,
+   "free": 46
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 3,
+   "secs": 298.2,
+   "files": {
+    "game.js": 341,
+    "index.html": 37,
+    "style.css": 82
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught TypeError: Cannot read properties of null (reading 'getContext')\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Raptor/game.js (3)"
+   ],
+   "features": 11,
+   "free": 43
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 4,
+   "secs": 792.5,
+   "files": {
+    "game.js": 1,
+    "index.html": 37,
+    "style.css": 82
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught ReferenceError: saved is not defined\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Raptor/game.js (1)"
+   ],
+   "features": 5,
+   "free": 46
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 5,
+   "secs": 976.0,
+   "files": {
+    "game.js": 312,
+    "index.html": 37,
+    "style.css": 82
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 10,
+   "free": 47
+  },
+  {
+   "steps": 3,
+   "final": "Both files already contain the requested features (arrow/WASD movement, three enemy types, waves, power-ups, lives, score, localStorage high score, start/pause/game-over screens, WebAudio beeps, P pause). I'll verify the files are complete and consistent, then confirm no changes are needed.\n\nThe exi",
+   "error": null,
+   "aborted": null,
+   "turn": 6,
+   "secs": 999.9,
+   "files": {
+    "game.js": 312,
+    "index.html": 37,
+    "style.css": 82
+   },
+   "js_errors": 0,
+   "js_error_sample": [],
+   "features": 10,
+   "free": 46
+  }
+ ],
+ "start_secs": 2.5,
+ "free_after_load": 45,
+ "final_files": {
+  "game.js": 312,
+  "index.html": 37,
+  "style.css": 82
+ },
+ "final_loc": 431,
+ "final_js_errors": 0,
+ "final_js_error_sample": [],
+ "features": {
+  "controls_arrows_wasd": false,
+  "space_shoot": true,
+  "three_enemy_types": false,
+  "waves": true,
+  "powerups": true,
+  "lives": true,
+  "score": true,
+  "high_score_localstorage": true,
+  "start_screen": true,
+  "game_over_screen": true,
+  "webaudio_beeps": true,
+  "pause_key": true
+ },
+ "features_count": 10,
+ "total_secs": 1000.4,
+ "free_min_seen": 43,
+ "free_end": 46,
+ "path": "/Users/madhatter2727/Projects/model-picker/bench/big/Raptor/index.html"
+}

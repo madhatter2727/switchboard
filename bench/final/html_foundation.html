@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motivational Quote</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Motivational Quote</h1>
+
+    <button onclick="getRandomQuote()">Get a Quote</button>
+
+    <p id="quote"></p>
+
+    <script>
+        function getRandomQuote() {
+            const quotes = [
+                "The only way to do great work is to love what you do.",
+                "Believe you can and you're halfway there.",
+                "Success is not final, failure is not fatal: It is the courage to continue that counts.",
+                "Your time is limited, so don't waste it living someone else's life.",
+                "Do what you love, and you will never work a day in your life.",
+            ];
+
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            const quote = quotes[randomIndex];
+
+            document.getElementById('quote').textContent = quote;
+        }
+    </script>
+
+</body>
+</html>

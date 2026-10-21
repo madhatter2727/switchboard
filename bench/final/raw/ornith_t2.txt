@@ -1,0 +1,7 @@
+{
+ "text": "The debt service coverage ratio (DSCR) tells you whether a property has enough income from rent and other sources to cover its loan payments\u2014like checking if your salary can pay your mortgage. For example, imagine a small apartment building that earns $120,000 per year in rent but owes $90,000 annually in loan payments; the DSCR would be 1.33, meaning the property generates 33% more income than needed to service its debt. A ratio above 1.0 means the building is financially healthy and can comfortably pay its debts, while a ratio below 1.0 signals trouble because the income isn't enough to cover the loan payments. Lenders usually require a DSCR of at least 1.2 or higher before approving a loan, giving them confidence that even if some tenants leave, the property can still meet its financial obligations.",
+ "first": 0.67,
+ "total": 12.8,
+ "words": 136,
+ "wps": 11.2
+}

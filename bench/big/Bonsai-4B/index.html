@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Space Defender</title>
+<style>
+body{margin:0;background:#000;color:#fff;font-family:monospace;}#game{position:absolute;top:50%;left:50%;transform:translate(-50%-50);}canvas{display:block;}#overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#000;}#start-screen,#game-over-screen{pointer-events:none;}#start-screen h1{margin:0 0 20px 0;font-size:24px;}#start-screen p{margin:0;}#game-over-screen h2{margin:0 0 10px 0;font-size:24px;}#score-display{font-size:18px;}#pause-overlay{display:none;}
+</style>
+</head>
+<body>
+<div id="overlay"><div id="start-screen"><h1>Space Defender</h1><p>WASD/Arrows to move, Space to shoot, P to pause</p><button onclick="startGame()">Start</button></div>
+<div id="game-over-screen"><h2>Game Over</h2><p>Score: <span id="final-score">0</span></p><button onclick="restartGame()">Try Again</button></div>
+<div id="pause-overlay" onclick="togglePause()"><h1>PAUSED</h1></div>
+<div id="game"><canvas id="canvas"></canvas></div>
+<script src="game.js"></script>
+</body>
+</html>

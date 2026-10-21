@@ -1,0 +1,31 @@
+{
+ "text": "",
+ "tools": [
+  [
+   "list_files_by_date",
+   {
+    "days_back": 7,
+    "folder": "Projects"
+   }
+  ],
+  [
+   "rename_item",
+   {
+    "new_name": "model-picker/selftest.png",
+    "path": "model-picker/selftest.json"
+   }
+  ],
+  [
+   "list_files_by_date",
+   {
+    "days_back": 7,
+    "folder": "Projects"
+   }
+  ]
+ ],
+ "native": 3,
+ "total": 7.3,
+ "first": 1.0,
+ "words": 0,
+ "error": "HTTP 500 {\"error\":{\"message\":\"prompt exceeds the Foundation Model context window (Content contains 4433 tokens, which exceeds the maximum allowed context size of 4096.)\",\"type\":\"internal_error\"}}"
+}

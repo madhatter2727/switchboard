@@ -1,0 +1,7 @@
+{
+ "text": "A debt service coverage ratio (DSCR) measures how well a property can generate income to cover its debts and expenses. It's like checking if you have enough money to pay your bills each month. For instance, imagine you own a small apartment building that rents out 10 units. If the total rent collected is $20,000 per year and your annual expenses (like mortgage, taxes, and maintenance) are $15,000, your DSCR would be $20,000 / $15,000 = 1.33. This means you have $1.33 in income for every dollar of debt or expense, indicating that the building is financially healthy and can cover its debts comfortably.",
+ "first": 0.36,
+ "total": 8.3,
+ "words": 104,
+ "wps": 13.0
+}

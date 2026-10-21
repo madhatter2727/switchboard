@@ -1,0 +1,31 @@
+Bonsai-4B turn 1 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 6 /12 secs 17.2 free 65  
+Bonsai-4B turn 2 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 6 /12 secs 57.1 free 66  
+Bonsai-4B turn 3 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 12 /12 secs 128.2 free 66  
+Bonsai-4B turn 4 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 12 /12 secs 355.8 free 66  
+Bonsai-4B turn 5 files ['game.js', 'index.html', 'style.css', 'None'] js_errors 1 features 12 /12 secs 694.3 free 66  
+Bonsai-4B turn 6 files ['game.js', 'index.html', 'style.css', 'None'] js_errors 1 features 12 /12 secs 878.9 free 66  
+Spark turn 1 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 142.0 free 53  
+Spark turn 2 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 167.6 free 38  
+Spark turn 3 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 186.3 free 43  
+Spark turn 4 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 237.3 free 22  
+Spark turn 5 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 265.3 free 34  
+Spark turn 6 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 294.3 free 34  
+Raptor turn 1 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 199.1 free 47  
+Raptor turn 2 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 236.7 free 46  
+Raptor turn 3 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 298.2 free 43  
+Raptor turn 4 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 5 /12 secs 792.5 free 46  
+Raptor turn 5 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 10 /12 secs 976.0 free 47  
+Raptor turn 6 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 10 /12 secs 999.9 free 46  
+Bonsai-9B turn 1 files [] js_errors None features 0 /12 secs 221.0 free 59  
+Bonsai-9B turn 2 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 6 /12 secs 264.8 free 57  
+Bonsai-9B turn 3 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 6 /12 secs 313.2 free 57  
+Bonsai-9B turn 4 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 11 /12 secs 462.5 free 58  
+Bonsai-9B turn 5 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 11 /12 secs 487.3 free 58  
+Bonsai-9B turn 6 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 11 /12 secs 535.2 free 57  
+ornith-9b turn 1 files ['game.js', 'style.css'] js_errors None features 0 /12 secs 74.4 free 28  
+ornith-9b turn 2 files ['game.js', 'index.html', 'style.css'] js_errors 2 features 11 /12 secs 326.4 free 24  
+ornith-9b turn 3 files ['game.js', 'index.html', 'style.css'] js_errors 0 features 0 /12 secs 434.3 free 23  
+ornith-9b turn 4 files ['game.js', 'index.html', 'style.css'] js_errors 2 features 1 /12 secs 500.6 free 26  
+ornith-9b turn 5 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 1 /12 secs 607.3 free 27  
+ornith-9b turn 6 files ['game.js', 'index.html', 'style.css'] js_errors 1 features 11 /12 secs 845.7 free 24  
+ALLDONE4

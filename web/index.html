@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Model Picker</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<div id="app">
+ <aside>
+  <h1>Model Picker</h1>
+  <div id="proxy" class="hint"></div>
+  <button id="newChat">+ New chat</button>
+  <div class="sec">Your chats</div>
+  <div id="chats"></div>
+  <div class="sec">Models <span class="hint">(click one; I start its engine)</span></div>
+  <div id="engines"></div>
+  <button id="refresh">Refresh list</button>
+ </aside>
+ <main>
+  <header><div id="cur">No model picked yet</div><div id="status"></div><button id="gear" type="button" title="Settings">⚙ Settings</button><label id="agentBox"><input type="checkbox" id="agent"> Agent mode</label></header><div id="agentNote"></div>
+  <div id="chat"><div class="empty">Pick a model on the left, then say hi.</div></div>
+  <form id="form"><textarea id="input" rows="2" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>
+   <button id="photo" type="button" title="Ask Photo Reader about an image">📷</button><button id="mic" type="button" title="Hold to talk. Speech stays on this Mac.">🎙</button><button id="send" type="submit">Send</button><button id="stop" type="button" hidden>Stop</button></form>
+ </main>
+</div>
+<div id="miniBar"><button id="miniOpen" type="button">Open full window</button><button id="miniQuit" type="button">Quit</button></div>
+<div id="settings" hidden><div class="box big"><h2>Settings</h2><div id="sbody"></div><div class="mb"><button id="sclose">Close</button></div></div></div>
+<div id="modal" hidden><div class="box"><div id="mtext"></div><input id="minput" hidden><div class="mb"><button id="mno">Cancel</button><button id="myes">OK</button></div></div></div>
+<script src="app.js"></script></body></html>

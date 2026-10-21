@@ -1,0 +1,127 @@
+### FILE: index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Defender</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="game" width="800" height="600"></canvas>
+    <div id="hud" class="overlay">
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
+```
+
+### FILE: style.css
+```css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #000;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+}
+
+#game {
+    display: block;
+    background-color: #000;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    color: #fff;
+    pointer-events: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#score, #lives {
+    font-size: 24px;
+    text-shadow: 2px 2px 4px #000;
+}
+```
+
+### FILE: game.js
+```javascript
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+
+let score = 0;
+let lives = 3;
+let shipX = canvas.width / 2 - 15;
+let shipY = canvas.height - 60;
+let speed = 5;
+let keys = {};
+
+function drawShip() {
+    ctx.fillStyle = '#00ff00';
+    ctx.beginPath();
+    ctx.moveTo(shipX, shipY);
+    ctx.lineTo(shipX - 20, shipY + 15);
+    ctx.lineTo(shipX + 20, shipY + 15);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function updateShip() {
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        shipX -= speed;
+    }
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        shipX += speed;
+    }
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+        shipY -= speed;
+    }
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+        shipY += speed;
+    }
+    if (shipX < 0) shipX = 0;
+    if (shipX > canvas.width) shipX = canvas.width;
+    if (shipY < 0) shipY = 0;
+    if (shipY > canvas.height) shipY = canvas.height;
+}
+
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    updateShip();
+    drawShip();
+    requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+scoreEl.textContent = 'Score: ' + score;
+livesEl.textContent = 'Lives: ' + lives;
+
+gameLoop();
+```

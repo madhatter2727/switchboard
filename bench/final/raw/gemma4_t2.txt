@@ -1,0 +1,7 @@
+{
+ "text": "The Debt Service Coverage Ratio (DSCR) is a simple way to measure if a property's income is enough to cover its monthly loan payments. Essentially, it tells you how many times the property's income can pay off the debt. For example, if an apartment building earns \\$10,000 in monthly rent and has \\$4,000 in monthly mortgage payments, the DSCR is 2.5 ( \\$10,000 / \\$4,000). A ratio above 1.0 generally means the property is generating enough cash flow to handle its debt obligations comfortably.",
+ "first": 0.3,
+ "total": 2.7,
+ "words": 84,
+ "wps": 34.8
+}

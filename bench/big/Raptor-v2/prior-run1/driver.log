@@ -1,0 +1,7 @@
+[    0s] start mem free 76%
+[   42s] step 1 try 1 ok=True problems=[] model=35s mem=48%
+[   94s] step 2 try 1 ok=True problems=[] model=44s mem=47%
+[  188s] step 3 try 1 ok=False problems=['score/lives never changed while shooting+moving 28s (enemies/collisions not working)'] model=58s mem=46%
+[  283s] step 3 try 2 ok=False problems=['score/lives never changed while shooting+moving 28s (enemies/collisions not working)'] model=59s mem=46%
+[  376s] step 3 try 3 ok=False problems=['score/lives never changed while shooting+moving 28s (enemies/collisions not working)'] model=58s mem=46%
+[  376s] FINISHED stopped: step 3 failed 3 times

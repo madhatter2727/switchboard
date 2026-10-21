@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background: #000;
+            display: block;
+        }
+        #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-5 is 50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        #gameOverScreen h2 {
+            color: red;
+            margin-top: 0;
+        }
+        #gameOverScreen button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        #gameOverScreen button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOverScreen">
+        <h2>Game Over</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button id="restartBtn">Restart</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+
+        let width = canvas.width = 800;
+        let height = canvas.height = 600;
+
+        let score = 0;
+        let gameRunning = true;
+
+        const player = {
+            x: width / 2 - 25,
+            y: height - 60,
+            width: 50,
+            height: 60,
+            speed: 8,
+            color: '#00ff00'
+        };
+
+        const bullets = [];
+        const bulletsSpeed = 10;
+        const bulletWidth = 5;
+        const bulletHeight = 15;
+
+        const enemies = [];
+        const enemySpeed = 2;
+        const enemySpawnRate = 60; // frames
+        let enemySpawnCounter = 0;
+
+        let keys = {};
+
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            player.y = height - 60;
+            if (player.x > width / 2) player.x = width / 2 - 25;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space' && gameRunning) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        restartBtn.addEventListener('click', () => {
+            gameRunning = true;
+            score = 0;
+            gameOverScreen.style.display = 'none';
+            resetGame();
+        });
+
+        function resetGame() {
+            player.x = width / 2 - 25;
+            player.y = height - 60;
+            bullets.length = 0;
+            enemies.length = 0;
+            enemySpawnCounter = 0;
+            gameRunning = true;
+            gameLoop();
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Add a little triangle nose to look like a ship
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width / 2, player.y - 15);
+            ctx.lineTo(player.x + player.width, player.y + player.height);
+            ctx.lineTo(player.x, player.y + player.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#ffff00';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bulletWidth, bulletHeight);
+            });
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = '#ff0000';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, 40, 40);
+                // Add a triangle nose to look like an enemy
+                ctx.beginPath();
+                ctx.moveTo(enemy.x + 20, enemy.y - 10);
+                ctx.lineTo(enemy.x + 40, enemy.y + 40);
+                ctx.lineTo(enemy.x, enemy.y + 40);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        function updatePlayer() {
+            if (keys['ArrowLeft'] || keys['KeyA']) {
+                player.x -= player.speed;
+                if (player.x < 0) player.x = 0;
+            }
+            if (keys['ArrowRight'] || keys['KeyD']) {
+                player.x += player.speed;
+                if (player.x + player.width > width) player.x = width - player.width;
+            }
+        }
+
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                bullets[i].y -= bulletsSpeed;
+                if (bullets[i].y + bullets.height < 0) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        function updateEnemies() {
+            enemySpawnCounter++;
+            if (enemySpawnCounter >= enemySpawnRate) {
+                enemySpawnCounter = 0;
+                const x = Math.random() * (width - 40);
+                enemies.push({ x: x, y: -40, width: 40, height: 40 });
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].y += enemySpeed;
+                
+                // Check if enemy reaches bottom
+                if (enemies[i].y + enemies[i].height > height) {
+                    gameOver();
+                    return;
+                }
+
+                // Check if enemy hits player
+                if (
+                    player.x < enemies[i].x + enemies[i].width &&
+                    player.x + player.width > enemies[i].x &&
+                    player.y < enemies[i].y + enemies[i].height &&
+                    player.y + player.height > enemies[i].y
+                ) {
+                    gameOver();
+                    return;
+                }
+
+                // Check if bullet hits enemy
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    if (
+                        bullets[j].x < enemies[i].x + enemies[i].width &&
+                        bullets[j].x + bullets[j].width > enemies[i].x &&
+                        bullets[j].y < enemies[i].y + enemies[i].height &&
+                        bullets[j].y + bullets[j].height > enemies[i].y
+                    ) {
+                        bullets.splice(j, 1);
+                        enemies.splice(i, 1);
+                        score += 10;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            finalScoreEl.textContent = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function drawScore() {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Score: ' + score, 20, 40);
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, width, height);
+
+            updatePlayer();
+            updateBullets();
+            updateEnemies();
+
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+            drawScore();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize and start
+        resizeCanvas();
+        resetGame();
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+ "chatId": "cmvi6z30q7vms",
+ "lock": {
+  "e": "osaurus",
+  "m": "raptor-0.6-4b-jang_6m",
+  "name": "Raptor",
+  "why": "files or calendar",
+  "agent": true
+ },
+ "note": "Auto locked this chat to Raptor with Agent mode (file and folder tools) on. Start a new chat for a fresh pick.",
+ "turns": [
+  {
+   "q": "Find the document in the Test folder on my desktop at ~/Desktop/Test and tell me what it is about",
+   "engine": "osaurus",
+   "model": "raptor-0.6-4b-jang_6m",
+   "agentBox": true,
+   "header": "Auto · locked to Raptor for this chat",
+   "label": "Auto picked Raptor (files or calendar) · locked for this chat",
+   "steps": [
+    "Looking in ~/Desktop/Test… -> hermes-mac-mini-desktop-setup.md",
+    "Reading ~/Desktop/Test/hermes-mac-mini-desktop-setup.md… -> ---\ntitle: \"Query: Best Hermes setup — Desktop on Mac Mini\"\ntype: query-answer\ncreated: 2026-08-04\nupdated: 2026-08-04\nc"
+   ],
+   "reply": "The document in `~/Desktop/Test/` is **`hermes-mac-mini-desktop-setup.md`** — a setup guide about the **Hermes Agent Desktop on a Mac Mini**.\n\nIt covers:\n- Recommended setup topology (Hermes Desktop as the always-on outer-loop agent on the Mac Mini, with Claude Code + ECC for coding and Grok Build for creative work)\n- Install path (install Hermes Agent Desktop from official Nous channels, on the plugged-in Mac Mini)\n- Day-one configuration (identity stack files like `SOUL.md`, `USER.md`, `MEMORY"
+  },
+  {
+   "q": "Now give me a 4 sentence synopsis of that document",
+   "engine": "osaurus",
+   "model": "raptor-0.6-4b-jang_6m",
+   "agentBox": true,
+   "header": "Auto · locked to Raptor for this chat",
+   "label": "Auto picked Raptor (files or calendar) · locked for this chat",
+   "steps": [],
+   "reply": "This document provides a setup guide for running Hermes Agent Desktop on a Mac Mini.\n\nIt recommends a topology where Hermes serves as the always-on outer-loop agent, with separate tools for coding and creative work.\n\nThe guide details the installation path, starting with installing Hermes from official Nous channels on a plugged-in Mac Mini.\n\nIt also outlines day-one configuration steps, including identity files and model selection for optimal performance and cost."
+  }
+ ]
+}

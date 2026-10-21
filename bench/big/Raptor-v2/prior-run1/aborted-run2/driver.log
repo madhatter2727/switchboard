@@ -1,0 +1,3 @@
+[    0s] start mem free 72%
+[   81s] step 3 try 1 ok=False problems=['no visible movement on screen after 1s with no input: enemies are not spawning/falling (diff 96)'] model=56s mem=45%
+[  161s] step 3 try 2 ok=False problems=['no visible movement on screen after 1s with no input: enemies are not spawning/falling (diff 96)'] model=55s mem=45%

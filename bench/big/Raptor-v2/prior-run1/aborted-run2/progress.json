@@ -1,0 +1,68 @@
+{
+ "started": "14:10:16",
+ "steps": {
+  "3": {
+   "attempts": [
+    {
+     "try": 1,
+     "model_s": 56,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        0,
+        0
+       ]
+      },
+      "problems": [
+       "no visible movement on screen after 1s with no input: enemies are not spawning/falling (diff 96)"
+      ],
+      "ok": false
+     }
+    },
+    {
+     "try": 2,
+     "model_s": 55,
+     "files_written": [
+      "index.html",
+      "style.css",
+      "game.js"
+     ],
+     "verify": {
+      "errors": [],
+      "checks": {
+       "move_diff_right": 640,
+       "move_diff_left_a": 640,
+       "enemy_fall_diff": 96,
+       "enemies_len_samples": [
+        0,
+        0
+       ]
+      },
+      "problems": [
+       "no visible movement on screen after 1s with no input: enemies are not spawning/falling (diff 96)"
+      ],
+      "ok": false
+     }
+    }
+   ],
+   "goal": "Add ONE enemy type: enemies (red circles or squares about 24px) spawn at the top at a random x every ~1 second and fall straight down at a steady speed. Keep them in an array named enemies. Remove an enemy from the array when it leaves the bottom of the canvas. Do not add collisions or scoring yet."
+  }
+ },
+ "last_good_step": 0,
+ "status": "running",
+ "current": 3,
+ "mem_free_pct": {
+  "start": 72,
+  "min_seen": 45
+ },
+ "elapsed_s": 161
+}

@@ -1,0 +1,23 @@
+{
+ "text": "Based on the files changed most recently in the **Projects** folder, the 3 folders with the most recent activity are:\n\n1. **model-picker** \u2014 last changed **Oct 18, 2026 at 2:58 PM** (e.g., `selftest.png`, `selftest.json`, `bench/bench3.py`)\n2. **ask-my-mac-backup-20261018** \u2014 last changed **Oct 18, 2026 at 9:51 AM** (e.g., `defaults-before.txt`, `PLAN.md`, `README.md`)\n3. **magnitude-speed-lab** \u2014 last changed **Oct 17, 2026 at 12:51 PM** (e.g., `race-oll.json`, `index.html`, `style.css`)\n\nNo files were moved or changed \u2014 this is read-only.",
+ "tools": [
+  [
+   "list_folder",
+   {
+    "path": "Projects"
+   }
+  ],
+  [
+   "list_files_by_date",
+   {
+    "days_back": 7,
+    "folder": "Projects"
+   }
+  ]
+ ],
+ "native": 2,
+ "total": 13.6,
+ "first": 1.91,
+ "words": 75,
+ "error": null
+}

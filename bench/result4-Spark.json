@@ -1,0 +1,152 @@
+{
+ "model": "Spark",
+ "id": "spark-x2.5-4b-mlx",
+ "free_before": 78,
+ "turns": [
+  {
+   "steps": 3,
+   "final": "Done. Files saved in `Projects/model-picker/bench/big/Spark/`:\n\n- **index.html** \u2014 loads `style.css` and `game.js`, has canvas + overlay screens (start, pause, game-over, win)\n- **style.css** \u2014 all styling for UI, canvas, overlays, power-ups\n- **game.js** \u2014 full game logic: input, ship control, 3 en",
+   "error": null,
+   "aborted": null,
+   "turn": 1,
+   "secs": 142.0,
+   "files": {
+    "game.js": 365,
+    "index.html": 33,
+    "style.css": 58
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+   ],
+   "features": 11,
+   "free": 53
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 2,
+   "secs": 167.6,
+   "files": {
+    "game.js": 365,
+    "index.html": 33,
+    "style.css": 58
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+   ],
+   "features": 11,
+   "free": 38
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 3,
+   "secs": 186.3,
+   "files": {
+    "game.js": 365,
+    "index.html": 33,
+    "style.css": 58
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+   ],
+   "features": 11,
+   "free": 43
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 4,
+   "secs": 237.3,
+   "files": {
+    "game.js": 365,
+    "index.html": 33,
+    "style.css": 58
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+   ],
+   "features": 11,
+   "free": 22
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 5,
+   "secs": 265.3,
+   "files": {
+    "game.js": 365,
+    "index.html": 33,
+    "style.css": 58
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+   ],
+   "features": 11,
+   "free": 34
+  },
+  {
+   "steps": 10,
+   "final": "",
+   "error": null,
+   "aborted": null,
+   "turn": 6,
+   "secs": 294.3,
+   "files": {
+    "game.js": 365,
+    "index.html": 33,
+    "style.css": 58
+   },
+   "js_errors": 1,
+   "js_error_sample": [
+    "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+   ],
+   "features": 11,
+   "free": 34
+  }
+ ],
+ "start_secs": 3.9,
+ "free_after_load": 61,
+ "final_files": {
+  "game.js": 365,
+  "index.html": 33,
+  "style.css": 58
+ },
+ "final_loc": 456,
+ "final_js_errors": 1,
+ "final_js_error_sample": [
+  "\"Uncaught SyntaxError: missing ) after argument list\", source: file:///Users/madhatter2727/Projects/model-picker/bench/big/Spark/game.js (46)"
+ ],
+ "features": {
+  "controls_arrows_wasd": false,
+  "space_shoot": true,
+  "three_enemy_types": true,
+  "waves": true,
+  "powerups": true,
+  "lives": true,
+  "score": true,
+  "high_score_localstorage": true,
+  "start_screen": true,
+  "game_over_screen": true,
+  "webaudio_beeps": true,
+  "pause_key": true
+ },
+ "features_count": 11,
+ "total_secs": 294.6,
+ "free_min_seen": 22,
+ "free_end": 34,
+ "path": "/Users/madhatter2727/Projects/model-picker/bench/big/Spark/index.html"
+}

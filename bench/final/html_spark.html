@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motivational Quote</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .quote {
+            font-size: 1.5rem;
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-style: italic;
+            transition: all 0.3s ease;
+        }
+
+        .quote:hover {
+            transform: scale(1.02);
+            color: #667eea;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .quote-placeholder {
+            color: #aaa;
+            font-style: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Motivational Quote</h1>
+        <p class="quote quote-placeholder">Click the button to get a random quote!</p>
+        <div class="button-container">
+            <button id="getQuoteBtn">Get a Random Quote</button>
+        </div>
+    </div>
+
+    <script>
+        // Array of motivational quotes
+        const quotes = [
+            "The only way to have a good day is to accept that the day will end.",
+            "Every great achievement was once an idea, and the only way to turn an idea into reality is to take action.",
+            "Do not watch the clock; do what it counts of, do what the hour asks of you.",
+            "The future belongs to those who believe in the beauty of their dreams.",
+            "It is not enough to be able to fight for what you believe in; you must also be able to fight for what you hope for.",
+            "The best way to prepare for tomorrow is to act wisely today.",
+            "You don't have to be great to be seen, you just have to be true to yourself.",
+            "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+            "The only limit to our potential is our own beliefs about what we can do.",
+            "When you reach your destination, you discover a new destination.",
+            "Do not be afraid to fail. Failure is the stepping stone to success.",
+            "The future is not a destination; it is a source of inspiration.",
+            "Your time is limited, so don't waste it living someone else's life.",
+            "Believe you can and you're halfway there. Believe you can't, and you're halfway to success.",
+            "The journey of a thousand miles begins with a single step.",
+            "Do not let the fear of failure stop you from taking the first step.",
+            "In the middle of difficulty lies opportunity.",
+            "The only thing worse than being watched is being unwatched.",
+            "Success is not the key to happiness. Happiness is the key to success.",
+            "When you are running out of time, speed up.",
+            "The future is yours to create, not to predict."
+        ];
+
+        // Function to get a random quote
+        function getRandomQuote() {
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            return quotes[randomIndex];
+        }
+
+        // DOM elements
+        const quoteElement = document.querySelector('.quote');
+        const button = document.getElementById('getQuoteBtn');
+
+        // Event listener for button click
+        button.addEventListener('click', () => {
+            const quote = getRandomQuote();
+            quoteElement.textContent = quote;
+            // Optional: add a subtle animation
+            quoteElement.style.opacity = '0';
+            setTimeout(() => {
+                quoteElement.style.transition = 'opacity 0.5s ease';
+                quoteElement.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+</body>
+</html>

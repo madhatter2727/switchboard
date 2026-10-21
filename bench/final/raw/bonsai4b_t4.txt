@@ -1,0 +1,23 @@
+{
+ "text": "The 3 folders changed most recently (within 7 days) are:\n\n1. **ask-my-mac-backup-20261018** \u2013 Oct 18, 2026\n2. **model-picker** \u2013 Oct 18, 2026\n3. **mind-map-live-tony** \u2013 Oct 16, 2026",
+ "tools": [
+  [
+   "list_folder",
+   {
+    "path": "Projects"
+   }
+  ],
+  [
+   "list_files_by_date",
+   {
+    "folder": "Projects",
+    "days_back": 7
+   }
+  ]
+ ],
+ "native": 2,
+ "total": 6.6,
+ "first": 1.87,
+ "words": 28,
+ "error": null
+}

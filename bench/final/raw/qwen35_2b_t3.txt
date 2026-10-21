@@ -1,0 +1,7 @@
+{
+ "text": "Since all labels are wrong, the box labeled **\"Mixed\"** must actually contain **Apples** and **Oranges**.\n\nHere is the step-by-step deduction:\n1.  **Box \"Mixed\"**: Contains Apples and Oranges.\n2.  **Box \"Apples\"**: Cannot contain only Apples (wrong label), so it must contain **Oranges** and **Mixed**.\n3.  **Box \"Oranges\"**: Cannot contain only Oranges (wrong label), so it must contain **Apples** and **Mixed**.\n\n**Final Answer:**\n*   **Apples Box**: Oranges and Mixed\n*   **Oranges Box**: Apples and Mixed\n*   **Mixed Box**: Apples and Oranges",
+ "first": 0.09,
+ "total": 2.0,
+ "words": 79,
+ "wps": 41.1
+}

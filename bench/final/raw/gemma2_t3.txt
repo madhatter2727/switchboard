@@ -1,0 +1,7 @@
+{
+ "text": "Here's how to solve this logic puzzle:\n\n* **You know:** You picked an apple from the \"Mixed\" box, meaning the label was wrong. \n* **Think about possibilities:**  If the \"Mixed\" box contained apples, then it must have had oranges and mixed fruits. \n* **The solution:** \n    * **Apples** are in the \"Oranges\" box.\n    * **Oranges** are in the \"Apples\" box.\n    * **Mixed** is actually a box with all the other fruits (apples, oranges)\n\nLet me know if you'd like another logic puzzle! \n",
+ "first": 0.18,
+ "total": 2.3,
+ "words": 81,
+ "wps": 38.1
+}

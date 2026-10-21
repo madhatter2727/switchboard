@@ -1,0 +1,31 @@
+{
+ "chatId": "cmvi703vqpake",
+ "lock": null,
+ "note": "Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.",
+ "turns": [
+  {
+   "q": "List the folder ~/Projects/model-picker/test-sandbox/inbox",
+   "engine": "osaurus",
+   "model": "raptor-0.6-4b-jang_6m",
+   "agentBox": true,
+   "header": "Osaurus · raptor-0.6-4b-jang_6m  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Looking in ~/Projects/model-picker/test-sandbox/inbox… -> alpha.txt\nbeta.txt\ncmp.txt\ngamma.txt\nt2.txt\nt3.txt\nt4.txt"
+   ],
+   "reply": "The folder `~/Projects/model-picker/test-sandbox/inbox` contains these files:\n\n- alpha.txt\n- beta.txt\n- cmp.txt\n- gamma.txt\n- t2.txt\n- t3.txt\n- t4.txt"
+  },
+  {
+   "q": "Read the file ~/Projects/model-picker/test-sandbox/docs/zebra-invoice-notes.txt and tell me what it says",
+   "engine": "osaurus",
+   "model": "raptor-0.6-4b-jang_6m",
+   "agentBox": true,
+   "header": "Osaurus · raptor-0.6-4b-jang_6m  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Reading ~/Projects/model-picker/test-sandbox/docs/zebra-invoice-notes.txt… -> Quarterly mortgage invoice pdf sample\n"
+   ],
+   "reply": "The file `~/Projects/model-picker/test-sandbox/docs/zebra-invoice-notes.txt` says:\n\n**Quarterly mortgage invoice pdf sample**"
+  }
+ ]
+}
