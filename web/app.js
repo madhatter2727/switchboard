@@ -12,7 +12,7 @@ const ENGINES=[
  {id:'spark',name:'Spark X2.5 4B',base:'http://127.0.0.1:8095/v1'},
  {id:'bonsai27b',name:'Bonsai 2 27B (big: ~9 GB memory)',base:'http://127.0.0.1:8096/v1'},
 ];
-const S={auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
+const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
@@ -72,10 +72,13 @@ function render(){agentUI();
  const ax=document.createElement('div');ax.className='m'+(S.auto?' sel':'');ax.innerHTML='<span>Auto (recommended)</span><span class="badge agent">default</span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
  for(const e of ENGINES){
   const d=document.createElement('div');d.className='eng';const up=S.up[e.id];const ms=S.models[e.id]||[];
-  d.innerHTML=`<div class="eh"><span class="dot ${up?'on':''}"></span>${e.name}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}</div>`;
+  const col=S.collapsed.has(e.id);const inUse=!S.auto&&S.sel&&S.sel.e===e.id;if(col)d.classList.add('collapsed');
+  d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${col?'▸':'▾'}</button><span class="dot ${up?'on':''}"></span>${e.name}${col?`<span class="cnt">${ms.length} model${ms.length===1?'':'s'}</span>`:''}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
+  d.querySelector('.eh').onclick=()=>{if(S.collapsed.has(e.id))S.collapsed.delete(e.id);else S.collapsed.add(e.id);act('prefsSet','',{key:'collapsed',value:[...S.collapsed]});render()};
+  if(col){$('engines').appendChild(d);continue}
   if(!ms.length){const s=document.createElement('div');s.className='sub';s.textContent='no chat models found';d.appendChild(s)}
   for(const m of ms){const x=document.createElement('div');x.className='m'+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');
-   x.innerHTML=`<span>${esc(m.label)}</span><span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span>`;
+   x.innerHTML=`<span>${esc(m.label)}</span><span class="badges">${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span>`;
    x.onclick=()=>pick(e.id,m.id);d.appendChild(x)}
   $('engines').appendChild(d)}
  renderChats();
@@ -252,7 +255,7 @@ window.__selftest_auto=async(qs)=>{await boot;const out=[];
   // auto-approve nothing: file tasks here are read-only questions
   reply=await p;out.push({q,picked:S.lastAuto&&S.lastAuto.name,why:S.lastAuto&&S.lastAuto.why,engine:S.sel&&S.sel.e,agent:$('agent').checked,label:(document.querySelector('#chat .msg.assistant .via')||{}).textContent||null,reply:String(reply).slice(0,160),ms:Date.now()-t})}
  return JSON.stringify(out,null,1)};
-const boot=(async()=>{await loadChats();newChat();await refresh()})();
+const boot=(async()=>{try{const p=await act('prefsGet','',{key:'collapsed'});if(Array.isArray(p.value))S.collapsed=new Set(p.value)}catch{}await loadChats();newChat();await refresh()})();
 setInterval(()=>{if(!S.switching&&!S.busy)refresh()},6000);
 
 // ---------- Agent mode ----------
@@ -598,3 +601,12 @@ window.__selftest=async(mode,eid,mid)=>{if(mode!=='m3')return _st10(mode,eid,mid
  t=Date.now();out.pdfReply=await send('What is this document about? Also quote its very last sentence.');out.pdfMs=Date.now()-t;
  const um=S.chat.messages.find(m=>m.atts);out.pdfAttTextHead=um&&um.attText.slice(0,200);out.pdfAttTextLen=um&&um.attText.length;
  return JSON.stringify(out,null,1)};
+
+// ---- selftest m4: collapse groups, check saved state ----
+const _st11=window.__selftest;
+window.__selftest=async(mode,eid,mid)=>{if(mode!=='m4')return _st11(mode,eid,mid);await boot;await sleep(500);const out={startCollapsed:[...S.collapsed]};
+ if(mid==='set'){for(const id of eid.split(',')){const h=[...document.querySelectorAll('#engines .eng')].find(x=>x.textContent.includes((ENGINES.find(e=>e.id===id)||{}).name));if(h&&!S.collapsed.has(id))h.querySelector('.eh').click();await sleep(200)}}
+ if(mid==='clear'){for(const id of [...S.collapsed]){const h=[...document.querySelectorAll('#engines .eng')].find(x=>x.textContent.includes((ENGINES.find(e=>e.id===id)||{}).name));if(h)h.querySelector('.eh').click();await sleep(200)}}
+ out.nowCollapsed=[...S.collapsed];out.autoVisible=!!document.querySelector('#engines .eng .m');out.autoHasToggle=!!document.querySelector('#engines .eng:first-child .tog');
+ out.groups=[...document.querySelectorAll('#engines .eng')].map(x=>x.querySelector('.eh').textContent.trim()+' -> '+x.querySelectorAll('.m').length+' rows');
+ out.saved=(await act('prefsGet','',{key:'collapsed'})).value;return JSON.stringify(out,null,1)};

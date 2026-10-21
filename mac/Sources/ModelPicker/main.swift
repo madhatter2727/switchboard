@@ -61,6 +61,13 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "toolRun": return AgentTools.run(d["name"] as? String ?? "", d["args"] as? String ?? "{}")
         case "toolApply" where (d["pendingId"] as? String ?? "") != "": return PortTools.apply(pendingId: d["pendingId"] as! String)
         case "toolApply": return ["text": AgentTools.apply(d["name"] as? String ?? "", d["args"] as? String ?? "{}")]
+        case "prefsGet", "prefsSet":   // small window settings (which model groups are collapsed), kept between launches
+            let f = SUPPORT + "/ui-prefs.json"; let key = d["key"] as? String ?? ""
+            var all = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: f)))) as? [String: Any] ?? [:]
+            if op == "prefsGet" { return ["value": all[key] ?? NSNull()] }
+            all[key] = d["value"] ?? NSNull()
+            if let j = try? JSONSerialization.data(withJSONObject: all, options: [.prettyPrinted]) { try? j.write(to: URL(fileURLWithPath: f), options: .atomic) }
+            return ["ok": true]
         case "state":
             if let t = d["json"] as? String { try? t.write(toFile: STATE, atomically: true, encoding: .utf8) }
             return ["ok": true]
