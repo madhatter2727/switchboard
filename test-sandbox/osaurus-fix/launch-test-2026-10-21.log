@@ -1,0 +1,11 @@
+./watch.sh: line 3: declare: -A: invalid option
+declare: usage: declare [-afFirtx] [-p] [name[=value] ...]
+14:06:13 LAUNCH ollama-serve pid=12341 /opt/homebrew/opt/ollama/bin/ollama serve
+14:06:13 LAUNCH lmstudio pid=73714 /Applications/LM Studio.app/Contents/MacOS/LM Studio --run-as-service
+14:08:34 LAUNCH osaurus pid=50386 /Applications/osaurus.app/Contents/MacOS/osaurus --launched-by-cli
+:07:44 TEST1c Bonsai 4B manual
+14:08:27 TEST2 Auto x2 (Raptor/JANG) + simultaneous proxy request
+14:08:42 proxy request finished
+14:09:10 TEST3 Osaurus already open: manual Raptor JANG chat
+14:09:45 TEST4 Osaurus closed: proxy /v1/models x3
+14:10:04 TEST5 Osaurus closed: Auto quick chat (should go to Bonsai 4B)

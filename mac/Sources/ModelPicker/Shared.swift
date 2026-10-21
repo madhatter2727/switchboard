@@ -81,8 +81,11 @@ func isEmbedName(_ m: String) -> Bool { m.lowercased().contains("embed") || m ==
 
 func offlineLines(_ id: String) -> [String] {
     switch id {
-    case "osaurus": return runCmd(OSAURUS, ["list"]).1.split(separator: "\n").map(String.init)
-    case "lmstudio": return runCmd(LMS, ["ls"]).1.split(separator: "\n").map(String.init)
+    // Never run `osaurus list` / `lms ls` here: those CLIs launch the Osaurus / LM Studio apps just to answer.
+    // Use the last list seen while the engine was running, else what is on disk.
+    case "osaurus": return cachedIds("osaurus") ?? osaurusDiskModels()
+    case "lmstudio": return cachedIds("lmstudio") ?? lmstudioDiskModels()
+    case "ollama": return cachedIds("ollama") ?? ollamaDiskModels()
     case "magnitude": return runCmd(MAGNITUDE, ["models", "status"]).1.split(separator: "\n").map(String.init)
     case "spark": return FileManager.default.fileExists(atPath: home + "/MLXModels/Spark-X2.5-4B-MLX-4bit") && FileManager.default.isExecutableFile(atPath: BUILTIN_SCRIPT["spark"]!) ? ["spark-x2.5-4b-mlx"] : []
     case "bonsai27b": return FileManager.default.fileExists(atPath: home + "/MLXModels/Bonsai-2-27B-JANG-CRACK-1.75bit") && FileManager.default.isExecutableFile(atPath: BUILTIN_SCRIPT["bonsai27b"]!) ? ["bonsai-2-27b"] : []
@@ -97,16 +100,14 @@ func modelIds(_ e: EngineDef) -> [String] {
        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
         var ids = ((j["data"] as? [[String: Any]]) ?? (j["models"] as? [[String: Any]]) ?? []).compactMap { $0["id"] as? String ?? $0["name"] as? String }
         if let a = SINGLE_ALIAS[e.id] { ids = [a] }
-        return ids.filter { !isEmbedName($0) }
+        ids = ids.filter { !isEmbedName($0) }
+        if ["osaurus", "lmstudio", "ollama"].contains(e.id) { saveCachedIds(e.id, ids) }
+        return ids
     }
     let L = offlineLines(e.id).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     switch e.id {
-    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b": return L.filter { !isEmbedName($0) }
-    case "lmstudio":
-        var out: [String] = []; var sec = ""
-        for l in L { if l.hasPrefix("LLM") { sec = "llm" } else if l.hasPrefix("EMBEDDING") { sec = "emb" }
-            else if sec == "llm" && !l.hasPrefix("You have"), let f = l.split(separator: " ").first { out.append(String(f)) } }
-        return out
+    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama": return L.filter { !isEmbedName($0) }
+    case "lmstudio": return L.filter { !isEmbedName($0) }
     case "magnitude":
         var out: [String] = []; var on = false
         for l in L { if l.hasPrefix("MODEL") && l.contains("MODEL ID") { on = true; continue }
@@ -119,12 +120,11 @@ func modelIds(_ e: EngineDef) -> [String] {
 /// Start / stop / load engines. Shared by the window and the background proxy.
 func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String: Any] {
     switch (op, eng) {
-    case ("start", "osaurus"): _ = runCmd(OSAURUS, ["serve", "--yes"], detach: true)
+    case ("start", _) where ["osaurus", "ollama", "lmstudio", "magnitude"].contains(eng):
+        // One guarded launch: checks the port and the running app first, and coordinates the window and the proxy.
+        if let e = ENGINE_DEFS.first(where: { $0.id == eng }) { return ["ok": ensureEngineUp(e)] }
     case ("stop", "osaurus"): _ = runCmd(OSAURUS, ["stop"])
-    case ("start", "ollama"): _ = runCmd("/usr/bin/open", ["-a", "Ollama"])
-    case ("start", "lmstudio"): _ = runCmd(LMS, ["server", "start"])
     case ("stop", "lmstudio"): _ = runCmd(LMS, ["server", "stop"])
-    case ("start", "magnitude"): _ = runCmd(MAGNITUDE, ["serve"], detach: true)
     case ("stop", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "stop"])
     case ("load", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "load", d["model"] as? String ?? ""])
     case ("start", "bonsai4b"): _ = runCmd("/bin/bash", [BONSAI, "4b"], detach: true)
@@ -144,8 +144,100 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
 /// Make sure an engine answers; start it if not. Returns false if it never came up.
 func ensureEngineUp(_ e: EngineDef, seconds: Int = 300) -> Bool {
     if engineUp(e) { return true }
-    _ = engineAct("start", e.id)
+    if !GUARDED.contains(e.id) {
+        _ = engineAct("start", e.id)
+        for _ in 0..<seconds { Thread.sleep(forTimeInterval: 1); if engineUp(e) { return true } }
+        return false
+    }
+    // Same-process guard (two callers in one app) + cross-process lock file (window and background proxy).
+    let mx = engineMutex(e.id); mx.lock(); defer { mx.unlock() }
+    let fd = open(SUPPORT + "/launch-\(e.id).lock", O_CREAT | O_RDWR, 0o644)
+    if fd >= 0 { flock(fd, LOCK_EX) }
+    defer { if fd >= 0 { flock(fd, LOCK_UN); close(fd) } }
+    if engineUp(e) { return true }   // someone else started it while we waited for the lock
+    let wasRunning = appRunning(e.id)
+    launchEngine(e.id, appAlreadyRunning: wasRunning)
+    launchLog("\(e.id) start requested (app \(wasRunning ? "already running, server only" : "not running, launched")) by \(isProxyProcess ? "proxy" : "window")")
     for _ in 0..<seconds { Thread.sleep(forTimeInterval: 1); if engineUp(e) { return true } }
+    launchLog("\(e.id) did not answer within \(seconds)s")
     return false
+}
+/// Backends that are separate apps/services and get the guarded, start-on-demand launch.
+let GUARDED: Set<String> = ["osaurus", "ollama", "lmstudio", "magnitude"]
+var isProxyProcess: Bool { CommandLine.arguments.contains("--proxy") }
+private var _mutexes: [String: NSLock] = [:]; private let _mutexLock = NSLock()
+func engineMutex(_ id: String) -> NSLock { _mutexLock.lock(); defer { _mutexLock.unlock() }
+    if let m = _mutexes[id] { return m }; let m = NSLock(); _mutexes[id] = m; return m }
+func pgrepAny(_ pats: [String]) -> Bool { pats.contains { runCmd("/usr/bin/pgrep", ["-f", $0]).0 == 0 } }
+func appRunning(_ id: String) -> Bool {
+    switch id {
+    case "osaurus": return pgrepAny(["osaurus.app/Contents/MacOS/osaurus"])
+    case "ollama": return pgrepAny(["ollama serve", "Ollama.app/Contents/MacOS/Ollama"])
+    case "lmstudio": return pgrepAny(["LM Studio.app/Contents/MacOS/LM Studio"])
+    case "magnitude": return pgrepAny(["magnitude serve", "Magnitude.app/Contents/MacOS"])
+    default: return false
+    }
+}
+let BREW_OLLAMA = home + "/Library/LaunchAgents/sh.brew.ollama.plist"
+/// Starts the backend once, in the background (no window, no focus change).
+func launchEngine(_ id: String, appAlreadyRunning: Bool) {
+    switch id {
+    case "osaurus":
+        // `osaurus serve` starts the server; if the app is closed it opens it hidden (menu bar only).
+        // (`open -g -j` was tested: Osaurus still shows its main window and takes focus, so it is not used.)
+        _ = runCmd(OSAURUS, ["serve", "--yes"], detach: true)
+    case "ollama":
+        if appAlreadyRunning { return }   // the server is up or starting; just wait for the port
+        if FileManager.default.fileExists(atPath: BREW_OLLAMA) {   // Tara's Ollama runs as a Homebrew background service
+            _ = runCmd("/bin/launchctl", ["kickstart", "gui/\(getuid())/sh.brew.ollama"])
+        } else { _ = runCmd("/usr/bin/open", ["-g", "-j", "-a", "Ollama"]) }
+    case "lmstudio": _ = runCmd(LMS, ["server", "start"])
+    case "magnitude": if !appAlreadyRunning { _ = runCmd(MAGNITUDE, ["serve"], detach: true) }
+    default: break
+    }
+}
+func launchLog(_ s: String) {
+    let line = "\(ISO8601DateFormatter().string(from: Date())) \(s)\n"
+    let p = SUPPORT + "/engine-launches.log"
+    if let h = FileHandle(forWritingAtPath: p) { h.seekToEndOfFile(); h.write(line.data(using: .utf8)!); h.closeFile() }
+    else { try? line.write(toFile: p, atomically: true, encoding: .utf8) }
+}
+// ---- model lists without waking anything ----
+let MODEL_CACHE = SUPPORT + "/model-cache.json"
+private let _cacheLock = NSLock()
+func cachedIds(_ id: String) -> [String]? {
+    guard let d = FileManager.default.contents(atPath: MODEL_CACHE),
+          let j = try? JSONSerialization.jsonObject(with: d) as? [String: [String]], let v = j[id], !v.isEmpty else { return nil }
+    return v
+}
+func saveCachedIds(_ id: String, _ ids: [String]) {
+    _cacheLock.lock(); defer { _cacheLock.unlock() }
+    var j = (FileManager.default.contents(atPath: MODEL_CACHE).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: [String]] }) ?? [:]
+    if j[id] == ids { return }; j[id] = ids
+    if let d = try? JSONSerialization.data(withJSONObject: j, options: [.sortedKeys]) { try? d.write(to: URL(fileURLWithPath: MODEL_CACHE), options: .atomic) }
+}
+/// Osaurus serves the MLX model folders in ~/MLXModels (and ~/MLXModels/<org>/); ids are the folder names, lowercased.
+func osaurusDiskModels() -> [String] {
+    let fm = FileManager.default; let root = home + "/MLXModels"; var out: [String] = []
+    for a in (try? fm.contentsOfDirectory(atPath: root)) ?? [] {
+        let pa = root + "/" + a
+        if fm.fileExists(atPath: pa + "/config.json") { out.append(a.lowercased()); continue }
+        for b in (try? fm.contentsOfDirectory(atPath: pa)) ?? [] where fm.fileExists(atPath: pa + "/" + b + "/config.json") { out.append(b.lowercased()) }
+    }
+    return out.sorted()
+}
+func ollamaDiskModels() -> [String] {
+    let fm = FileManager.default; let root = home + "/.ollama/models/manifests/registry.ollama.ai/library"; var out: [String] = []
+    for n in (try? fm.contentsOfDirectory(atPath: root)) ?? [] { for t in (try? fm.contentsOfDirectory(atPath: root + "/" + n)) ?? [] where !t.hasPrefix(".") { out.append(t == "latest" ? n + ":latest" : n + ":" + t) } }
+    return out.sorted()
+}
+func lmstudioDiskModels() -> [String] {
+    let fm = FileManager.default; var roots = [home + "/.lmstudio/models"]
+    if let d = fm.contents(atPath: home + "/.lmstudio/settings.json"), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+       let f = j["downloadsFolder"] as? String, fm.fileExists(atPath: f) { roots.append(f) }
+    var out: [String] = []
+    for r in roots { for pub in (try? fm.contentsOfDirectory(atPath: r)) ?? [] where !pub.hasPrefix(".") {
+        for m in (try? fm.contentsOfDirectory(atPath: r + "/" + pub)) ?? [] where !m.hasPrefix(".") { out.append((pub + "/" + m).lowercased()) } } }
+    return out.filter { !isEmbedName($0) }.sorted()
 }
 func isRaptor(_ m: String) -> Bool { m.lowercased().contains("raptor") }

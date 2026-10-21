@@ -22,3 +22,6 @@ test-sandbox/docs/big-*
 bench/toolcheck/*.log
 chat-backups/
 transcribe.txt
+test-sandbox/osaurus-fix/chats/
+test-sandbox/osaurus-fix/watch.log
+test-sandbox/osaurus-fix/proxy-reply.json
