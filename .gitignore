@@ -25,3 +25,12 @@ transcribe.txt
 test-sandbox/osaurus-fix/chats/
 test-sandbox/osaurus-fix/watch.log
 test-sandbox/osaurus-fix/proxy-reply.json
+# test run output and test chats/photos (not source)
+test-sandbox/img-results/
+test-sandbox/imgchats/
+test-sandbox/lifechats/
+test-sandbox/m1/
+test-sandbox/m2chats/
+test-sandbox/m2files/
+test-sandbox/m3chats/
+test-sandbox/photos/
