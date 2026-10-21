@@ -15,7 +15,7 @@ enum CalendarTools {
     static let noWritableCalendar = "There's no calendar I can add to. Check that a calendar that allows new events is ticked under Settings > Calendars to read."
 
     static let store = EKEventStore()
-    static let cap = 40
+    static let cap = Int.max // no cap (Oct 21 2026)
 
     /// "what's on my calendar today/tomorrow/this week", plus a few obvious wordings.
     nonisolated static func span(in raw: String) -> CalendarSpan? {

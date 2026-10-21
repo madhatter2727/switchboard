@@ -4,7 +4,7 @@ import Foundation
 /// AppKit calls stay on the main actor. Every path goes through PathGuard.
 @MainActor
 enum FileTools2 {
-    private static let listLimit = 200
+    private static let listLimit = Int.max // no cap (Oct 21 2026)
 
     static func listFolder(path raw: String) -> String {
         switch resolve(raw) {

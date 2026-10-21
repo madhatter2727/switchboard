@@ -1,0 +1,19 @@
+{
+ "chatId": "cmvi833ud7zo7",
+ "lock": null,
+ "note": "Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.",
+ "turns": [
+  {
+   "q": "Read the whole file ~/Desktop/Test/hermes-mac-mini-desktop-setup.md and quote its last sentence exactly.",
+   "engine": "bonsai4b",
+   "model": "bonsai-2-4b",
+   "agentBox": true,
+   "header": "Bonsai 2 4B (Prism) · bonsai-2-4b  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Reading ~/Desktop/Test/hermes-mac-mini-desktop-setup.md… -> FILE ~/Desktop/Test/hermes-mac-mini-desktop-setup.md — characters 0–7330 of 7330 (the whole file)\n---\ntitle: \"Query: Bes"
+   ],
+   "reply": "Hermes Desktop on Mac Mini, identity files tight, Grok as default model, reverse-prompt → `/goal` → `/learn` + a few skills (Taste, mixture-of-agents), always-on desk agent; ECC and Grok Build stay separate lanes."
+  }
+ ]
+}

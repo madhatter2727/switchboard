@@ -3,7 +3,19 @@ import Foundation
 import PDFKit
 
 extension FileTools2 {
-    private static var textLimit: Int { 4000 }
+    private static var textLimit: Int { Int.max } // no size cap (Oct 21 2026)
+    /// Full extracted text for the agent's read_file_text: plain text, PDF, Word (.docx/.doc), RTF/RTFD, ODT, HTML. No cap.
+    static func extractFullText(path: String) -> (Bool, String) {
+        var isDir = ObjCBool(false)
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir) else { return (false, "No file at \(path).") }
+        let ext = (path as NSString).pathExtension.lowercased()
+        if isDir.boolValue && ext != "rtfd" { return (false, "\(path) is a folder. Use list_folder.") }
+        if ext == "pages" || ext == "key" || ext == "numbers" { return (false, "\(path) is an Apple iWork file. Export it to PDF or Word first, then I can read all of it.") }
+        let body = readBody(path: path, ext: ext)
+        if body.isEmpty { return (false, "\(path) has no text I can read.") }
+        if body.hasPrefix("Couldn't ") || body == "This file isn't plain text." { return (false, body + " (\(path))") }
+        return (true, body)
+    }
 
     /// PDF via PDFKit (first 4000 characters). RTF and docx via NSAttributedString. Else plain text.
     static func readFileText(path raw: String) -> String {
@@ -67,6 +79,13 @@ extension FileTools2 {
             return readAttributed(url, type: .officeOpenXML)
         case "doc":
             return readAttributed(url, type: .docFormat)
+        case "odt":
+            return readAttributed(url, type: .openDocument)
+        case "html", "htm":
+            let raw = readPlain(url)
+            return raw.replacingOccurrences(of: "<script[\\s\\S]*?</script>|<style[\\s\\S]*?</style>", with: " ", options: .regularExpression)
+                .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+                .replacingOccurrences(of: "[ \\t]+", with: " ", options: .regularExpression)
         default:
             return readPlain(url)
         }
@@ -79,7 +98,7 @@ extension FileTools2 {
         var text = document.string ?? ""
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             var parts: [String] = []
-            let pageStop = min(document.pageCount, 30)
+            let pageStop = document.pageCount
             for index in 0 ..< pageStop {
                 if let pageText = document.page(at: index)?.string {
                     parts.append(pageText)
@@ -109,7 +128,7 @@ extension FileTools2 {
             return "Couldn't read that file."
         }
         defer { try? handle.close() }
-        let data = handle.readData(ofLength: 64 * 1024)
+        let data = handle.readDataToEndOfFile()
         if data.isEmpty { return "" }
         if let text = decodeUTF8(data) {
             return clip(text.trimmingCharacters(in: .whitespacesAndNewlines))

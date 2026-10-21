@@ -2,7 +2,7 @@ import Foundation
 
 /// Read-only Spotlight search. Folder, info, read, date, and open live in FileTools2.
 enum FileTools {
-    private static let resultLimit = 15
+    private static let resultLimit = Int.max // no cap (Oct 21 2026)
     private static let documentExtensions: Set<String> = [
         "pdf", "docx", "pages", "txt", "md", "rtf", "key", "numbers", "xlsx"
     ]

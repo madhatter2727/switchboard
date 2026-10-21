@@ -1,0 +1,25 @@
+{
+ "chatId": "cmvi7px63sf7j",
+ "lock": {
+  "e": "osaurus",
+  "m": "raptor-0.6-4b-jang_6m",
+  "name": "Raptor",
+  "why": "files or calendar",
+  "agent": true
+ },
+ "note": "Auto locked this chat to Raptor with Agent mode (file and folder tools) on. Start a new chat for a fresh pick.",
+ "turns": [
+  {
+   "q": "Read the whole file ~/Desktop/Test/hermes-mac-mini-desktop-setup.md and quote its last sentence exactly.",
+   "engine": "osaurus",
+   "model": "raptor-0.6-4b-jang_6m",
+   "agentBox": true,
+   "header": "Auto · locked to Raptor for this chat",
+   "label": "Auto picked Raptor (files or calendar) · locked for this chat",
+   "steps": [
+    "Reading ~/Desktop/Test/hermes-mac-mini-desktop-setup.md… -> FILE ~/Desktop/Test/hermes-mac-mini-desktop-setup.md — characters 0–7330 of 7330 (the whole file)\n---\ntitle: \"Query: Bes"
+   ],
+   "reply": "The last sentence of the file is:\n\n**\"Product UI and model names change quickly — re-check official Hermes docs on install day.\"**"
+  }
+ ]
+}

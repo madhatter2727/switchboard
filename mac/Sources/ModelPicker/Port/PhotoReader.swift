@@ -85,7 +85,7 @@ private enum PhotoAsk {
         let payload: [String: Any] = [
             "model": model,
             "stream": false,
-            "max_tokens": 512,
+            "max_tokens": 4096,
             "messages": [
                 [
                     "role": "user",

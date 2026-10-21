@@ -11,6 +11,8 @@ enum AgentTools {
         var t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty || t.contains("\0") || t.contains("\n") { return nil }
         t = (t as NSString).expandingTildeInPath
+        // Small models sometimes guess the home folder (/Users/user/..., /home/user/...). Map it onto Tara's home.
+        if !t.hasPrefix(home + "/") && t != home, let m = t.range(of: "^/(Users|home)/[^/]+/", options: .regularExpression) { t = home + "/" + t[m.upperBound...] }
         if !t.hasPrefix("/") { t = home + "/" + t }
         // resolve symlinks on the deepest existing ancestor, so links cannot escape home
         var url = URL(fileURLWithPath: t).standardizedFileURL
@@ -39,6 +41,14 @@ enum AgentTools {
             dest = dir + "/" + base + " \(n)" + (ext.isEmpty ? "" : "." + ext); n += 1 }
         return dest
     }
+    static func intArg(_ v: Any?) -> Int? { if let i = v as? Int { return i }; if let d = v as? Double { return Int(d) }; if let s = v as? String { return Int(s.trimmingCharacters(in: .whitespaces)) }; return nil }
+    /// Pages a long list instead of cutting it: returns one page plus how to get the next one.
+    static func page(_ rows: [String], _ a: [String: Any], _ size: Int) -> String {
+        let off = max(0, min(rows.count, intArg(a["offset"]) ?? 0)), end = min(rows.count, off + size)
+        var out = rows[off..<end].joined(separator: "\n")
+        if off > 0 || end < rows.count { out += "\n[Items \(off + 1)–\(end) of \(rows.count).\(end < rows.count ? " MORE: call again with offset \(end) to see the rest." : " That is the end of the list.")]" }
+        return out
+    }
     static func fmtSize(_ n: Int) -> String { n < 1024 ? "\(n) B" : n < 1_048_576 ? "\(n / 1024) KB" : String(format: "%.1f MB", Double(n) / 1_048_576) }
 
     /// Read-only tools run now. Changing tools return a preview only ("pending": true).
@@ -48,15 +58,15 @@ enum AgentTools {
         switch name {
         case "list_folder":
             guard let p = guardPath(a["path"] as? String ?? ""), let items = try? fm.contentsOfDirectory(atPath: p) else { return ["text": "Cannot open that folder (it must be inside your home folder, not Library or hidden)."] }
-            let rows = items.filter { !$0.hasPrefix(".") }.sorted().prefix(80).map { n -> String in
+            let rows = items.filter { !$0.hasPrefix(".") }.sorted().map { n -> String in
                 var d: ObjCBool = false; fm.fileExists(atPath: p + "/" + n, isDirectory: &d); return (d.boolValue ? "[folder] " : "") + n }
-            return ["text": rows.isEmpty ? "The folder is empty." : rows.joined(separator: "\n") + (items.count > 80 ? "\n…and more" : "")]
+            return ["text": rows.isEmpty ? "The folder is empty." : page(rows, a, 500)]
         case "search_files":
             let q = (a["query"] as? String ?? "").trimmingCharacters(in: .whitespaces)
             guard !q.isEmpty else { return ["text": "Missing query."] }
             let (_, out) = runCmd("/usr/bin/mdfind", ["-onlyin", home, "-name", q])
-            let paths = out.split(separator: "\n").map(String.init).compactMap { guardPath($0) }.prefix(15)
-            return ["text": paths.isEmpty ? "No matching files." : paths.map(short).joined(separator: "\n")]
+            let paths = out.split(separator: "\n").map(String.init).compactMap { guardPath($0) }
+            return ["text": paths.isEmpty ? "No matching files." : page(paths.map(short), a, 200)]
         case "list_files_by_date":
             let days = (a["days_back"] as? Int) ?? Int("\(a["days_back"] ?? "7")") ?? 7
             guard let p = guardPath((a["folder"] as? String) ?? "Desktop"), let en = fm.enumerator(atPath: p) else { return ["text": "Cannot open that folder."] }
@@ -74,14 +84,23 @@ enum AgentTools {
                 rows.append((m, f + "  (" + fmtSize((at[.size] as? Int) ?? 0) + ", " + DateFormatter.localizedString(from: m, dateStyle: .medium, timeStyle: .short) + ")"))
             }
             rows.sort { $0.0 > $1.0 }
-            return ["text": rows.isEmpty ? "No files changed in that time." : rows.prefix(40).map { $0.1 }.joined(separator: "\n")]
+            return ["text": rows.isEmpty ? "No files changed in that time." : page(rows.map { $0.1 }, a, 300)]
         case "file_info":
             guard let p = guardPath(a["path"] as? String ?? ""), let at = try? fm.attributesOfItem(atPath: p) else { return ["text": "Cannot read that path."] }
             return ["text": "\(short(p)): \(at[.type] as? String ?? ""), \(fmtSize((at[.size] as? Int) ?? 0)), modified \(at[.modificationDate] ?? "")"]
         case "read_file_text":
-            guard let p = guardPath(a["path"] as? String ?? ""), let d = fm.contents(atPath: p) else { return ["text": "Cannot read that file."] }
-            guard let s = String(data: d.prefix(8000), encoding: .utf8) else { return ["text": "That file is not plain text."] }
-            return ["text": String(s.prefix(4000)) + (d.count > 4000 ? "\n…(cut off)" : "")]
+            // Whole file, no size cap. Optional offset + max_chars read one exact slice (the window pages big files).
+            guard let p = guardPath(a["path"] as? String ?? "") else { return ["text": "Cannot read that file (it must be inside your home folder, not Library or hidden)."] }
+            let (ok, full) = mainSync { FileTools2.extractFullText(path: p) }
+            if !ok { return ["text": full] }
+            let total = full.count
+            let off = max(0, min(total, intArg(a["offset"]) ?? 0))
+            let want = intArg(a["max_chars"]).map { max(1, $0) } ?? (total - off)
+            let sIdx = full.index(full.startIndex, offsetBy: off), eIdx = full.index(sIdx, offsetBy: min(want, total - off))
+            let end = off + full.distance(from: sIdx, to: eIdx)
+            let head = "FILE \(short(p)) — characters \(off)–\(end) of \(total)" + (off == 0 && end == total ? " (the whole file)" : "")
+            let tail = end < total ? "\n[MORE: \(total - end) characters remain. Call read_file_text again with offset \(end) to keep reading.]" : "\n[END OF FILE]"
+            return ["text": head + "\n" + String(full[sIdx..<eIdx]) + tail, "total": total, "start": off, "end": end, "path": short(p)]
         case "list_calendar_events": return ["text": calendarEvents(a)]
         case "move_items":
             let dest = a["destination_folder"] as? String ?? ""
@@ -132,7 +151,6 @@ enum AgentTools {
             let key = "\(e.eventIdentifier ?? "")|\(e.startDate.timeIntervalSince1970)"; if !seen.insert(key).inserted { continue }
             let when = e.isAllDay ? (multi ? dd.string(from: e.startDate) + " all day" : "All day") : (multi ? dd.string(from: e.startDate) + " " : "") + df.string(from: e.startDate) + "–" + df.string(from: e.endDate)
             lines.append(when + " — " + (e.title ?? "(No title)") + (e.calendar != nil ? " (" + e.calendar.title + ")" : ""))
-            if lines.count == 40 { break }
         }
         return label + " (" + dd.string(from: start) + "):\n" + (lines.isEmpty ? "No events." : lines.joined(separator: "\n"))
     }

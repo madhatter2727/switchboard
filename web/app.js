@@ -36,6 +36,33 @@ function agentUI(){if(S.auto){$('agent').disabled=true;const L=S.chat&&S.chat.lo
  $('agentNote').textContent=!S.sel?'':ok?(($('agent').checked)?'Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.':''):'Agent mode needs an agent-capable model (like Raptor). This one is chat-only.'}
 $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(S.chat.messages.length)saveChat(S.chat)}agentUI()};
 const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body};
+// ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
+function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
+ if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
+const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).length)/3);
+const OUT_RESERVE=4096,TOOL_SCHEMA=2500;
+function roomChars(eid,m,msgs){return Math.max(2000,(ctxFor(eid,m)-OUT_RESERVE-TOOL_SCHEMA-tok(msgs))*3)}
+function maxOut(eid,m,msgs){return Math.max(1024,Math.min(16384,ctxFor(eid,m)-TOOL_SCHEMA-tok(msgs)))}
+// History never gets silently cut: if it is too big for the model, the oldest tool results (then oldest turns) are swapped for a plain note saying so.
+function fitHistory(api,eid,m,keepFrom){api=api.map(x=>({...x}));const lim=ctxFor(eid,m)-OUT_RESERVE-TOOL_SCHEMA;
+ for(let i=1;i<keepFrom&&tok(api)>lim;i++){const x=api[i];if(x.role==='tool'&&x.content.length>400)x.content='[Earlier tool result ('+x.content.length+' characters) not re-sent: too big for this model together with the rest of the chat. Call the tool again if you need it.]'}
+ let dropped=0;while(tok(api)>lim&&api.length>2&&1<keepFrom-dropped){const x=api[1];if(x.role==='system')break;api.splice(1,1);dropped++}
+ if(dropped)api.splice(1,0,{role:'user',content:'[Note from the app: '+dropped+' earlier messages of this chat were not re-sent because the chat is longer than this model can hold. They are still saved in the chat.]'},{role:'assistant',content:'Understood.'});
+ return api}
+async function llm(eid,m,messages,maxTok){const e=ENGINES.find(x=>x.id===eid);
+ const r=await nativeNet({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(eid,{model:up(eid,m),messages,stream:false,temperature:0.2,max_tokens:maxTok||1500,reasoning_effort:'none'}))});
+ if(r.status!==200)throw new Error('model error '+(r.status||'no connection'));return (JSON.parse(r.body).choices[0].message.content||'').trim()}
+function splitChunks(text,size){const out=[];let i=0;while(i<text.length){let j=Math.min(text.length,i+size);if(j<text.length){const nl=text.lastIndexOf('\n',j);if(nl>i+size*0.6)j=nl+1}out.push([i,j]);i=j}return out}
+// Reads ANY size: splits into parts that fit the model, takes notes on every part (same model), and repeats on the notes if they are still too big.
+async function digest(text,label,question,eid,m,progress,depth=0){
+ const size=Math.max(4000,(ctxFor(eid,m)-OUT_RESERVE-1500)*3);const parts=splitChunks(text,size);const notes=[];
+ for(let k=0;k<parts.length;k++){if(S.stopAgent)throw new Error('stopped');const [a,b]=parts[k];progress&&progress('Reading '+label+': part '+(k+1)+' of '+parts.length+(depth?' (combining notes)':'')+'…');
+  const sys='You read one part of a long '+(depth?'set of notes':'document')+' for the user. Their request: "'+question+'". Write short notes on everything in THIS part that matters for the request. Copy exact sentences when exact wording could matter (names, numbers, quotes, headings). Do not invent anything. If nothing in this part matters, write: Nothing relevant here.';
+  const n=await llm(eid,m,[{role:'system',content:sys},{role:'user',content:'Part '+(k+1)+' of '+parts.length+' (characters '+a+'–'+b+' of '+text.length+'):\n\n'+text.slice(a,b)}],1200);
+  notes.push('Part '+(k+1)+' (characters '+a+'–'+b+'): '+n)}
+ let all=notes.join('\n\n');
+ if(all.length>size&&depth<6)all=await digest(all,label,question,eid,m,progress,depth+1);
+ return all}
 function lockLabel(L){return 'Auto picked '+L.name+' ('+L.why+') · locked for this chat'}
 function render(){agentUI();
  $('proxy').innerHTML=S.proxy?'<span class="dot on" style="display:inline-block"></span> Fixed address for other apps:<br><b>http://127.0.0.1:7777/v1</b>':'<span class="dot" style="display:inline-block"></span> Fixed address (7777) is off';
@@ -172,9 +199,16 @@ async function send(text){
  if(ch.messages.length===1)ch.title=text.slice(0,40);
  saveChat(ch);addMsg('user',text);
  const out=addMsg('assistant','');out.innerHTML='<span class="think">Thinking…</span>';
- return new Promise(resolve=>{
+ return new Promise(async resolve=>{try{
   const id=++SID;let acc='',gotAny=false,errored=false;S.cur=id;
-  const body={model:up(S.sel.e,S.sel.m),messages:ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:m.content})),stream:true,temperature:0.7};
+  let hist=ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:m.content}));
+  const room=roomChars(S.sel.e,S.sel.m,[]);
+  if(text.length>room*0.7){out.innerHTML='<span class="think">Your message is long ('+text.length.toLocaleString()+' characters). Reading it in parts…</span>';S.stopAgent=false;
+   const notes=await digest(text,'your message','Understand and answer the user\'s message; keep every instruction and question exactly',S.sel.e,S.sel.m,t=>out.firstChild.textContent=t);
+   const edge=Math.min(3000,Math.floor(room*0.15));
+   hist[hist.length-1]={role:'user',content:'[My message was '+text.length.toLocaleString()+' characters, more than you can hold at once, so the app read all of it in parts. Notes from every part, in order:]\n'+notes+'\n\n[Exact beginning:]\n'+text.slice(0,edge)+'\n\n[Exact ending:]\n'+text.slice(-edge)}}
+  hist=fitHistory([{role:'system',content:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(1);
+  const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};
   thinkOff(S.sel.e,body);
   pending[id]=ev=>{
    if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
@@ -183,7 +217,7 @@ async function send(text){
    else if(ev.type==='done'){delete pending[id];
      if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{tagVia(out,via);ch.messages.push({role:'assistant',content:acc,via:via||undefined});saveChat(ch)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
-  window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});
+  window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
 $('form').onsubmit=ev=>{ev.preventDefault();const t=$('input').value.trim();if(!t||S.busy)return;$('input').value='';send(t)};
 $('input').onkeydown=ev=>{if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();$('form').requestSubmit()}};
@@ -211,11 +245,11 @@ setInterval(()=>{if(!S.switching&&!S.busy)refresh()},6000);
 
 // ---------- Agent mode ----------
 const TOOLS=[
- ['list_folder','List the files and folders directly inside one folder.',{path:['string','Folder path. A name like Downloads is looked up inside the home folder.']},['path']],
- ['search_files','Find files and folders in the home folder by name. Returns up to 15 paths.',{query:['string','Words to look for in the file name.']},['query']],
+ ['list_folder','List the files and folders directly inside one folder. Very big folders come in pages; the result says how to get the next page.',{path:['string','Folder path. A name like Downloads is looked up inside the home folder.'],offset:['integer','Optional: start at this item number (from a MORE note).']},['path']],
+ ['search_files','Find files and folders in the home folder by name. Many results come in pages; the result says how to get the next page.',{query:['string','Words to look for in the file name.'],offset:['integer','Optional: start at this result number (from a MORE note).']},['query']],
  ['list_files_by_date','List files in a folder changed within the last N days (7 = last week, 0 = today).',{folder:['string','Folder to scan, e.g. Downloads.'],days_back:['integer','How many days back.'],name_contains:['string','Optional part of the file name.']},['folder','days_back']],
  ['file_info','Show kind, size and dates for one file or folder.',{path:['string','Path inside the home folder.']},['path']],
- ['read_file_text','Read the text of a plain text file (first 4000 characters).',{path:['string','Path to a file inside the home folder.']},['path']],
+ ['read_file_text','Read the WHOLE text of a document: plain text, Markdown, code, PDF, Word (.docx/.doc), RTF, ODT or HTML. No size limit. If the file is bigger than you can hold at once, the app reads every part for you and returns notes on each part plus the exact opening and ending. Read it once with just the path; do not page it yourself.',{path:['string','Path to a file inside the home folder.'],offset:['integer','Optional: only to jump to a later character position named in a MORE note.']},['path']],
  ['list_calendar_events','Read-only: list calendar events. range is today, tomorrow or this_week; or give start_date and end_date as YYYY-MM-DD.',{range:['string','today, tomorrow or this_week'],start_date:['string','Optional YYYY-MM-DD'],end_date:['string','Optional YYYY-MM-DD']},[]],
  ['copy_items','Prepare a copy of files or folders into a destination folder. Nothing is copied until the user approves.',{paths:['array','Paths to copy.'],destination_folder:['string','Folder to copy them into. Created if missing.']},['paths','destination_folder']],
  ['create_folder','Prepare a new folder. Nothing is created until the user approves.',{path:['string','Folder to create, e.g. Desktop/Archive.']},['path']],
@@ -232,7 +266,7 @@ function sysPrompt(){return 'You are a private assistant on this Mac running in 
 function describe(n,a){const p=x=>(x||'').toString();
  return {list_folder:'Looking in '+p(a.path)+'…',search_files:'Searching for “'+p(a.query)+'”…',list_files_by_date:'Finding files in '+p(a.folder||'Desktop')+' from the last '+(a.days_back??7)+' day(s)…',file_info:'Checking '+p(a.path)+'…',read_file_text:'Reading '+p(a.path)+'…',list_calendar_events:'Checking your calendar for '+p(a.range||((a.start_date||'')+' '+(a.end_date||'')).trim()||'today')+'…',copy_items:'Preparing to copy '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to '+p(a.destination_folder)+'…',create_folder:'Preparing a new folder '+p(a.path)+'…',trash_items:'Preparing to move '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to the Trash…',open_item:'Opening '+p(a.target)+'…',reminders:'Checking your reminders…',create_calendar_event:'Preparing to add “'+p(a.title)+'” to your calendar…',ask_photo_reader:'Asking Photo Reader about '+p(a.path)+'…',move_items:'Preparing to move '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to '+p(a.destination_folder)+'…',rename_item:'Preparing to rename '+p(a.path)+'…'}[n]||'Using '+n+'…'}
 function addStep(st){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='step '+(st.status||'');
- d.innerHTML='🔧 '+esc(st.text)+(st.result?'<div class="res">'+esc(String(st.result).slice(0,600))+'</div>':'');
+ const R=st.result?String(st.result):'';d.innerHTML='🔧 '+esc(st.text)+(R?(R.length>600?'<details class="res"><summary>'+esc(R.slice(0,600))+'… (show all '+R.length.toLocaleString()+' characters)</summary>'+esc(R)+'</details>':'<div class="res">'+esc(R)+'</div>'):'');
  if(st.undoId&&!st.undone){const b=document.createElement('button');b.textContent='Undo';b.className='undo';b.onclick=async()=>{b.disabled=true;const r=await act('undoLast','');if(r.ok)st.undone=true;d.querySelector('.res').textContent+='\n'+r.text;if(r.ok)b.remove();else b.disabled=false;if(S.chat)saveChat(S.chat)};d.appendChild(b)}
  c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 function parseTextCalls(content){ // small models sometimes print the call as JSON text
@@ -241,19 +275,37 @@ function parseTextCalls(content){ // small models sometimes print the call as JS
 function histWithTools(msgs){const out=[];msgs.forEach((m,i)=>{
   if(m.role==='user'||m.role==='assistant'){out.push({role:m.role,content:m.content});return}
   if(m.role==='step'&&m.tool&&m.result!=null){const id='h'+i;out.push({role:'assistant',content:null,tool_calls:[{id,type:'function',function:{name:m.tool,arguments:JSON.stringify(m.args||{})}}]});
-   out.push({role:'tool',tool_call_id:id,name:m.tool,content:String(m.result).slice(0,4000)})}});return out}
+   out.push({role:'tool',tool_call_id:id,name:m.tool,content:String(m.result)})}});return out}
+// read_file_text without offset: get the whole file; if it does not fit the model, read it in parts (nothing skipped).
+async function readWhole(a,question,api,prog){
+ const r=await act('toolRun','',{name:'read_file_text',args:JSON.stringify({path:a.path})});
+ if(r.total==null)return r.text||'Cannot read that file.';
+ const room=roomChars(S.sel.e,S.sel.m,api);if(r.text.length<=room)return r.text;
+ const body=r.text.slice(r.text.indexOf('\n')+1).replace(/\n\[END OF FILE\]$/,'');
+ const notes=await digest(body,r.path,question,S.sel.e,S.sel.m,prog);
+ const edge=Math.max(400,Math.min(3000,Math.floor((room-notes.length)/2)));
+ const lines=body.replace(/\s+$/,'').split('\n');const first=(lines.find(l=>l.trim())||'').trim(),last=lines[lines.length-1].trim();
+ return 'FILE '+r.path+': '+r.total.toLocaleString()+' characters. That is more than this model can hold at once (about '+room.toLocaleString()+' characters), so the app read ALL of it in parts. Nothing was skipped.\n\nFIRST LINE OF THE FILE (exact): '+first+'\nLAST LINE OF THE FILE (exact): '+last+'\n\nEXACT OPENING (character for character):\n'+body.slice(0,edge)+'\n\nEXACT ENDING (character for character):\n'+body.slice(-edge)+'\n\nHELPER NOTES ON EVERY PART, IN ORDER (for meaning only; their wording may be off, never quote from them):\n'+notes+'\n\n(To see the exact text of a part, call read_file_text with the start of that part as offset.)'}
+// Lists that come in pages: fetch the next pages automatically while they fit; otherwise leave the MORE note so the model can ask.
+async function morePages(n,a,out,api){let guard=0;
+ while(guard++<1000){const mm=/MORE: call again with offset (\d+)/.exec(out);if(!mm)break;
+  if(out.length>roomChars(S.sel.e,S.sel.m,api)*0.8)break;
+  const nx=await act('toolRun','',{name:n,args:JSON.stringify({...a,offset:Number(mm[1])})});
+  out=out.replace(/\n\[Items [^\]]*\]$/,'')+'\n'+(nx.text||'')}
+ return out}
 async function sendAgent(text){
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;S.stopAgent=false;S.nudged=false;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;ch.engine=S.sel.e;ch.model=S.sel.m;
  ch.messages.push({role:'user',content:text});if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text);
- const api=[{role:'system',content:sysPrompt()},...histWithTools(ch.messages)];
+ const api=[{role:'system',content:sysPrompt()},...histWithTools(ch.messages)];const turnStart=api.length-1;
  let final='';const wait=addMsg('assistant','');wait.innerHTML='<span class="think working">Working…</span>';
  try{
-  for(let step=0;step<8;step++){
-   wait.firstChild.textContent='Working… (step '+(step+1)+' of up to 8)';$('chat').appendChild(wait);$('chat').scrollTop=1e9;
+  const MAXSTEP=30;const prog=t=>{wait.firstChild.textContent=t;$('chat').scrollTop=1e9};
+  for(let step=0;step<MAXSTEP;step++){
+   wait.firstChild.textContent='Working… (step '+(step+1)+')';$('chat').appendChild(wait);$('chat').scrollTop=1e9;
    if(S.stopAgent){final='(stopped)';break}
-   const r=await nativeNet({url:e.base+'/chat/completions',method:'POST',timeout:300,body:JSON.stringify(thinkOff(S.sel.e,{model:up(S.sel.e,S.sel.m),messages:api,tools:TOOLS,tool_choice:'auto',stream:false,temperature:0.3,reasoning_effort:'none'}))});
+   const r=await nativeNet({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(S.sel.e,{model:up(S.sel.e,S.sel.m),messages:fitHistory(api,S.sel.e,S.sel.m,turnStart),tools:TOOLS,tool_choice:'auto',stream:false,temperature:0.3,max_tokens:maxOut(S.sel.e,S.sel.m,api),reasoning_effort:'none'}))});
    if(r.status!==200){final='The model could not answer ('+(r.status||'no connection')+').';break}
    let msg;try{msg=JSON.parse(r.body).choices[0].message}catch{final='I could not read the model reply.';break}
    let calls=msg.tool_calls||[];let content=msg.content||'';
@@ -264,15 +316,19 @@ async function sendAgent(text){
    for(const c of calls){
     let a={};try{a=JSON.parse(c.function.arguments||'{}')}catch{}
     const n=c.function.name;const st={role:'step',tool:n,args:a,text:describe(n,a),status:''};const el=addStep(st);
-    const res=await act('toolRun','',{name:n,args:JSON.stringify(a)});let out=res.text||'';
+    let res,out;
+    if(n==='read_file_text'&&!(Number(a.offset)>0)){out=await readWhole(a,text,api,prog);res={}}
+    else if(n==='read_file_text'){res=await act('toolRun','',{name:n,args:JSON.stringify({path:a.path,offset:Number(a.offset),max_chars:Math.max(Number(a.max_chars)||0,roomChars(S.sel.e,S.sel.m,api))})});out=res.text||''}
+    else{res=await act('toolRun','',{name:n,args:JSON.stringify(a)});out=res.text||'';
+     if(!res.pending&&n!=='read_file_text')out=await morePages(n,a,out,api)}
     if(res.pending){
       const ok=await dialog('The assistant wants to change something:\n\n'+res.preview,{yes:'Approve',no:'Deny'});
       if(ok){const ap=await act('toolApply','',{name:n,args:JSON.stringify(a),pendingId:res.pendingId||''});out=ap.text;st.status='done';st.text+=' approved';if(ap.undoId)st.undoId=ap.undoId}
       else{if(res.pendingId)act('toolCancelId','',{pendingId:res.pendingId});out='The user denied this action. Nothing was changed.';st.status='denied';st.text+=' denied'}}
     st.result=out;ch.messages.push(st);saveChat(ch);el.replaceWith(addStep(st));
-    api.push({role:'tool',tool_call_id:c.id,name:n,content:String(out).slice(0,6000)});
+    api.push({role:'tool',tool_call_id:c.id,name:n,content:String(out)});
    }
-   if(step===7)final='I stopped after 8 steps. Ask me to continue if you want more.';
+   if(step===MAXSTEP-1)final='I used '+MAXSTEP+' tool steps in a row and paused so I do not loop forever. Say "continue" and I will keep going.';
   }
  }finally{
   wait.remove();addMsg('assistant',final,S.via);ch.messages.push({role:'assistant',content:final,via:S.via||undefined});saveChat(ch);

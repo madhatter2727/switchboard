@@ -1,0 +1,19 @@
+{
+ "chatId": "cmvi7tm6c3i9z",
+ "lock": null,
+ "note": "Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.",
+ "turns": [
+  {
+   "q": "Read the file ~/Projects/model-picker/test-sandbox/docs/big-60kb.txt and quote its very last line exactly.",
+   "engine": "osaurus",
+   "model": "raptor-0.6-4b-jang_6m",
+   "agentBox": true,
+   "header": "Osaurus · raptor-0.6-4b-jang_6m  (agent-capable)",
+   "label": null,
+   "steps": [
+    "Reading /Users/user/Projects/model-picker/test-sandbox/docs/big-60kb.txt… -> FILE ~/Projects/model-picker/test-sandbox/docs/big-60kb.txt — characters 0–60189 of 60189 (the whole file)\nLong test fil"
+   ],
+   "reply": "The very last line of the file is:\n\n**FINAL LINE: The violet heron counted 4,817 pebbles at midnight.**"
+  }
+ ]
+}

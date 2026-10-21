@@ -53,3 +53,20 @@ Tool-calling check (one tool call each, one model at a time, via proxy 7777; ben
 - Tools OFF: gemma2:2b (Ollama: "does not support tools").
 - Bonsai 2 27B: kept agent-capable from the Oct 18 bench (passed on port 8096); Osaurus copy timed out today (too big with other models loaded; memory dropped to 10%, Osaurus restarted to free it).
 Verified in the real app (selftest convo mode, WebView screenshots in bench/toolcheck/): A Auto desktop file read -> Raptor, follow-up synopsis still Raptor using the file text; B manual Raptor listed a folder and read a file with no box ticking; C Auto plain chat stayed Bonsai 4B for the follow-up; D manual Spark and E manual gemma4 listed a folder; F qwen2.5-coder listed a folder.
+
+## Oct 21 2026 ~10:30-11:15 AM ET: no size limits on reading (Tech Demos)
+Backup first: ~/Projects/model-picker-backup-20261021b (source, installed .app, old ~/Models/bonsai2/start.sh).
+Root cause of "cut off at 'Local is a second phase fr'": the agent's read_file_text (Tools.swift) returned only the first 4000 characters (and only plain text: PDFs/Word failed). On top, the window cut each tool result to 6000 characters and to 4000 when re-sending history. The ported Ask My Mac reader (Port/FileToolsRead.swift, PDF/Word) also clipped at 4000 and was not even used.
+Fix (no hard caps left in reading, tool results, history or listings):
+- read_file_text returns the WHOLE file; text, Markdown, code, PDF (all pages, PDFKit), Word .docx/.doc, RTF/RTFD, ODT, HTML (same extraction as Ask My Mac/One Space). iWork files get a plain "export to PDF/Word first" message. Optional offset to jump.
+- If the file fits the model's memory it goes in whole. If not, the window reads it in parts that fit (same model), takes notes on every part, combines the notes (repeats if needed), and gives the model the notes plus the exact opening and exact ending. The result says plainly that the file was bigger and that nothing was skipped. Works for any size.
+- Tool results and history are never shortened. If a long chat no longer fits, the oldest tool results (then oldest turns) are replaced by a visible note saying they were not re-sent (still saved in the chat).
+- Lists page instead of cutting: list_folder 500 per page, search_files 200, files-by-date 300, with a MORE note; the window fetches further pages by itself while they fit. Calendar events, reminders, instant find results: no cap. Step boxes show "show all N characters".
+- Pasted text longer than the model can hold is read in parts the same way.
+- Answer length: max_tokens set from the free context (up to 16k) instead of the engine default (Osaurus defaulted to 2048). Photo Reader answers up to 4096 tokens (was 512). Agent steps 8 -> 30 per message (then it pauses and says "continue").
+- Guessed paths like /Users/user/... or /Users/.../ are mapped onto Tara's home.
+- Context: Bonsai 2 4B/9B now -c 65536 -np 1 with q8 KV cache (was 8192 shared by 4 slots); Ollama already 65536 (OLLAMA_CONTEXT_LENGTH, q8 KV); Raptor/Spark budgeted at 32768 (Osaurus has no setting; model supports far more); Bonsai 27B 16384; gemma2:2b 8192.
+Results (read-only reads; test files test-sandbox/docs/big-60kb.txt and big-1mb.txt):
+- Raptor (Auto): Desktop Hermes guide -> quoted the real last sentence "Product UI and model names change quickly — re-check official Hermes docs on install day." 60 KB: exact last line, 1 read, ~30 s. 1 MB: correct last line (dropped the "FINAL LINE:" label), read in parts, ~6.5 min.
+- Bonsai 4B: whole Desktop file delivered (7,442 chars) but it quoted the bold "bottom line" sentence instead of the true last one; 60 KB exact; 1 MB correct, ~12.5 min.
+- Gemma 4 E2B: same Desktop behaviour as Bonsai ("ECC and Grok Build stay separate lanes."); 60 KB exact; 1 MB: see below.

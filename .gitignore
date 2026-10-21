@@ -18,3 +18,5 @@ bench/**/*.png
 !web/**/*.png
 .DS_Store
 selftest.json
+test-sandbox/docs/big-*
+bench/toolcheck/*.log
