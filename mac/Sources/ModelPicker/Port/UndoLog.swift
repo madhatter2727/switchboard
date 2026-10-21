@@ -101,6 +101,9 @@ enum UndoLog {
         case "trash":
             guard let path = step.path else { return "The undo record is missing a path." }
             return trashCopy(path)
+        case "restoreFile":
+            guard let from = step.from, let to = step.to else { return "The undo record is missing a path." }
+            return FileWrite.restore(from: from, to: to)
         case "removeEmptyFolder":
             guard let path = step.path else { return "The undo record is missing a path." }
             return removeEmptyFolder(path)

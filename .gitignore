@@ -20,3 +20,5 @@ bench/**/*.png
 selftest.json
 test-sandbox/docs/big-*
 bench/toolcheck/*.log
+chat-backups/
+transcribe.txt

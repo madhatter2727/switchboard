@@ -20,7 +20,7 @@ func mainAwait<T>(_ f: @escaping @MainActor () async -> T) -> T {
 enum PortTools {
     static let lock = NSLock()
     static var pendings: [String: PendingAction] = [:]
-    static let changingNames: Set<String> = ["move_items", "rename_item", "copy_items", "create_folder", "trash_items", "create_calendar_event"]
+    static let changingNames: Set<String> = ["move_items", "rename_item", "copy_items", "create_folder", "trash_items", "create_calendar_event", "edit_file"]
 
     private static func str(_ a: [String: Any], _ keys: [String]) -> String? {
         for k in keys { if let s = a[k] as? String { let t = s.trimmingCharacters(in: .whitespacesAndNewlines); if !t.isEmpty { return t } } }
@@ -40,7 +40,7 @@ enum PortTools {
     private static func pend(_ action: PendingAction) -> [String: Any] {
         guard action.phase == .pending else { return ["text": action.previewText] }
         lock.lock(); pendings[action.id.uuidString] = action; lock.unlock()
-        return ["pending": true, "pendingId": action.id.uuidString, "preview": action.previewText + "\nNothing is overwritten and nothing is permanently deleted.", "text": "Waiting for the user to approve. Nothing has changed yet."]
+        return ["pending": true, "pendingId": action.id.uuidString, "preview": action.previewText + (action.kind == .editFile ? "" : "\nNothing is overwritten and nothing is permanently deleted."), "text": "Waiting for the user to approve. Nothing has changed yet."]
     }
 
     /// nil = not one of the ported tools.
@@ -59,6 +59,20 @@ enum PortTools {
         case "create_calendar_event":
             let t = str(a, ["title", "name", "summary"]) ?? "", s = str(a, ["start", "start_time"]) ?? "", e = str(a, ["end", "end_time"]) ?? ""
             return pend(mainAwait { await ActionCenter.planCalendarEvent(title: t, start: s, end: e) })
+        case "create_file":
+            let p = str(a, ["path", "file", "name", "filename"]) ?? ""
+            let c = (a["content"] as? String) ?? (a["text"] as? String) ?? (a["contents"] as? String) ?? ""
+            return mainSync { FileWrite.create(path: p, content: c) }
+        case "edit_file":
+            let p = str(a, ["path", "file"]) ?? ""
+            let m = str(a, ["mode", "how"]) ?? ((a["find"] as? String).map { _ in "replace" } ?? "append")
+            let t = (a["text"] as? String) ?? (a["content"] as? String) ?? (a["new_text"] as? String) ?? (a["replace_with"] as? String) ?? ""
+            let f = (a["find"] as? String) ?? (a["old_text"] as? String)
+            return pend(mainSync { FileWrite.planEdit(path: p, mode: m, text: t, find: f) })
+        case "pages_new_document":
+            let t = (a["text"] as? String) ?? (a["content"] as? String) ?? ""
+            let s = str(a, ["save_path", "path", "save_as"])
+            return FileWrite.pagesNew(text: t, savePath: s)
         case "open_item":
             let t = str(a, ["target", "path", "name"]) ?? ""
             return ["text": mainAwait { await FileTools2.openItem(t) }]

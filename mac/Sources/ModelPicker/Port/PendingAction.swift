@@ -9,6 +9,7 @@ struct PendingAction: Identifiable, Equatable {
         case createFolder
         case trash
         case calendarEvent
+        case editFile
     }
 
     enum Phase: Equatable {
@@ -47,6 +48,9 @@ struct PendingAction: Identifiable, Equatable {
     var eventStart: Date? = nil
     var eventEnd: Date? = nil
     var eventAllDay: Bool = false
+    /// Set for an edit of an existing file.
+    var editPath: String? = nil
+    var editData: Data? = nil
 
     var previewText: String {
         var lines = [title, summary]

@@ -19,6 +19,8 @@ enum ActionCenter {
             return runTrash(action)
         case .calendarEvent:
             return saveCalendarEvent(action)
+        case .editFile:
+            return FileWrite.runEdit(action)
         }
     }
 

@@ -22,6 +22,11 @@ final class SpeechInput: ObservableObject {
     private var utterance = 0
     private var prefix = ""
 
+    nonisolated static func log(_ m: String) {
+        let line = "\(Date()) \(m)\n"; let path = NSHomeDirectory() + "/Library/Logs/ModelPickerSpeech.log"
+        if let h = FileHandle(forWritingAtPath: path) { h.seekToEndOfFile(); h.write(line.data(using: .utf8)!); h.closeFile() } else { try? line.write(toFile: path, atomically: true, encoding: .utf8) }
+    }
+    private var buffers = 0
     init() {
         guard let recognizer = SFSpeechRecognizer(), recognizer.supportsOnDeviceRecognition else {
             available = false
@@ -44,6 +49,7 @@ final class SpeechInput: ObservableObject {
     }
 
     func holdUp() {
+        Self.log("holdUp: buffers=\(buffers) listening=\(listening) starting=\(starting)")
         let active = holding || starting || engine.isRunning || tapInstalled
         holding = false
         generation += 1
@@ -101,8 +107,11 @@ final class SpeechInput: ObservableObject {
         guard format.sampleRate > 0, format.channelCount > 0 else {
             throw SpeechFailure.noInput
         }
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+        Self.log("arm: format \(format) onDevice=\(recognizer.supportsOnDeviceRecognition) locale=\(recognizer.locale.identifier) available=\(recognizer.isAvailable)")
+        buffers = 0
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             request.append(buffer)
+            Task { @MainActor in self?.buffers += 1 }
         }
         tapInstalled = true
         engine.prepare()
@@ -110,6 +119,8 @@ final class SpeechInput: ObservableObject {
         task = recognizer.recognitionTask(with: request) { [weak self] result, error in
             let text = result?.bestTranscription.formattedString ?? ""
             let failed = error != nil
+            if let e = error as NSError? { SpeechInput.log("recognizer error \(e.domain) \(e.code) \(e.localizedDescription)") }
+            if result?.isFinal == true { SpeechInput.log("final: '\(text)'") }
             let finished = failed || result?.isFinal == true
             Task { @MainActor in
                 guard let self, self.utterance == token else { return }
@@ -165,6 +176,7 @@ final class SpeechInput: ObservableObject {
     }
 
     private func fail(_ message: String) {
+        Self.log("fail: \(message)")
         hint = message
         warning = message
     }

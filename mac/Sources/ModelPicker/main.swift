@@ -1,6 +1,7 @@
 import Cocoa
 import ServiceManagement
 import WebKit
+import Speech
 
 final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHandler, URLSessionDataDelegate {
     weak var web: WKWebView?
@@ -210,6 +211,16 @@ if let i = CommandLine.arguments.firstIndex(of: "--preroute"), CommandLine.argum
         if CommandLine.arguments.contains("--apply"), r["pending"] as? Bool == true, let pid = r["pendingId"] as? String { r["applied"] = PortTools.apply(pendingId: pid) }
         if let d = try? JSONSerialization.data(withJSONObject: r), let s = String(data: d, encoding: .utf8) { print(s) }
         fflush(stdout); exit(0) }
+    RunLoop.main.run()
+}
+if let i = CommandLine.arguments.firstIndex(of: "--transcribe"), CommandLine.arguments.count > i + 1 {
+    let f = CommandLine.arguments[i + 1]
+    Task {
+        var out = "SpeechTranscriber not available on this macOS"
+        if #available(macOS 26.0, *) { out = "available=\(SpeechTranscriber.isAvailable) text=" + (await LiveTranscriber.transcribeFile(f)) }
+        try? out.write(toFile: NSHomeDirectory() + "/Projects/model-picker/transcribe.txt", atomically: true, encoding: .utf8)
+        print(out); fflush(stdout); exit(0)
+    }
     RunLoop.main.run()
 }
 let app = NSApplication.shared

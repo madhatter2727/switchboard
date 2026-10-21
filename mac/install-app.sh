@@ -19,6 +19,7 @@ pb NSRemindersFullAccessUsageDescription "Model Picker lists your open reminders
 pb NSRemindersUsageDescription "Model Picker lists your open reminders when you ask."
 pb NSMicrophoneUsageDescription "Model Picker uses the microphone for hold-to-talk. Audio stays on this Mac."
 pb NSSpeechRecognitionUsageDescription "Model Picker turns your speech into text on this Mac. Recognition stays on device."
+pb NSAppleEventsUsageDescription "Model Picker controls Pages only when you ask it to make a document for you."
 pb NSCalendarsUsageDescription "Model Picker reads your calendar only when you ask about your schedule."
 codesign --force --deep -s - -r="designated => identifier \"com.tara.modelpicker\"" "$APP"  # stable identity: macOS keeps permissions across updates
 # Background helper: keeps the fixed address http://127.0.0.1:7777/v1 alive after login, even with the window closed.
