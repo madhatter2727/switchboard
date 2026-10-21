@@ -158,7 +158,8 @@ const CODE_RX=/\b(code|coding|script|bug|debug|html|css|javascript|js|python|swi
 const FILE_RX=/\b(pages|keynote|textedit|docx|txt|markdown|note|notes|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function haveModel(eid){return (S.models[eid]||[]).length>0}
 function autoRoute(text){
- if(S.att.some(a=>a.kind==='image')){const g=(S.models.ollama||[]).find(m=>isVision(m.id));if(g)return {e:'ollama',m:g.id,name:g.id+' (can see pictures)',agent:false,why:'picture attached'}}
+ if(S.att.some(a=>a.kind==='image')){if(haveModel('bonsai4b'))return {e:'bonsai4b',m:ALIAS.bonsai4b,name:'Bonsai 4B (can see pictures)',agent:false,why:'picture attached'};
+  const g=(S.models.ollama||[]).find(m=>isVision(m.id));if(g)return {e:'ollama',m:g.id,name:g.id+' (can see pictures)',agent:false,why:'picture attached'}}
  const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
  const R={e:'osaurus',m:raptor?raptor.id:'raptor-0.6-4b-jang_6m',name:'Raptor',agent:false};
  if(CODE_RX.test(text)){
@@ -542,7 +543,7 @@ window.__selftest=async(mode,eid,mid)=>{if(mode!=='show')return _st9(mode,eid,mi
 
 // ---- M3 (Oct 21): attachments. Paste (Cmd+V), drag and drop, or 📎. Pictures go to models that can see; documents are read in full. ----
 S.att=[];
-const isVision=m=>/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl/i.test(m||'');
+const isVision=m=>/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl|bonsai-2-(4b|9b)/i.test(m||''); // Bonsai 2 4B/9B see pictures since Oct 21 (mmproj added in start.sh)
 const apiText=m=>m.attText?(m.content+'\n\n'+m.attText):m.content;
 function kb(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB'}
 function renderAtts(){const b=$('atts');b.innerHTML='';
