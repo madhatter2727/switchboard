@@ -17,6 +17,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
             guard let us = d["url"] as? String, let url = localOK(us) else { replyHandler(["error": "blocked", "status": 0, "body": ""], nil); return }
             var r = URLRequest(url: url); r.httpMethod = (d["method"] as? String) ?? "GET"; r.timeoutInterval = (d["timeout"] as? Double) ?? 5
             if let b = d["body"] as? String { r.httpBody = b.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+            if r.httpMethod == "POST" { Owned.noteRequest(url: url, body: r.httpBody) }
             let cfg = URLSessionConfiguration.ephemeral; cfg.timeoutIntervalForRequest = r.timeoutInterval
             let rid = d["rid"] as? String
             let t = URLSession(configuration: cfg).dataTask(with: r) { data, resp, err in
@@ -83,6 +84,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         guard let us = d["url"] as? String, let url = localOK(us) else { emit(id, "error", "blocked"); return }
         var r = URLRequest(url: url); r.httpMethod = "POST"; r.timeoutInterval = 600
         r.httpBody = (d["body"] as? String)?.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        Owned.noteRequest(url: url, body: r.httpBody)
         let t = session.dataTask(with: r); tasks[id] = t; bufs[id] = Data(); t.taskDescription = "\(id)"; t.resume()
     }
     func idOf(_ t: URLSessionTask) -> Int { Int(t.taskDescription ?? "") ?? -1 }
@@ -215,7 +217,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
     @objc func showWindow() { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
     func applicationShouldHandleReopen(_ s: NSApplication, hasVisibleWindows f: Bool) -> Bool { showWindow(); return true }
-    func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { false }
+    func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { false }   // closing the window keeps the menu bar item (and its models)
+    /// Quit (Cmd+Q, menu Quit, menu bar Quit): stop the local models Switchboard started, unless Ask My Mac is
+    /// still open (it shares them through 7777). Crash / force-quit is covered by the 7777 helper's watcher.
+    func applicationShouldTerminate(_ s: NSApplication) -> NSApplication.TerminateReply {
+        if CommandLine.arguments.contains("--selftest") { return .terminateNow }
+        let others = otherClientsOpen(excludingSelf: true)
+        launchLog("Switchboard quitting; Ask My Mac or another Switchboard open: \(others)")
+        if others || Owned.isEmpty { return .terminateNow }
+        window?.orderOut(nil)
+        DispatchQueue.global().async {
+            Owned.stopAll(reason: "Switchboard quit")
+            DispatchQueue.main.async { NSApp.reply(toApplicationShouldTerminate: true) }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { NSApp.reply(toApplicationShouldTerminate: true) }   // never hang a quit
+        return .terminateLater
+    }
+}
+/// Is a Switchboard window app (other than this process) or Ask My Mac running?
+/// Uses the process list, not AppKit: the 7777 helper must never register with macOS as an app
+/// (when it did, Finder/Spotlight "opened" Switchboard by just activating the invisible helper).
+func otherClientsOpen(excludingSelf: Bool) -> Bool { switchboardWindowOpen() || askMyMacOpen() }
+func switchboardWindowOpen() -> Bool {
+    let out = runCmd("/usr/bin/pgrep", ["-fl", "Switchboard.app/Contents/MacOS/Switchboard"]).1
+    let me = "\(getpid())"
+    return out.split(separator: "\n").contains { l in
+        let f = l.split(separator: " "); guard let pid = f.first, String(pid) != me else { return false }
+        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") }
+}
+func askMyMacOpen() -> Bool { runCmd("/usr/bin/pgrep", ["-x", "AskMyMac"]).0 == 0 }
+
+/// Runs inside the 7777 helper. Every 5 s: if neither Switchboard's window app nor Ask My Mac is running
+/// (closed, crashed or force-quit) for 10 s, stop what Switchboard started. Also stops Ask My Mac's own
+/// engines (Spark / Bonsai 27B jobs) once Ask My Mac has been gone 10 s, in case it crashed.
+final class Watcher {
+    var goneSince: Date?, ammGoneSince: Date?
+    let proxy: Proxy
+    init(_ p: Proxy) { proxy = p }
+    let q = DispatchQueue(label: "watcher"); var timer: DispatchSourceTimer?
+    func start() { let t = DispatchSource.makeTimerSource(queue: q); t.schedule(deadline: .now() + 5, repeating: 5); t.setEventHandler { [weak self] in self?.tick() }; t.resume(); timer = t }
+    func tick() {
+        let sb = switchboardWindowOpen(), amm = askMyMacOpen()
+        if amm { ammGoneSince = nil } else {
+            if ammGoneSince == nil { ammGoneSince = Date() }
+            if Date().timeIntervalSince(ammGoneSince!) >= 10 {
+                DispatchQueue.global().async { for l in ["com.tara.askmymac.spark", "com.tara.askmymac.bonsai"] where runCmd("/bin/launchctl", ["list", l]).0 == 0 {
+                    _ = runCmd("/bin/launchctl", ["remove", l]); launchLog("owned: stopped \(l) because Ask My Mac is not running") } }
+            }
+        }
+        if sb || amm { goneSince = nil; return }
+        if goneSince == nil { goneSince = Date() }
+        guard Date().timeIntervalSince(goneSince!) >= 10, !Owned.isEmpty else { return }
+        let keep = proxy.busyEngines(otherAppsWithin: 600)
+        DispatchQueue.global().async { Owned.stopAll(reason: "neither Switchboard nor Ask My Mac is open", keep: keep) }
+    }
 }
 // Test harness (benchmark): `ModelPicker --tool NAME 'ARGS_JSON' [--apply]` runs one agent tool and prints JSON.
 if let i = CommandLine.arguments.firstIndex(of: "--tool"), CommandLine.arguments.count > i + 2 {
@@ -250,10 +305,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--transcribe"), CommandLine.arg
     }
     RunLoop.main.run()
 }
-let app = NSApplication.shared
 if CommandLine.arguments.contains("--proxy") {
-    app.setActivationPolicy(.prohibited)
-    let px = Proxy(); px.start(); app.run()
+    // No NSApplication here on purpose (see switchboardWindowOpen).
+    let px = Proxy(); px.start(); let w = Watcher(px); w.start(); dispatchMain()
 } else {
+    let app = NSApplication.shared
     let del = AppDelegate(); app.delegate = del; app.setActivationPolicy(.regular); app.run()
 }

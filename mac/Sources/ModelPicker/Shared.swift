@@ -123,19 +123,19 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
     case ("start", _) where ["osaurus", "ollama", "lmstudio", "magnitude"].contains(eng):
         // One guarded launch: checks the port and the running app first, and coordinates the window and the proxy.
         if let e = ENGINE_DEFS.first(where: { $0.id == eng }) { return ["ok": ensureEngineUp(e)] }
-    case ("stop", "osaurus"): _ = runCmd(OSAURUS, ["stop"])
-    case ("stop", "lmstudio"): _ = runCmd(LMS, ["server", "stop"])
+    case ("stop", "osaurus"): _ = runCmd(OSAURUS, ["stop"]); Owned.forget(eng)
+    case ("stop", "lmstudio"): _ = runCmd(LMS, ["server", "stop"]); Owned.forget(eng)
     case ("stop", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "stop"])
-    case ("load", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "load", d["model"] as? String ?? ""])
-    case ("start", "bonsai4b"): _ = runCmd("/bin/bash", [BONSAI, "4b"], detach: true)
-    case ("start", "bonsai9b"): _ = runCmd("/bin/bash", [BONSAI, "9b"], detach: true)
-    case ("stop", "bonsai4b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"])
-    case ("stop", "bonsai9b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
+    case ("load", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "load", d["model"] as? String ?? ""]); Owned.noteUsed("magnitude", d["model"] as? String ?? "")
+    case ("start", "bonsai4b"): _ = runCmd("/bin/bash", [BONSAI, "4b"], detach: true); Owned.noteStarted(eng)
+    case ("start", "bonsai9b"): _ = runCmd("/bin/bash", [BONSAI, "9b"], detach: true); Owned.noteStarted(eng)
+    case ("stop", "bonsai4b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); Owned.forget(eng)
+    case ("stop", "bonsai9b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"]); Owned.forget(eng)
     case ("start", "spark"), ("start", "bonsai27b"):
         guard let sc = BUILTIN_SCRIPT[eng] else { break }
         if eng == "bonsai27b" { freeMemoryForBig() } else { stopBuiltin("bonsai27b") }
-        _ = runCmd("/bin/launchctl", ["submit", "-l", jobLabel(eng), "--", sc])
-    case ("stop", "spark"), ("stop", "bonsai27b"): stopBuiltin(eng)
+        _ = runCmd("/bin/launchctl", ["submit", "-l", jobLabel(eng), "--", sc]); Owned.noteStarted(eng)
+    case ("stop", "spark"), ("stop", "bonsai27b"): stopBuiltin(eng); Owned.forget(eng)
     case ("list", _): return ["ids": modelIds(ENGINE_DEFS.first { $0.id == eng } ?? ENGINE_DEFS[0])]
     default: break
     }
@@ -157,6 +157,7 @@ func ensureEngineUp(_ e: EngineDef, seconds: Int = 300) -> Bool {
     if engineUp(e) { return true }   // someone else started it while we waited for the lock
     let wasRunning = appRunning(e.id)
     launchEngine(e.id, appAlreadyRunning: wasRunning)
+    if !(e.id == "ollama" && wasRunning) { Owned.noteStarted(e.id, kind: wasRunning ? "server" : "app") }
     launchLog("\(e.id) start requested (app \(wasRunning ? "already running, server only" : "not running, launched")) by \(isProxyProcess ? "proxy" : "window")")
     for _ in 0..<seconds { Thread.sleep(forTimeInterval: 1); if engineUp(e) { return true } }
     launchLog("\(e.id) did not answer within \(seconds)s")

@@ -1,19 +1,30 @@
 import Foundation
 import Network
 
+let PROXY_PID = SUPPORT + "/helper-7777.pid"
+
 /// Small OpenAI-style server on 127.0.0.1:7777 that routes to whichever engine holds the model.
 final class Proxy: NSObject, URLSessionDataDelegate {
     let port: NWEndpoint.Port = 7777
     var listener: NWListener?
     var session: URLSession!
     var relays: [Int: (NWConnection, Bool)] = [:]   // task id -> (connection, headerSent)
+    var relayEngine: [Int: String] = [:]
+    func done(_ eng: String) { lock.lock(); inFlight[eng] = max(0, (inFlight[eng] ?? 1) - 1); if otherUse[eng] != nil { otherUse[eng] = Date() }; lock.unlock() }
     let lock = NSLock()
     var lastMagnitude = ""
+    var inFlight: [String: Int] = [:]          // engine -> requests being answered right now
+    var otherUse: [String: Date] = [:]         // engine -> last use by an app other than Switchboard / Ask My Mac
+    /// Engines to keep even when both apps are closed: mid-answer, or used by some other local app in the last `s` seconds.
+    func busyEngines(otherAppsWithin s: Double) -> Set<String> {
+        lock.lock(); defer { lock.unlock() }
+        return Set(inFlight.filter { $0.value > 0 }.keys).union(otherUse.filter { Date().timeIntervalSince($0.value) < s }.keys)
+    }
 
     func log(_ s: String) { FileHandle.standardError.write(("\(Date()) \(s)\n").data(using: .utf8)!) }
 
     func start() {
-        ensureDirs()
+        ensureDirs(); try? "\(getpid())".write(toFile: PROXY_PID, atomically: true, encoding: .utf8)
         session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil)
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: port)
@@ -89,18 +100,30 @@ final class Proxy: NSObject, URLSessionDataDelegate {
             guard var j = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { err(c, 400, "Body must be JSON."); return }
             DispatchQueue.global().async {
                 guard let (e, m) = self.route(j["model"] as? String) else { self.err(c, 400, "No model picked in Switchboard and none named in the request, or that model was not found on any engine."); return }
-                self.log("chat -> \(e.id) / \(m)")
-                guard ensureEngineUp(e) else { self.err(c, 503, "Could not start \(e.name)."); return }
+                let ua = head.split(separator: "\r\n").first { $0.lowercased().hasPrefix("user-agent:") }.map(String.init) ?? ""
+                let known = ua.contains("AskMyMac") || ua.contains("Ask%20My%20Mac") || ua.contains("Switchboard")
+                self.lock.lock(); self.inFlight[e.id, default: 0] += 1; if !known { self.otherUse[e.id] = Date() }; self.lock.unlock()
+                self.log("chat -> \(e.id) / \(m)  [\(ua)]")
+                Owned.noteUsed(e.id, m)
+                guard ensureEngineUp(e) else { self.done(e.id); self.err(c, 503, "Could not start \(e.name)."); return }
                 if e.id == "magnitude" && self.lastMagnitude != m { _ = engineAct("load", "magnitude", ["model": m]); self.lastMagnitude = m }
                 j["model"] = upstreamModel(e, m)
                 if isRaptor(m) && j["reasoning_effort"] == nil { j["reasoning_effort"] = "none" }
                 var r = URLRequest(url: URL(string: e.base + "/chat/completions")!); r.httpMethod = "POST"; r.timeoutInterval = 900
                 r.httpBody = try? JSONSerialization.data(withJSONObject: j); r.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 let t = self.session.dataTask(with: r)
-                self.lock.lock(); self.relays[t.taskIdentifier] = (c, false); self.lock.unlock()
+                self.lock.lock(); self.relays[t.taskIdentifier] = (c, false); self.relayEngine[t.taskIdentifier] = e.id; self.lock.unlock()
                 c.stateUpdateHandler = { st in if case .cancelled = st { t.cancel() } else if case .failed = st { t.cancel() } }
                 t.resume()
             }
+            return
+        }
+        if path == "/switchboard/owned" && method == "POST" {
+            // Ask My Mac reports an engine it launched (e.g. Osaurus), so it is stopped when neither app is open.
+            if let j = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any], let id = j["engine"] as? String, ENGINE_DEFS.contains(where: { $0.id == id }) {
+                Owned.noteStarted(id, kind: (j["kind"] as? String) == "server" ? "server" : "app", by: (j["by"] as? String).map { String($0.prefix(32)) } ?? "other app")
+                respond(c, 200, Data("{\"ok\":true}".utf8))
+            } else { err(c, 400, "Need {\"engine\": id}.") }
             return
         }
         if path == "/" || path == "/health" { respond(c, 200, Data("{\"ok\":true,\"name\":\"Switchboard proxy\"}".utf8)); return }
@@ -122,7 +145,8 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         rel?.0.send(content: data, completion: .contentProcessed { _ in })
     }
     func urlSession(_ s: URLSession, task t: URLSessionTask, didCompleteWithError e: Error?) {
-        lock.lock(); let rel = relays.removeValue(forKey: t.taskIdentifier); lock.unlock()
+        lock.lock(); let rel = relays.removeValue(forKey: t.taskIdentifier); let eng = relayEngine.removeValue(forKey: t.taskIdentifier); lock.unlock()
+        if let eng = eng { done(eng) }
         guard let c = rel?.0 else { return }
         if e != nil && (e as NSError?)?.code != NSURLErrorCancelled {
             let msg = "data: {\"error\":{\"message\":\"engine connection lost\"}}\n\n"
