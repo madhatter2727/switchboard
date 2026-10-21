@@ -225,3 +225,8 @@ private enum PhotoAsk {
 }
 
 extension String: @retroactive Error {}
+
+extension FileTools2 {
+    /// Photo Reader for an attachment the app saved itself (absolute path, no home-folder rule needed).
+    static func describeAttachment(path: String, question: String) async -> String { await PhotoAsk.send(path: path, question: question) }
+}

@@ -139,6 +139,21 @@ enum PortTools {
         case "saveCreation":
             let name = d["name"] as? String ?? "creation", html = d["html"] as? String ?? ""
             return mainSync { Creations.save(name: name, html: html).map { ["ok": true, "path": $0] } ?? ["ok": false] }
+        case "attachPick":
+            let paths = mainSync { Attachments.pick() }
+            return ["files": paths.map { Attachments.info($0, real: true) }]
+        case "attachPath":
+            let p = d["path"] as? String ?? ""
+            guard FileManager.default.fileExists(atPath: p) else { return ["ok": false, "err": "No file at \(p)."] }
+            return Attachments.info(p, real: true)
+        case "attachSave":
+            return Attachments.save(name: d["name"] as? String ?? "pasted.png", b64: d["b64"] as? String ?? "")
+        case "describeImage":
+            let p = d["path"] as? String ?? "", q = d["question"] as? String ?? "Describe this image in detail, including any text in it."
+            guard p.hasPrefix(Attachments.dir + "/") || FileManager.default.fileExists(atPath: p) else { return ["ok": false] }
+            let t = mainAwait { await FileTools2.describeAttachment(path: p, question: q) }
+            let bad = t.hasPrefix("Photo Reader is offline") || t.hasPrefix("No file") || t.hasPrefix("That ") || t.hasPrefix("Couldn't")
+            return ["ok": !bad, "text": t]
         case "revealPath":
             let p = d["path"] as? String ?? ""
             guard case .success(let path) = PathGuard.accept(p) else { return ["ok": false] }

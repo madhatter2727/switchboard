@@ -40,7 +40,7 @@ const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b'].inclu
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
-const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).length)/3);
+const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(2400)).length)/3); // a picture counts as ~800 tokens, not its base64 size
 const OUT_RESERVE=4096,TOOL_SCHEMA=2500;
 function roomChars(eid,m,msgs){return Math.max(2000,(ctxFor(eid,m)-OUT_RESERVE-TOOL_SCHEMA-tok(msgs))*3)}
 function maxOut(eid,m,msgs){return Math.max(1024,Math.min(16384,ctxFor(eid,m)-TOOL_SCHEMA-tok(msgs)))}
@@ -145,6 +145,7 @@ async function pick(eid,mid,keepAuto){
 function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v)}
 function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
  if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
+ if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.textContent=(a.kind==='image'?'🖼 ':'📄 ')+a.name;r.appendChild(c)});d.appendChild(r)}
  if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 let SID=0;const pending={};
 window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
@@ -154,6 +155,7 @@ const CODE_RX=/\b(code|coding|script|bug|debug|html|css|javascript|js|python|swi
 const FILE_RX=/\b(pages|keynote|textedit|docx|txt|markdown|note|notes|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function haveModel(eid){return (S.models[eid]||[]).length>0}
 function autoRoute(text){
+ if(S.att.some(a=>a.kind==='image')){const g=(S.models.ollama||[]).find(m=>isVision(m.id));if(g)return {e:'ollama',m:g.id,name:g.id+' (can see pictures)',agent:false,why:'picture attached'}}
  const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
  const R={e:'osaurus',m:raptor?raptor.id:'raptor-0.6-4b-jang_6m',name:'Raptor',agent:false};
  if(CODE_RX.test(text)){
@@ -190,7 +192,7 @@ async function localCommand(text){
  return show(r.text||'Done.',r.files)}
 async function send(text){
  if(!S.chat)newChat();
- if(!S.busy&&!S.switching){const lc=await localCommand(text);if(lc!==null)return lc}
+ if(!S.busy&&!S.switching&&!S.att.length){const lc=await localCommand(text);if(lc!==null)return lc}
  let via='';
  if(S.auto){S.chat.auto=true;if(S.busy||S.switching)return '';const r=await autoSwitch(text);if(!r){addMsg('err','Auto could not start a model. Try picking one yourself.');return ''}via=lockLabel(r)}
  else via='';
@@ -201,19 +203,19 @@ async function send(text){
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;
- ch.engine=S.sel.e;ch.model=S.sel.m;ch.messages.push({role:'user',content:text});
+ ch.engine=S.sel.e;ch.model=S.sel.m;const um=await userMsg(text);ch.messages.push(um);
  if(ch.messages.length===1)ch.title=text.slice(0,40);
- saveChat(ch);addMsg('user',text);showPreNote();
+ saveChat(ch);addMsg('user',text,undefined,um);showPreNote();
  const out=addMsg('assistant','');out.innerHTML='<span class="think">Thinking…</span>';
  return new Promise(async resolve=>{try{
   const id=++SID;let acc='',gotAny=false,errored=false;S.cur=id;
-  let hist=ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:m.content}));
+  let hist=ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:apiText(m)}));
   const room=roomChars(S.sel.e,S.sel.m,[]);
   if(text.length>room*0.7){out.innerHTML='<span class="think">Your message is long ('+text.length.toLocaleString()+' characters). Reading it in parts…</span>';S.stopAgent=false;
    const notes=await digest(text,'your message','Understand and answer the user\'s message; keep every instruction and question exactly',S.sel.e,S.sel.m,t=>out.firstChild.textContent=t);
    const edge=Math.min(3000,Math.floor(room*0.15));
-   hist[hist.length-1]={role:'user',content:'[My message was '+text.length.toLocaleString()+' characters, more than you can hold at once, so the app read all of it in parts. Notes from every part, in order:]\n'+notes+'\n\n[Exact beginning:]\n'+text.slice(0,edge)+'\n\n[Exact ending:]\n'+text.slice(-edge)}}
-  hist=fitHistory([{role:'system',content:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(1);
+   hist[hist.length-1]={role:'user',content:'[My message was '+text.length.toLocaleString()+' characters, more than you can hold at once, so the app read all of it in parts. Notes from every part, in order:]\n'+notes+'\n\n[Exact beginning:]\n'+text.slice(0,edge)+'\n\n[Exact ending:]\n'+text.slice(-edge)+(um.attText?'\n\n'+um.attText:'')}}
+  hist=fitHistory([{role:'system',content:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(1);withImages(hist,hist.length-1);
   const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};
   thinkOff(S.sel.e,body);
   pending[id]=ev=>{
@@ -225,7 +227,7 @@ async function send(text){
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
-$('form').onsubmit=ev=>{ev.preventDefault();const t=$('input').value.trim();if(!t||S.busy)return;$('input').value='';send(t)};
+$('form').onsubmit=ev=>{ev.preventDefault();let t=$('input').value.trim();if(S.busy||S.attLoading)return;if(!t&&S.att.length)t=S.att.some(a=>a.kind==='image')?'What is in this picture?':'Please read the attached file and tell me what it is about.';if(!t)return;$('input').value='';send(t)};
 $('input').onkeydown=ev=>{if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();$('form').requestSubmit()}};
 $('stop').onclick=()=>window.webkit.messageHandlers.stream.postMessage({id:S.cur,cmd:'cancel'});
 $('delAll').onclick=async()=>{if(S.busy)return;const n=S.chats.length;if(!n){await dialog('There are no saved chats to delete.',{yes:'OK',no:'Close'});return}
@@ -287,7 +289,7 @@ function parseTextCalls(content){ // small models sometimes print the call as JS
  try{const t=content.trim();const o=JSON.parse(t.replace(/^```(json)?|```$/g,'').trim());const arr=Array.isArray(o)?o:o.tool_calls||[o];
   return arr.map((x,i)=>{const f=x.function||x;const n=f.name||x.tool;if(!n||!TOOLS.find(t=>t.function.name===n))return null;let a=f.arguments??f.parameters??{};return{id:'t'+i,type:'function',function:{name:n,arguments:typeof a==='string'?a:JSON.stringify(a)}}}).filter(Boolean)}catch{return[]}}
 function histWithTools(msgs){const out=[];msgs.forEach((m,i)=>{
-  if(m.role==='user'||m.role==='assistant'){out.push({role:m.role,content:m.content});return}
+  if(m.role==='user'||m.role==='assistant'){out.push({role:m.role,content:apiText(m)});return}
   if(m.role==='step'&&m.tool&&m.result!=null){const id='h'+i;out.push({role:'assistant',content:null,tool_calls:[{id,type:'function',function:{name:m.tool,arguments:JSON.stringify(m.args||{})}}]});
    out.push({role:'tool',tool_call_id:id,name:m.tool,content:String(m.result)})}});return out}
 // read_file_text without offset: get the whole file; if it does not fit the model, read it in parts (nothing skipped).
@@ -311,8 +313,8 @@ async function sendAgent(text){
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;S.stopAgent=false;S.nudged=false;S.sig={};S.repeats=0;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;ch.engine=S.sel.e;ch.model=S.sel.m;
- ch.messages.push({role:'user',content:text});if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text);showPreNote();
- const hint=S.preHint;S.preHint=null;const api=[{role:'system',content:sysPrompt()+(hint?'\n\n'+hint:'')},...histWithTools(ch.messages)];const turnStart=api.length-1;
+ const um=await userMsg(text);ch.messages.push(um);if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text,undefined,um);showPreNote();
+ const hint=S.preHint;S.preHint=null;const api=[{role:'system',content:sysPrompt()+(hint?'\n\n'+hint:'')},...histWithTools(ch.messages)];const turnStart=api.length-1;withImages(api,turnStart);
  let final='';const wait=addMsg('assistant','');wait.innerHTML='<span class="think working">Working…</span><span class="elapsed"></span>';const turnFrom=ch.messages.length;
  const t0=Date.now(),tick=setInterval(()=>{const el=wait.querySelector('.elapsed');if(el)el.textContent=' · '+Math.round((Date.now()-t0)/1000)+' s · press Stop to cancel'},1000);
  try{
@@ -534,3 +536,65 @@ window.__selftest=async(mode,eid,mid)=>{
 const _st9=window.__selftest;
 window.__selftest=async(mode,eid,mid)=>{if(mode!=='show')return _st9(mode,eid,mid);await boot;const c=S.chats.find(x=>x.title.toLowerCase().includes(mid.toLowerCase()));if(c)openChat(c.id);
  await sleep(800);if(eid==='expand')document.querySelectorAll('#chat details').forEach(d=>d.open=false);$('chat').scrollTop=1e9;return JSON.stringify({opened:c&&c.title,play:document.querySelectorAll('#chat .playbtn').length})};
+
+// ---- M3 (Oct 21): attachments. Paste (Cmd+V), drag and drop, or 📎. Pictures go to models that can see; documents are read in full. ----
+S.att=[];
+const isVision=m=>/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl/i.test(m||'');
+const apiText=m=>m.attText?(m.content+'\n\n'+m.attText):m.content;
+function kb(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB'}
+function renderAtts(){const b=$('atts');b.innerHTML='';
+ S.att.forEach(a=>{const c=document.createElement('span');c.className='chip'+(a.err?' bad':'');
+  if(a.kind==='image'&&a.dataURL){const i=document.createElement('img');i.src=a.dataURL;c.appendChild(i)}else c.append(a.kind==='image'?'🖼 ':'📄 ');
+  const t=document.createElement('span');t.textContent=a.name+(a.err?' (can\'t read: '+a.err+')':a.chars!=null?' · '+a.chars.toLocaleString()+' characters':a.bytes?' · '+kb(a.bytes):'');c.appendChild(t);
+  const x=document.createElement('button');x.type='button';x.className='x';x.title='Remove';x.textContent='×';x.onclick=()=>{S.att=S.att.filter(y=>y!==a);renderAtts()};c.appendChild(x);b.appendChild(c)});
+ if(S.attLoading){const c=document.createElement('span');c.className='chip';c.textContent='Adding…';b.appendChild(c)}
+ const im=S.att.some(a=>a.kind==='image');const sel=S.auto?(S.chat&&S.chat.lock):S.sel;
+ if(im&&sel&&!isVision(sel.m)){const n=document.createElement('div');n.className='attnote';n.textContent=sel.m+' can\'t see pictures, so Photo Reader (on this Mac) will describe the picture to it in words.';b.appendChild(n)}}
+function addAtt(r){if(!r)return;if(r.files){r.files.forEach(addAtt);return}S.att.push({...r,id:Math.random()});renderAtts()}
+const b64=f=>new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]||'');fr.onerror=rej;fr.readAsDataURL(f)});
+async function addFiles(files){S.attLoading=true;renderAtts();
+ try{for(const f of files){let name=f.name||'pasted.png';if(!/\.[a-z0-9]+$/i.test(name)&&/^image\//.test(f.type))name='pasted-'+new Date().toTimeString().slice(0,8).replace(/:/g,'')+'.'+(f.type.split('/')[1]||'png');
+   addAtt(await act('attachSave','',{name,b64:await b64(f)}))}}finally{S.attLoading=false;renderAtts()}}
+$('clip').onclick=async()=>{if(S.busy)return;S.attLoading=true;renderAtts();try{addAtt(await act('attachPick',''))}finally{S.attLoading=false;renderAtts()}};
+$('input').addEventListener('paste',ev=>{const fs=[...(ev.clipboardData&&ev.clipboardData.files||[])];if(!fs.length)return;ev.preventDefault();addFiles(fs)});
+// dropping a file must never navigate the app window away
+['dragover','dragenter'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();document.body.classList.add('dropping')}));
+window.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classList.remove('dropping')});
+window.addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('dropping');const fs=[...(e.dataTransfer&&e.dataTransfer.files||[])];if(fs.length)addFiles(fs)});
+function withImages(arr,i){if(!S.turnImages||!S.turnImages.length||!arr[i]||arr[i].role!=='user')return;
+ arr[i]={role:'user',content:[{type:'text',text:String(arr[i].content)},...S.turnImages.map(u=>({type:'image_url',image_url:{url:u}}))]}}
+async function userMsg(text){const m={role:'user',content:text};const A=S.att;S.att=[];S.turnImages=[];renderAtts();if(!A.length)return m;
+ m.atts=A.map(a=>({name:a.name,kind:a.kind,path:a.path,chars:a.chars}));const vis=isVision(S.sel.m);const parts=[];
+ let budget=Math.floor(roomChars(S.sel.e,S.sel.m,[])*0.7)-text.length;
+ for(const a of A){
+  if(a.err){parts.push('[Attached file '+a.name+': it could not be read ('+a.err+'). Tell the user plainly.]');continue}
+  if(a.kind==='image'){
+   if(vis&&a.dataURL){S.turnImages.push(a.dataURL);parts.push('[Attached picture: '+a.name+'. It is included in this message as an image, and you can see it. Look at it directly and answer. Do NOT call any tool (not ask_photo_reader) for this picture.]');continue}
+   status('Photo Reader is describing '+a.name+' for '+S.sel.m+'…');const r=await act('describeImage','',{path:a.path,question:'Describe this picture in detail. Copy any text in it exactly.'});status('');
+   parts.push(r.ok?'[Attached picture: '+a.name+'. You cannot see pictures, so a local picture model (Photo Reader) described it for you. Say so if it matters:]\n'+r.text
+     :'[Attached picture: '+a.name+'. You cannot see pictures, and Photo Reader is not running, so nobody could describe it. Tell the user plainly that this model cannot see pictures and they can pick a model marked "can see pictures" (like gemma4:e2b) or open Photo Reader.]');continue}
+  const t=a.text||'';const where=a.real?' It is saved at '+a.path+'.':'';
+  if(t.length<=budget){budget-=t.length;parts.push('[Attached file: '+a.name+', '+t.length.toLocaleString()+' characters, the WHOLE file.'+where+']\n'+t+'\n[END OF '+a.name+']');continue}
+  S.stopAgent=false;const notes=await digest(t,a.name,text,S.sel.e,S.sel.m,x=>status(x));status('');const edge=Math.max(400,Math.min(3000,Math.floor(budget/3)));
+  parts.push('[Attached file: '+a.name+', '+t.length.toLocaleString()+' characters. That is more than this model can hold at once, so the app read ALL of it in parts. Nothing was skipped.'+where+']\nEXACT OPENING:\n'+t.slice(0,edge)+'\n\nEXACT ENDING:\n'+t.slice(-edge)+'\n\nNOTES ON EVERY PART, IN ORDER:\n'+notes)}
+ m.attText=parts.join('\n\n');return m}
+
+// ---- selftest m3: paste a picture (real paste event) + attach a PDF ----
+const _st10=window.__selftest;
+window.__selftest=async(mode,eid,mid)=>{if(mode!=='m3')return _st10(mode,eid,mid);await boot;const out={};
+ const mk=async()=>{const cv=document.createElement('canvas');cv.width=400;cv.height=200;const g=cv.getContext('2d');g.fillStyle='#ffeb3b';g.fillRect(0,0,400,200);g.fillStyle='#d32f2f';g.beginPath();g.arc(80,100,50,0,7);g.fill();g.fillStyle='#000';g.font='bold 48px Helvetica';g.fillText('HELLO 42',150,115);
+  const bl=await new Promise(r=>cv.toBlob(r,'image/png'));return new File([bl],'image.png',{type:'image/png'})};
+ const paste=async()=>{const f=await mk();try{const dt=new DataTransfer();dt.items.add(f);$('input').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));out.pasteEvent='ok'}catch(e){out.pasteEvent='fallback: '+e.message;await addFiles([f])}
+  for(let i=0;i<40&&(S.attLoading||!S.att.length);i++)await sleep(250)};
+ // 1) Auto + picture -> a model that can see
+ S.auto=true;S.chat=null;newChat();await paste();out.chips1=[...document.querySelectorAll('#atts .chip')].map(c=>c.textContent);
+ let t=Date.now();out.visionReply=await send('What words and shapes are in this picture?');out.visionMs=Date.now()-t;out.visionModel=S.sel&&S.sel.m;
+ // 2) model that cannot see -> Photo Reader describes
+ S.chat=null;newChat();await pick(eid,mid);$('agent').checked=false;agentUI();await paste();out.note2=($('atts').querySelector('.attnote')||{}).textContent||null;
+ t=Date.now();out.blindReply=await send('What words are in this picture?');out.blindMs=Date.now()-t;out.blindAttText=(S.chat.messages.find(m=>m.atts)||{}).attText;
+ // 3) PDF attached in full + remove x works
+ S.chat=null;newChat();addAtt(await act('attachPath','',{path:'/Users/madhatter2727/Projects/model-picker/test-sandbox/docs/big-60kb.pdf'}));addAtt(await act('attachPath','',{path:'/Users/madhatter2727/Projects/model-picker/test-sandbox/docs/big-60kb.pdf'}));out.chipsBeforeRemove=S.att.length;
+ document.querySelector('#atts .chip .x').click();out.chipsAfterRemove=S.att.length;out.pdfChars=S.att[0]&&S.att[0].chars;
+ t=Date.now();out.pdfReply=await send('What is this document about? Also quote its very last sentence.');out.pdfMs=Date.now()-t;
+ const um=S.chat.messages.find(m=>m.atts);out.pdfAttTextHead=um&&um.attText.slice(0,200);out.pdfAttTextLen=um&&um.attText.length;
+ return JSON.stringify(out,null,1)};

@@ -57,3 +57,10 @@ body.mini header{flex-wrap:wrap}body.mini #cur{font-size:12px}
 .play{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .elapsed{opacity:.6;font-size:12px}
 #mtext pre{white-space:pre-wrap;max-height:40vh;overflow:auto;font-size:12px}
+/* M3: attachments */
+#form{flex-wrap:wrap}#atts{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px}#atts:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#1d2440;border:1px solid #33406a;border-radius:14px;padding:3px 8px;font-size:12px;max-width:340px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chip img{width:28px;height:28px;object-fit:cover;border-radius:4px}
+.chip.bad{border-color:#a33}.chip .x{background:none;border:none;color:#ccd;cursor:pointer;font-size:15px;padding:0 2px}
+.attnote{flex-basis:100%;font-size:12px;opacity:.75}.attrow{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+body.dropping #chat{outline:3px dashed #4d7cff;outline-offset:-8px}
