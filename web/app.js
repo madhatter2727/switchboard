@@ -393,11 +393,18 @@ const _showChat=showChat;showChat=function(){_showChat();const e=$('chat').query
 showChat();
 // voice: hold the mic button, speech stays on this Mac
 let micDown=false;
+let micWait=false,warnTimer=null;
+// a voice warning shows for a few seconds, then clears itself (also on the next mic press, send or new chat)
+function voiceWarn(t){clearTimeout(warnTimer);status(t);$('status').classList.add('warn');warnTimer=setTimeout(clearVoiceWarn,6000)}
+function clearVoiceWarn(){clearTimeout(warnTimer);if($('status').classList.contains('warn')){$('status').classList.remove('warn');status('')}$('mic').title='Hold to talk'}
 window.__speech=ev=>{const m=$('mic');m.classList.toggle('on',!!ev.listening);
- if(ev.text&&micDown||ev.text&&ev.listening)$('input').value=ev.text;
- if(ev.warning){m.title=ev.warning;if(micDown){micDown=false;status(ev.warning)}}};
-const micStart=()=>{if(S.busy)return;micDown=true;status('Listening… release to stop');act('speechDown','',{draft:$('input').value})};
-const micStop=()=>{if(!micDown)return;micDown=false;act('speechUp','');setTimeout(()=>status(''),1500)};
+ if(ev.text&&(micDown||micWait||ev.listening))$('input').value=ev.text;
+ if(ev.text&&micWait&&!ev.listening){micWait=false;status('')}
+ if(ev.warning){m.title=ev.warning;if(micDown||micWait){micDown=false;micWait=false;voiceWarn(ev.warning)}}else if(!micDown&&!micWait)clearVoiceWarn()};
+const micStart=()=>{if(S.busy)return;clearVoiceWarn();micDown=true;status('Listening… release to stop');act('speechDown','',{draft:$('input').value})};
+const micStop=()=>{if(!micDown)return;micDown=false;micWait=true;status('Finishing…');act('speechUp','');setTimeout(()=>{if(micWait){micWait=false;if(!$('status').classList.contains('warn'))status('')}},8000)};
+const _nc=newChat;newChat=function(){clearVoiceWarn();return _nc()};
+const _send=send;send=function(t){clearVoiceWarn();return _send(t)};
 $('mic').onmousedown=micStart;window.addEventListener('mouseup',micStop);$('mic').onmouseleave=()=>{};
 act('speechInfo','').then(r=>{if(!r.available){$('mic').style.opacity=.35;$('mic').title=r.hint}});
 // Photo Reader
@@ -432,7 +439,7 @@ window.__selftest=async(mode,eid,mid)=>{
   if(r.pending){const ap=await act('toolApply','',{name:n,args:a,pendingId:r.pendingId});return JSON.stringify({preview:r.preview,applied:ap},null,1)}
   return JSON.stringify(r,null,1)}
  if(mode==='mic'){await boot;const ev=[];const old=window.__speech;window.__speech=e=>{ev.push(JSON.stringify(e));old(e)};
-  micStart();await sleep(Number(mid)||8000);micStop();await sleep(1500);return JSON.stringify({events:ev.slice(0,12),mic:$('mic').title},null,1)}
+  micStart();await sleep(Number(mid)||8000);micStop();await sleep(5000);const r={events:ev.slice(-8),mic:$('mic').title,input:$('input').value,status:$('status').textContent};await sleep(7000);r.statusAfter7s=$('status').textContent;return JSON.stringify(r,null,1)}
  if(mode==='settings'){await boot;openSettings();await sleep(2500);return $('sbody').innerText}
  return _st4(mode,eid,mid)};
 const _st5=window.__selftest;

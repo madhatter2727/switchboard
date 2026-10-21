@@ -16,7 +16,14 @@ final class LiveTranscriber: @unchecked Sendable {
     static func makeTranscriber() async throws -> SpeechTranscriber {
         let loc = await SpeechTranscriber.supportedLocale(equivalentTo: Locale.current) ?? Locale(identifier: "en-US")
         let t = SpeechTranscriber(locale: loc, transcriptionOptions: [], reportingOptions: [.volatileResults], attributeOptions: [])
-        if let req = try await AssetInventory.assetInstallationRequest(supporting: [t]) {
+        // The speech model is shared by the system, but each app must reserve its language first.
+        if !(await AssetInventory.reservedLocales).contains(where: { $0.identifier == loc.identifier }) {
+            do { let ok = try await AssetInventory.reserve(locale: loc); SpeechInput.log("analyzer: reserve \(loc.identifier) -> \(ok)") } catch { SpeechInput.log("analyzer: reserve error \(error)") }
+        }
+        let st = await AssetInventory.status(forModules: [t])
+        SpeechInput.log("analyzer: locale \(loc.identifier) asset status \(st)")
+        if st == .unsupported { throw NSError(domain: "ModelPicker", code: 3, userInfo: [NSLocalizedDescriptionKey: "On-device speech isn't supported for \(loc.identifier)."]) }
+        if st != .installed, let req = try await AssetInventory.assetInstallationRequest(supporting: [t]) {
             SpeechInput.log("analyzer: downloading speech model for \(loc.identifier)…")
             try await req.downloadAndInstall()
         }

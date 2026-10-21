@@ -28,6 +28,7 @@ final class SpeechInput: ObservableObject {
     }
     private var buffers = 0
     init() {
+        if useAnalyzer { available = true; return }
         guard let recognizer = SFSpeechRecognizer(), recognizer.supportsOnDeviceRecognition else {
             available = false
             fail("On-device dictation isn't available on this Mac.")
@@ -36,8 +37,24 @@ final class SpeechInput: ObservableObject {
         available = true
     }
 
+    // ---- macOS 26+: SpeechAnalyzer. Works even when Siri & Dictation are turned off in System Settings. ----
+    private var live: AnyObject?
+    private var liveStopping = false
+    private var downAt = Date()
+    private var clearTask: Task<Void, Never>?
+    var useAnalyzer: Bool { if #available(macOS 26.0, *) { return SpeechTranscriber.isAvailable }; return false }
+
     func holdDown(currentDraft: String) {
         holding = true
+        clearWarning()
+        if useAnalyzer, #available(macOS 26.0, *) {
+            guard live == nil, !starting, !liveStopping else { return }
+            prefix = currentDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+            dictation = ""; starting = true; downAt = Date(); generation += 1
+            let token = generation
+            Task { await startLive(token) }
+            return
+        }
         guard available, !listening, !starting else { return }
         prefix = currentDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         dictation = ""
@@ -48,8 +65,55 @@ final class SpeechInput: ObservableObject {
         Task { await startIfHeld(token) }
     }
 
+    @available(macOS 26.0, *)
+    private func startLive(_ token: Int) async {
+        defer { starting = false }
+        guard await Self.allowMic() else { fail("Microphone access is off. Turn it on in System Settings > Privacy & Security > Microphone, then try again."); return }
+        _ = await Self.allowSpeech()
+        let lt = LiveTranscriber()
+        let pre = prefix
+        do {
+            try await lt.start { [weak self] text in
+                Task { @MainActor in
+                    guard let self else { return }
+                    let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !spoken.isEmpty { self.dictation = pre.isEmpty ? spoken : pre + " " + spoken }
+                }
+            }
+        } catch {
+            Self.log("analyzer start failed: \(error)")
+            fail("The microphone didn't start (\(error.localizedDescription)).")
+            return
+        }
+        live = lt
+        listening = true
+        ready()
+        if !holding || generation != token { await finishLive() }
+    }
+
+    @available(macOS 26.0, *)
+    private func finishLive() async {
+        guard let lt = live as? LiveTranscriber, !liveStopping else { return }
+        liveStopping = true
+        listening = false
+        let heldFor = Date().timeIntervalSince(downAt)
+        let text = await lt.stop()
+        live = nil; liveStopping = false
+        if text.isEmpty {
+            fail(heldFor < 0.8 ? "Keep holding the mic while you talk, then let go." : "Didn't catch that. Hold the mic and try again.")
+        } else {
+            dictation = prefix.isEmpty ? text : prefix + " " + text
+        }
+    }
+
     func holdUp() {
         Self.log("holdUp: buffers=\(buffers) listening=\(listening) starting=\(starting)")
+        if useAnalyzer, #available(macOS 26.0, *) {
+            holding = false
+            generation += 1
+            if live != nil { Task { await finishLive() } }
+            return
+        }
         let active = holding || starting || engine.isRunning || tapInstalled
         holding = false
         generation += 1
@@ -179,6 +243,19 @@ final class SpeechInput: ObservableObject {
         Self.log("fail: \(message)")
         hint = message
         warning = message
+        clearTask?.cancel()
+        // The yellow note clears itself after a few seconds.
+        clearTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(6))
+            guard !Task.isCancelled else { return }
+            self?.clearWarning()
+        }
+    }
+
+    func clearWarning() {
+        clearTask?.cancel(); clearTask = nil
+        if warning != nil { warning = nil }
+        hint = "Hold to talk. Speech stays on this Mac."
     }
 
     private static func allowSpeech() async -> Bool {
