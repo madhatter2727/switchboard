@@ -6,7 +6,12 @@ let MAGNITUDE = home + "/Applications/Magnitude.app/Contents/Resources/magnitude
 let LMS = home + "/.lmstudio/bin/lms"
 let BONSAI = home + "/Models/bonsai2/start.sh"
 let SUPPORT = home + "/Library/Application Support/Model Picker"
-let CHATS = SUPPORT + "/chats"
+/// Saved chats. `--chats-dir PATH` points a test run at a copy instead of the real chats.
+let CHATS: String = {
+    let a = CommandLine.arguments
+    if let i = a.firstIndex(of: "--chats-dir"), a.count > i + 1 { return a[i + 1] }
+    return SUPPORT + "/chats"
+}()
 let STATE = SUPPORT + "/state.json"
 
 func ensureDirs() { try? FileManager.default.createDirectory(atPath: CHATS, withIntermediateDirectories: true) }

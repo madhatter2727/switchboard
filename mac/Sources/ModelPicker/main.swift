@@ -46,6 +46,12 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
             if let id = d["id"] as? String, id.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }) {
                 try? fm.trashItem(at: URL(fileURLWithPath: CHATS + "/" + id + ".json"), resultingItemURL: nil) }
             return ["ok": true]
+        case "trashAllChats":
+            // Same as the per-chat Delete, for every chat: each file goes to the macOS Trash (nothing is permanently deleted).
+            let files = ((try? fm.contentsOfDirectory(atPath: CHATS)) ?? []).filter { $0.hasSuffix(".json") }
+            var moved = 0, failed = 0
+            for f in files { do { try fm.trashItem(at: URL(fileURLWithPath: CHATS + "/" + f), resultingItemURL: nil); moved += 1 } catch { failed += 1 } }
+            return ["ok": failed == 0, "moved": moved, "failed": failed]
         case "toolRun": return AgentTools.run(d["name"] as? String ?? "", d["args"] as? String ?? "{}")
         case "toolApply" where (d["pendingId"] as? String ?? "") != "": return PortTools.apply(pendingId: d["pendingId"] as! String)
         case "toolApply": return ["text": AgentTools.apply(d["name"] as? String ?? "", d["args"] as? String ?? "{}")]

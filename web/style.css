@@ -45,3 +45,5 @@ body.mini #miniBar{display:flex;justify-content:space-between;padding:6px 10px;h
 body.mini #miniBar button{background:#2b3358;color:#cfe;border:1px solid #444b73;border-radius:6px;padding:3px 10px;cursor:pointer}
 body.mini header{flex-wrap:wrap}body.mini #cur{font-size:12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}.chips button{background:#2b3358;color:#cfe;border:1px solid #444b73;border-radius:14px;padding:5px 12px;cursor:pointer;font-size:12px}
+
+#delAll{width:100%;margin-top:6px;font-size:12px;background:#2c3048}#delAll:hover{background:#a33}

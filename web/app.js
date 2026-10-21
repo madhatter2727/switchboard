@@ -224,6 +224,10 @@ async function send(text){
 $('form').onsubmit=ev=>{ev.preventDefault();const t=$('input').value.trim();if(!t||S.busy)return;$('input').value='';send(t)};
 $('input').onkeydown=ev=>{if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();$('form').requestSubmit()}};
 $('stop').onclick=()=>window.webkit.messageHandlers.stream.postMessage({id:S.cur,cmd:'cancel'});
+$('delAll').onclick=async()=>{if(S.busy)return;const n=S.chats.length;if(!n){await dialog('There are no saved chats to delete.',{yes:'OK',no:'Close'});return}
+ if(!(await dialog('Delete all '+n+' chat'+(n===1?'':'s')+'? They go to the Trash.',{yes:'Delete all',no:'Cancel'})))return;
+ const r=await act('trashAllChats','');await loadChats();newChat();renderChats();
+ if(!r.ok)addMsg('err','Moved '+r.moved+' chats to the Trash, but '+r.failed+' could not be moved.');else status('Moved '+r.moved+' chats to the Trash.');setTimeout(()=>status(''),5000)};
 $('refresh').onclick=refresh;$('newChat').onclick=()=>{if(!S.busy)newChat()};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 window.__selftest=async(mode,eid,mid)=>{
@@ -449,6 +453,9 @@ window.__selftest=async(mode,eid,mid)=>{
  if(mode==='photoui'){await boot;$('photo').click();await sleep(4000);return 'clicked'}
  return _st5(mode,eid,mid)};
 
+const _st5b=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='delall')return _st5b(m,e,x);await boot;const before=S.chats.length;$('delAll').click();await sleep(800);const txt=$('mtext').textContent;
+ if(x==='no'){await sleep(5000);$('mno').click();await sleep(800);await loadChats();return JSON.stringify({before,dialog:txt,after:S.chats.length})}
+ $('myes').click();await sleep(2000);return JSON.stringify({before,dialog:txt,after:S.chats.length,shown:document.querySelectorAll('#chats .ch').length,status:$('status').textContent})};
 const _st6=window.__selftest;window.__selftest=async(m,e,x)=>{if(m==='perm'){await boot;return JSON.stringify(await act('permInfo',''))}return _st6(m,e,x)};
 
 // ---- selftest: multi-turn chat in ONE chat. eid 'auto' => Auto; else manual pick (Agent box NOT touched). mid = "[model@@]msg1##msg2" ----
