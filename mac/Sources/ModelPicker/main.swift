@@ -181,7 +181,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
     func validateMenuItem(_ i: NSMenuItem) -> Bool { if i.action == #selector(undoLastFromMenu) { return mainSync { UndoLog.hasEntries } }; return true }
     func setUpStatusItem() {
+        // A crowded menu bar puts the newest icon furthest left, where the MacBook notch hides it.
+        // Ask for a spot near the clock instead (Tara can still ⌘-drag it anywhere; macOS remembers).
+        let posKey = "NSStatusItem Preferred Position ModelPickerStatus"
+        if UserDefaults.standard.object(forKey: posKey) == nil { UserDefaults.standard.set(520.0, forKey: posKey) }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        item.autosaveName = "ModelPickerStatus"; item.behavior = []
         if let b = item.button { b.image = NSImage(systemSymbolName: "rectangle.3.group.bubble", accessibilityDescription: "Model Picker"); b.toolTip = "Model Picker" }
         let m = NSMenu()
         let o = NSMenuItem(title: "Open Model Picker", action: #selector(showWindow), keyEquivalent: ""); o.target = self
