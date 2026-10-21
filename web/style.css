@@ -48,3 +48,12 @@ body.mini header{flex-wrap:wrap}body.mini #cur{font-size:12px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}.chips button{background:#2b3358;color:#cfe;border:1px solid #444b73;border-radius:14px;padding:5px 12px;cursor:pointer;font-size:12px}
 
 #delAll{width:100%;margin-top:6px;font-size:12px;background:#2c3048}#delAll:hover{background:#a33}
+/* M2: code blocks, Play buttons, elapsed time */
+.code{margin:8px 0;border:1px solid #2a3355;border-radius:8px;background:#0b0e18;overflow:hidden}
+.codebar{display:flex;gap:8px;align-items:center;padding:6px 8px;background:#141a2c;font-size:12px}.codebar span{flex:1;opacity:.8}
+.code pre{margin:0;padding:10px;max-height:50vh;overflow:auto;white-space:pre;font-size:12px}
+.code details summary{cursor:pointer;padding:6px 10px;font-size:12px;opacity:.85}
+.playbtn{background:#2f7d32!important;color:#fff!important;font-weight:600}
+.play{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.elapsed{opacity:.6;font-size:12px}
+#mtext pre{white-space:pre-wrap;max-height:40vh;overflow:auto;font-size:12px}

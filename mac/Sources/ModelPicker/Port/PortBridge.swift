@@ -129,6 +129,16 @@ enum PortTools {
             let p = d["path"] as? String ?? ""
             guard case .success(let path) = PathGuard.accept(p) else { return ["ok": false] }
             NSWorkspace.shared.open(URL(fileURLWithPath: path)); return ["ok": true]
+        case "openInBrowser":
+            let p = d["path"] as? String ?? ""
+            return mainSync {
+                guard let path = Creations.resolve(p) else { return ["ok": false, "text": "I couldn't find \(p)."] }
+                if d["dry"] != nil { return ["ok": true, "path": path] }   // just find the file (Show in Finder)
+                let ok = Creations.openInBrowser(path)
+                return ["ok": ok, "path": path, "browser": Creations.browserName()] }
+        case "saveCreation":
+            let name = d["name"] as? String ?? "creation", html = d["html"] as? String ?? ""
+            return mainSync { Creations.save(name: name, html: html).map { ["ok": true, "path": $0] } ?? ["ok": false] }
         case "revealPath":
             let p = d["path"] as? String ?? ""
             guard case .success(let path) = PathGuard.accept(p) else { return ["ok": false] }

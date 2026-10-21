@@ -55,6 +55,10 @@ extension FileTools2 {
                 guard FileManager.default.fileExists(atPath: path) else {
                     return "No file at \(path)."
                 }
+                if Creations.isWeb(path) {   // web pages and games: open in the browser so they run (not in a code editor)
+                    _ = Creations.openInBrowser(path)
+                    return "Opened \(path) in \(Creations.browserName()), so the page runs. If it still shows code, the file itself is broken: read it with read_file_text."
+                }
                 let opened = NSWorkspace.shared.open(URL(fileURLWithPath: path))
                 return opened ? "Opened \(path)." : "Couldn't open \(path)."
             }

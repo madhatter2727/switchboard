@@ -1,5 +1,6 @@
 const $=id=>document.getElementById(id);
 const nativeNet=(o)=>window.webkit.messageHandlers.net.postMessage(o);
+let RID=0;const netC=o=>{const rid='r'+(++RID);S.curRid=rid;return nativeNet({...o,rid})}; // model requests the Stop button can cancel
 const act=(op,engine,extra={})=>window.webkit.messageHandlers.act.postMessage({op,engine,...extra});
 const ENGINES=[
  {id:'osaurus',name:'Osaurus',base:'http://127.0.0.1:1337/v1'},
@@ -50,8 +51,8 @@ function fitHistory(api,eid,m,keepFrom){api=api.map(x=>({...x}));const lim=ctxFo
  if(dropped)api.splice(1,0,{role:'user',content:'[Note from the app: '+dropped+' earlier messages of this chat were not re-sent because the chat is longer than this model can hold. They are still saved in the chat.]'},{role:'assistant',content:'Understood.'});
  return api}
 async function llm(eid,m,messages,maxTok){const e=ENGINES.find(x=>x.id===eid);
- const r=await nativeNet({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(eid,{model:up(eid,m),messages,stream:false,temperature:0.2,max_tokens:maxTok||1500,reasoning_effort:'none'}))});
- if(r.status!==200)throw new Error('model error '+(r.status||'no connection'));return (JSON.parse(r.body).choices[0].message.content||'').trim()}
+ const r=await netC({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(eid,{model:up(eid,m),messages,stream:false,temperature:0.2,max_tokens:maxTok||1500,reasoning_effort:'none'}))});
+ if(r.error==='cancelled'||S.stopAgent)throw new Error('stopped');if(r.status!==200)throw new Error('model error '+(r.status||'no connection'));return (JSON.parse(r.body).choices[0].message.content||'').trim()}
 function splitChunks(text,size){const out=[];let i=0;while(i<text.length){let j=Math.min(text.length,i+size);if(j<text.length){const nl=text.lastIndexOf('\n',j);if(nl>i+size*0.6)j=nl+1}out.push([i,j]);i=j}return out}
 // Reads ANY size: splits into parts that fit the model, takes notes on every part (same model), and repeats on the notes if they are still too big.
 async function digest(text,label,question,eid,m,progress,depth=0){
@@ -84,7 +85,7 @@ const status=t=>$('status').textContent=t||'';
 // ---- in-page dialogs (WKWebView has no confirm/prompt) ----
 function dialog(text,{input=null,yes='OK',no='Cancel'}={}){return new Promise(res=>{
  $('myes').textContent=yes;$('mno').textContent=no;
- $('mtext').textContent=text;const mi=$('minput');mi.hidden=input===null;if(input!==null)mi.value=input;$('modal').hidden=false;
+ setDialogText(text);const mi=$('minput');mi.hidden=input===null;if(input!==null)mi.value=input;$('modal').hidden=false;
  if(input!==null)mi.focus();
  const done=v=>{$('modal').hidden=true;res(v)};
  $('myes').onclick=()=>done(input===null?true:mi.value);$('mno').onclick=()=>done(null);
@@ -98,7 +99,7 @@ function saveChat(c){c.updated=Date.now();act('saveChat','',{id:c.id,json:JSON.s
 function newChat(){S.chat={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:'New chat',created:Date.now(),updated:Date.now(),engine:S.sel?.e||null,model:S.sel?.m||null,auto:S.auto,lock:null,agent:S.sel?isAgent(S.sel.m):undefined,messages:[],saved:false};if(S.auto)$('cur').textContent=AUTOCUR;if(!S.auto&&S.sel)$('agent').checked=isAgent(S.sel.m);showChat();agentUI()}
 function showChat(){const c=$('chat');c.innerHTML='';
  if(!S.chat||!S.chat.messages.length)c.innerHTML='<div class="empty">'+(S.auto?'Ready. Just type what you want. Auto picks the right model for you.':S.sel?'Ready. Say hi to '+esc(S.sel.m)+'.':'Pick a model on the left, then say hi.')+'</div>';
- else S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via));renderChats()}
+ else S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via,m));renderChats()}
 function renderChats(){const box=$('chats');box.innerHTML='';
  if(!S.chats.length)box.innerHTML='<div class="sub" style="margin-left:0">No saved chats yet.</div>';
  for(const c of S.chats){const d=document.createElement('div');d.className='ch'+(S.chat&&S.chat.id===c.id?' sel':'');
@@ -142,7 +143,9 @@ async function pick(eid,mid,keepAuto){
  }finally{S.switching=false}
 }
 function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v)}
-function addMsg(cls,text,via){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;tagVia(d,via);c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
+function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
+ if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
+ if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 let SID=0;const pending={};
 window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 
@@ -215,10 +218,10 @@ async function send(text){
   thinkOff(S.sel.e,body);
   pending[id]=ev=>{
    if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
-     try{const o=JSON.parse(j);const dl=o.choices?.[0]?.delta||{};if(dl.content){acc+=dl.content;out.textContent=acc;gotAny=true;$('chat').scrollTop=1e9}}catch{}}
+     try{const o=JSON.parse(j);const dl=o.choices?.[0]?.delta||{};if(dl.content){acc+=dl.content;gotAny=true;if(!S.raf)S.raf=requestAnimationFrame(()=>{S.raf=0;if(pending[id]){out.textContent=acc;$('chat').scrollTop=1e9}})}}catch{}}
    else if(ev.type==='error'){errored=true;out.className='msg err';out.textContent=ev.text}
    else if(ev.type==='done'){delete pending[id];
-     if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{tagVia(out,via);ch.messages.push({role:'assistant',content:acc,via:via||undefined});saveChat(ch)}}
+     if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined};ch.messages.push(mo);if(/```/.test(acc)){out.textContent='';richText(out,acc,mo)}else out.textContent=acc;tagVia(out,via);saveChat(ch)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
@@ -272,11 +275,12 @@ const TOOLS=[
  ['pages_new_document','OPEN A NEW BLANK PAGES DOCUMENT AND TYPE TEXT INTO IT, right now. Use this whenever the user mentions Pages and wants something written in it, e.g. "open a blank Pages doc and write Test at the top". You do the typing yourself; never tell the user to type it. Optional save_path saves it as a .pages file.',{text:['string','Exactly what to type into the document. For "write Test at the top", this is: Test'],save_path:['string','Optional: where to save it, e.g. Desktop/Notes.pages. Leave out to just leave it open in Pages.']},['text']],
 ].map(([name,description,props,required])=>({type:'function',function:{name,description,parameters:{type:'object',properties:Object.fromEntries(Object.entries(props).map(([k,[t,d]])=>[k,t==='array'?{type:'array',items:{type:'string'},description:d}:{type:t,description:d}])),required}}}));
 const CHANGING=['move_items','rename_item','copy_items','create_folder','trash_items','create_calendar_event','edit_file'];
-function sysPrompt(){return 'You are a private assistant on this Mac running in Model Picker. Nothing goes to the cloud.\nNow: '+new Date().toString()+'. Use tools for files and folders; do not invent paths or contents. If a tool fails, say so plainly. Keep replies short.\nmove_items and rename_item only prepare a preview. Nothing changes until the user approves. Never say a file was changed before the tool result says it moved. You can never permanently delete files; trash_items only moves to the Trash after the user approves. Use open_item to open a file or app, reminders for open reminders, ask_photo_reader for questions about an image, and create_calendar_event (needs approval) to add an event. For schedule questions use list_calendar_events (read-only). If the result says PERMISSION_PENDING or PERMISSION_DENIED, tell the user plainly what to do.\nYOU CAN WRITE FILES. When the user asks you to write, type, create, save or change something in a file or document, DO IT with a tool: create_file for a new text, Markdown or Word file; edit_file to change an existing file (the user approves first, Undo is available); pages_new_document to open a new Pages document and type text into it. Never answer with instructions for the user to do it themselves, and never just open an app and stop. Only say it is done after the tool result says DONE.'}
+function sysPrompt(){return 'You are a private assistant on this Mac running in Model Picker. Nothing goes to the cloud.\nNow: '+new Date().toString()+'. Use tools for files and folders; do not invent paths or contents. If a tool fails, say so plainly. Keep replies short.\nmove_items and rename_item only prepare a preview. Nothing changes until the user approves. Never say a file was changed before the tool result says it moved. You can never permanently delete files; trash_items only moves to the Trash after the user approves. Use open_item to open a file or app, reminders for open reminders, ask_photo_reader for questions about an image, and create_calendar_event (needs approval) to add an event. For schedule questions use list_calendar_events (read-only). If the result says PERMISSION_PENDING or PERMISSION_DENIED, tell the user plainly what to do.\nYOU CAN WRITE FILES. When the user asks you to write, type, create, save or change something in a file or document, DO IT with a tool: create_file for a new text, Markdown or Word file; edit_file to change an existing file (the user approves first, Undo is available); pages_new_document to open a new Pages document and type text into it. Never answer with instructions for the user to do it themselves, and never just open an app and stop. Only say it is done after the tool result says DONE.\nWEB PAGES AND GAMES: when asked for a web page, browser game or web app, write ONE complete .html file (HTML, CSS and JavaScript together; every function you call must exist) with create_file in Documents/Model Picker Creations/, then call open_item on it: that opens it in the web browser so it runs, and the app shows the user a Play button. To fix a bug, use edit_file with mode replace on the exact broken lines; never paste the whole file back with overwrite. If the user says a page shows code instead of running, read the file with read_file_text to check it before answering.'}
 function describe(n,a){const p=x=>(x||'').toString();
  return {list_folder:'Looking in '+p(a.path)+'…',search_files:'Searching for “'+p(a.query)+'”…',list_files_by_date:'Finding files in '+p(a.folder||'Desktop')+' from the last '+(a.days_back??7)+' day(s)…',file_info:'Checking '+p(a.path)+'…',read_file_text:'Reading '+p(a.path)+'…',list_calendar_events:'Checking your calendar for '+p(a.range||((a.start_date||'')+' '+(a.end_date||'')).trim()||'today')+'…',copy_items:'Preparing to copy '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to '+p(a.destination_folder)+'…',create_folder:'Preparing a new folder '+p(a.path)+'…',trash_items:'Preparing to move '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to the Trash…',open_item:'Opening '+p(a.target)+'…',reminders:'Checking your reminders…',create_calendar_event:'Preparing to add “'+p(a.title)+'” to your calendar…',ask_photo_reader:'Asking Photo Reader about '+p(a.path)+'…',move_items:'Preparing to move '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to '+p(a.destination_folder)+'…',rename_item:'Preparing to rename '+p(a.path)+'…',create_file:'Creating '+p(a.path)+'…',edit_file:'Preparing to edit '+p(a.path)+' ('+p(a.mode||'append')+')…',pages_new_document:'Opening a new Pages document and typing “'+p(a.text).slice(0,60)+'”…'}[n]||'Using '+n+'…'}
 function addStep(st){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='step '+(st.status||'');
  const R=st.result?String(st.result):'';d.innerHTML='🔧 '+esc(st.text)+(R?(R.length>600?'<details class="res"><summary>'+esc(R.slice(0,600))+'… (show all '+R.length.toLocaleString()+' characters)</summary>'+esc(R)+'</details>':'<div class="res">'+esc(R)+'</div>'):'');
+ if(st.status!=='denied'&&['create_file','edit_file','open_item'].includes(st.tool)){const wp=(st.args||{}).path||(st.args||{}).target;if(wp&&/\.html?$/i.test(wp)&&/DONE|Opened|approved/.test(String(st.result)+st.text))d.appendChild(playRow(wp))}
  if(st.undoId&&!st.undone){const b=document.createElement('button');b.textContent='Undo';b.className='undo';b.onclick=async()=>{b.disabled=true;const r=await act('undoLast','');if(r.ok)st.undone=true;d.querySelector('.res').textContent+='\n'+r.text;if(r.ok)b.remove();else b.disabled=false;if(S.chat)saveChat(S.chat)};d.appendChild(b)}
  c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 function parseTextCalls(content){ // small models sometimes print the call as JSON text
@@ -304,18 +308,20 @@ async function morePages(n,a,out,api){let guard=0;
   out=out.replace(/\n\[Items [^\]]*\]$/,'')+'\n'+(nx.text||'')}
  return out}
 async function sendAgent(text){
- S.busy=true;$('send').hidden=true;$('stop').hidden=false;S.stopAgent=false;S.nudged=false;
+ S.busy=true;$('send').hidden=true;$('stop').hidden=false;S.stopAgent=false;S.nudged=false;S.sig={};S.repeats=0;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;ch.engine=S.sel.e;ch.model=S.sel.m;
  ch.messages.push({role:'user',content:text});if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text);showPreNote();
  const hint=S.preHint;S.preHint=null;const api=[{role:'system',content:sysPrompt()+(hint?'\n\n'+hint:'')},...histWithTools(ch.messages)];const turnStart=api.length-1;
- let final='';const wait=addMsg('assistant','');wait.innerHTML='<span class="think working">Working…</span>';
+ let final='';const wait=addMsg('assistant','');wait.innerHTML='<span class="think working">Working…</span><span class="elapsed"></span>';const turnFrom=ch.messages.length;
+ const t0=Date.now(),tick=setInterval(()=>{const el=wait.querySelector('.elapsed');if(el)el.textContent=' · '+Math.round((Date.now()-t0)/1000)+' s · press Stop to cancel'},1000);
  try{
   const MAXSTEP=30;const prog=t=>{wait.firstChild.textContent=t;$('chat').scrollTop=1e9};
   for(let step=0;step<MAXSTEP;step++){
    wait.firstChild.textContent='Working… (step '+(step+1)+')';$('chat').appendChild(wait);$('chat').scrollTop=1e9;
    if(S.stopAgent){final='(stopped)';break}
-   const r=await nativeNet({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(S.sel.e,{model:up(S.sel.e,S.sel.m),messages:fitHistory(api,S.sel.e,S.sel.m,turnStart),tools:TOOLS,tool_choice:'auto',stream:false,temperature:0.3,max_tokens:maxOut(S.sel.e,S.sel.m,api),reasoning_effort:'none'}))});
+   const r=await netC({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(S.sel.e,{model:up(S.sel.e,S.sel.m),messages:fitHistory(api,S.sel.e,S.sel.m,turnStart),tools:TOOLS,tool_choice:'auto',stream:false,temperature:0.3,max_tokens:maxOut(S.sel.e,S.sel.m,api),reasoning_effort:'none'}))});
+   if(S.stopAgent||r.error==='cancelled'){final='(stopped)';break}
    if(r.status!==200){final='The model could not answer ('+(r.status||'no connection')+').';break}
    let msg;try{msg=JSON.parse(r.body).choices[0].message}catch{final='I could not read the model reply.';break}
    let calls=msg.tool_calls||[];let content=msg.content||'';
@@ -325,7 +331,9 @@ async function sendAgent(text){
    api.push({role:'assistant',content:content||null,tool_calls:calls});
    for(const c of calls){
     let a={};try{a=JSON.parse(c.function.arguments||'{}')}catch{}
-    const n=c.function.name;const st={role:'step',tool:n,args:a,text:describe(n,a),status:''};const el=addStep(st);
+    const n=c.function.name;const sig=n+JSON.stringify(a);S.sig[sig]=(S.sig[sig]||0)+1;
+    if(S.sig[sig]>2){S.repeats++;api.push({role:'tool',tool_call_id:c.id,name:n,content:'You already ran '+n+' with exactly these arguments twice for this request. Do not repeat it. Answer the user now with what you have.'});continue} // loop guard
+    const st={role:'step',tool:n,args:a,text:describe(n,a),status:''};const el=addStep(st);
     let res,out;
     if(n==='read_file_text'&&!(Number(a.offset)>0)){out=await readWhole(a,text,api,prog);res={}}
     else if(n==='read_file_text'){res=await act('toolRun','',{name:n,args:JSON.stringify({path:a.path,offset:Number(a.offset),max_chars:Math.max(Number(a.max_chars)||0,roomChars(S.sel.e,S.sel.m,api))})});out=res.text||''}
@@ -338,13 +346,15 @@ async function sendAgent(text){
     st.result=out;ch.messages.push(st);saveChat(ch);el.replaceWith(addStep(st));
     api.push({role:'tool',tool_call_id:c.id,name:n,content:String(out)});
    }
+   if(S.repeats>=3){final='I stopped because the model kept repeating the same step. Try asking again in different words, or pick another model.';break}
    if(step===MAXSTEP-1)final='I used '+MAXSTEP+' tool steps in a row and paused so I do not loop forever. Say "continue" and I will keep going.';
   }
  }finally{
-  wait.remove();addMsg('assistant',final,S.via);ch.messages.push({role:'assistant',content:final,via:S.via||undefined});saveChat(ch);
+  clearInterval(tick);wait.remove();const mo={role:'assistant',content:final,via:S.via||undefined};const wf=webFilesOf(ch.messages.slice(turnFrom));if(wf.length)mo.webFiles=wf;
+  addMsg('assistant',final,S.via,mo);ch.messages.push(mo);saveChat(ch);
   S.busy=false;$('send').hidden=false;$('stop').hidden=true}
  return final}
-$('stop').onclick=()=>{S.stopAgent=true;window.webkit.messageHandlers.stream.postMessage({id:S.cur,cmd:'cancel'})};
+$('stop').onclick=()=>{S.stopAgent=true;window.webkit.messageHandlers.stream.postMessage({id:S.cur,cmd:'cancel'});if(S.curRid)act('netCancel','',{rid:S.curRid});status('Stopping…');setTimeout(()=>status(''),3000)};
 const _st0=window.__selftest;
 window.__selftest=async(mode,eid,mid)=>{
  if(mode!=='cal')return _st0(mode,eid,mid);
@@ -473,3 +483,54 @@ window.__selftest=async(mode,eid,mid)=>{
    label:(added.filter(m=>m.role==='assistant').pop()||{}).via||null,
    steps:added.filter(m=>m.role==='step').map(m=>m.text+' -> '+String(m.result).slice(0,120)),reply:String(reply).slice(0,500)})}
  return JSON.stringify({chatId:S.chat.id,lock:S.chat.lock||null,note:$('agentNote').textContent,turns},null,1)};
+
+// ---- M2 (Oct 21): code shows collapsed, web pages and games get a Play button that opens them in the browser ----
+function setDialogText(text){const m=$('mtext');m.innerHTML='';text=String(text);
+ if(text.length<=1500){m.textContent=text;return}
+ const head=document.createElement('div');head.textContent=text.slice(0,700)+' …';m.appendChild(head);
+ const det=document.createElement('details');const sm=document.createElement('summary');sm.textContent='Show the full text ('+text.length.toLocaleString()+' characters)';
+ const pre=document.createElement('pre');pre.textContent=text;det.append(sm,pre);m.appendChild(det)}
+const isWebCode=(lang,code)=>/^(html?|xhtml|svg)$/i.test(lang)||(/^(|text)$/i.test(lang)&&/<(!doctype html|html|canvas|body)[\s>]/i.test(code));
+function webFilesOf(msgs){const out=[];msgs.forEach(m=>{if(m.role!=='step'||m.status==='denied')return;
+  const p=(m.args||{}).path||(m.args||{}).target;if(['create_file','edit_file','open_item'].includes(m.tool)&&p&&/\.html?$/i.test(p)&&/DONE|Opened|approved/.test(String(m.result)+m.text)&&!out.includes(p))out.push(p)});return out}
+function playRow(path){const r=document.createElement('div');r.className='play';
+ const b=document.createElement('button');b.type='button';b.className='playbtn';b.textContent='▶ Play / Open in browser';
+ b.onclick=async()=>{const o=await act('openInBrowser','',{path});status(o.ok?'Opened in '+o.browser+'.':'Could not find '+path+'.');setTimeout(()=>status(''),4000)};
+ const f=document.createElement('button');f.type='button';f.textContent='Show in Finder';f.onclick=async()=>{const o=await act('openInBrowser','',{path,dry:1});act('revealPath','',{path:(o&&o.path)||path})};
+ const t=document.createElement('span');t.className='sub';t.textContent=' '+path;r.append(b,f,t);return r}
+function richText(d,text,mo){const rx=/```([\w+#.-]*)[^\n]*\n([\s\S]*?)(?:```|$)/g;let last=0,m,k=0;
+ while((m=rx.exec(text))){if(m.index>last){const s=document.createElement('span');s.textContent=text.slice(last,m.index);d.appendChild(s)}
+  d.appendChild(codeBlock(m[1]||'',m[2],mo,k++));last=rx.lastIndex}
+ if(last<text.length){const s=document.createElement('span');s.textContent=text.slice(last);d.appendChild(s)}}
+function codeBlock(lang,code,mo,idx){const lines=code.split('\n').length;const box=document.createElement('div');box.className='code';
+ const bar=document.createElement('div');bar.className='codebar';const lab=document.createElement('span');lab.textContent=(lang||'code')+' · '+lines.toLocaleString()+' lines';bar.appendChild(lab);
+ const cp=document.createElement('button');cp.type='button';cp.textContent='Copy';cp.onclick=()=>{navigator.clipboard.writeText(code).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1500)},()=>{})};bar.appendChild(cp);
+ if(isWebCode(lang,code)){const pb=document.createElement('button');pb.type='button';pb.className='playbtn';pb.textContent='▶ Play / Open in browser';
+  pb.onclick=async()=>{mo=mo||{};mo.saved=mo.saved||{};let p=mo.saved[idx];
+   if(!p){const r=await act('saveCreation','',{name:(S.chat&&S.chat.title)||'creation',html:code});if(!r.ok){status('Could not save the page.');return}p=r.path;mo.saved[idx]=p;if(S.chat&&S.chat.messages.includes(mo))saveChat(S.chat)}
+   const o=await act('openInBrowser','',{path:p});status(o.ok?'Saved as '+p.replace(/^\/Users\/[^/]+/,'~')+' and opened in '+o.browser+'.':'Could not open '+p);setTimeout(()=>status(''),6000)};bar.appendChild(pb)}
+ const pre=document.createElement('pre');pre.textContent=code;
+ if(lines>20){const det=document.createElement('details');const sm=document.createElement('summary');sm.textContent='Show the code ('+lines.toLocaleString()+' lines)';det.append(sm,pre);box.append(bar,det)}
+ else box.append(bar,pre);return box}
+// ---- selftest m2: agent makes an HTML game + Play; chat-mode code block collapsed + Play; Stop during an agent request ----
+const _st8=window.__selftest;
+window.__selftest=async(mode,eid,mid)=>{
+ if(mode!=='m2')return _st8(mode,eid,mid);await boot;const out={};
+ S.chat=null;newChat();await pick(eid,mid);$('agent').checked=true;agentUI();
+ let t=Date.now();out.agentReply=await send('Make me a tiny HTML browser game: a square moves around a canvas and I click it to score points. Save it and open it.');out.agentMs=Date.now()-t;
+ out.agentSteps=S.chat.messages.filter(m=>m.role==='step').map(m=>m.text+' -> '+String(m.result).slice(0,140));
+ out.playButtons=document.querySelectorAll('#chat .playbtn').length;
+ const pb=[...document.querySelectorAll('#chat .playbtn')].pop();if(pb){pb.click();await sleep(1500);out.afterPlayStatus=$('status').textContent}
+ await sleep(1500);
+ S.chat=null;newChat();$('agent').checked=false;agentUI();t=Date.now();
+ out.chatReplyChars=(await send('Write a complete small HTML page with a canvas where a ball bounces. Reply with just one html code block.')).length;out.chatMs=Date.now()-t;
+ out.codeBlocks=document.querySelectorAll('#chat .code').length;out.collapsed=document.querySelectorAll('#chat .code details:not([open])').length;out.chatPlay=document.querySelectorAll('#chat .code .playbtn').length;
+ const cb=document.querySelector('#chat .code .playbtn');if(cb){cb.click();await sleep(2000);out.chatPlayStatus=$('status').textContent}
+ await sleep(800);
+ S.chat=null;newChat();$('agent').checked=true;agentUI();t=Date.now();
+ const p=send('Write a very long detailed essay about the history of video games, at least 3000 words, then save it as a file.');await sleep(4000);$('stop').click();out.stopReply=await p;out.stopMs=Date.now()-t;
+ out.busyAfterStop=S.busy;return JSON.stringify(out,null,1)};
+// ---- selftest show: open the saved chat whose title contains mid (for screenshots) ----
+const _st9=window.__selftest;
+window.__selftest=async(mode,eid,mid)=>{if(mode!=='show')return _st9(mode,eid,mid);await boot;const c=S.chats.find(x=>x.title.toLowerCase().includes(mid.toLowerCase()));if(c)openChat(c.id);
+ await sleep(800);if(eid==='expand')document.querySelectorAll('#chat details').forEach(d=>d.open=false);$('chat').scrollTop=1e9;return JSON.stringify({opened:c&&c.title,play:document.querySelectorAll('#chat .playbtn').length})};

@@ -8,6 +8,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
     var tasks: [Int: URLSessionDataTask] = [:]
     var bufs: [Int: Data] = [:]
     var session: URLSession!
+    var netTasks: [String: URLSessionDataTask] = [:]   // agent requests the Stop button can cancel
     override init() { super.init(); session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil) }
 
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
@@ -17,12 +18,17 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
             var r = URLRequest(url: url); r.httpMethod = (d["method"] as? String) ?? "GET"; r.timeoutInterval = (d["timeout"] as? Double) ?? 5
             if let b = d["body"] as? String { r.httpBody = b.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type") }
             let cfg = URLSessionConfiguration.ephemeral; cfg.timeoutIntervalForRequest = r.timeoutInterval
-            URLSession(configuration: cfg).dataTask(with: r) { data, resp, err in
-                if err != nil { replyHandler(["error": "unreachable", "status": 0, "body": ""], nil); return }
+            let rid = d["rid"] as? String
+            let t = URLSession(configuration: cfg).dataTask(with: r) { data, resp, err in
+                if let rid = rid { DispatchQueue.main.async { self.netTasks[rid] = nil } }
+                if let e = err as NSError? { replyHandler(["error": e.code == NSURLErrorCancelled ? "cancelled" : "unreachable", "status": 0, "body": ""], nil); return }
                 replyHandler(["status": (resp as? HTTPURLResponse)?.statusCode ?? 0, "body": String(data: data ?? Data(), encoding: .utf8) ?? ""], nil)
-            }.resume()
+            }
+            if let rid = rid { netTasks[rid] = t }
+            t.resume()
         } else if m.name == "act" {
             let op = d["op"] as? String ?? "", eng = d["engine"] as? String ?? ""
+            if op == "netCancel" { let rid = d["rid"] as? String ?? ""; netTasks[rid]?.cancel(); replyHandler(["ok": netTasks[rid] != nil], nil); return }
             DispatchQueue.global().async { replyHandler(self.act(op, eng, d), nil) }
         } else { replyHandler(nil, "unknown") }
     }

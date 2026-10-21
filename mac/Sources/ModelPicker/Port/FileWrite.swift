@@ -58,6 +58,10 @@ enum FileWrite {
         do { try data.write(to: URL(fileURLWithPath: p), options: .withoutOverwriting) } catch { return ["text": "Could not create \(AgentTools.short(p)): \(error.localizedDescription)"] }
         let steps = [UndoStep(op: "trash", from: nil, to: nil, path: p)] + made.reversed().map { UndoStep(op: "removeEmptyFolder", from: nil, to: nil, path: $0) }
         let uid = UndoLog.record(kind: "createFile", summary: "Create \(AgentTools.short(p))", steps: steps)
+        if Creations.isWeb(p) {   // web pages and games open in the browser right away, so they run
+            _ = Creations.openInBrowser(p)
+            return ["text": "DONE: created \(AgentTools.short(p)) (\(content.count) characters) and opened it in \(Creations.browserName()) so it runs. The user also has a Play button. Tell them it is done and where it is.", "undoId": uid?.uuidString ?? "", "files": [p]]
+        }
         return ["text": "DONE: created \(AgentTools.short(p)) (\(content.count) characters). Tell the user it is done and where it is. They can say \"undo\" to move it to the Trash.", "undoId": uid?.uuidString ?? "", "files": [p]]
     }
 
