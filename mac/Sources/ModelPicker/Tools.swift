@@ -65,7 +65,7 @@ enum AgentTools {
             let q = (a["query"] as? String ?? "").trimmingCharacters(in: .whitespaces)
             guard !q.isEmpty else { return ["text": "Missing query."] }
             let (_, out) = runCmd("/usr/bin/mdfind", ["-onlyin", home, "-name", q])
-            let paths = out.split(separator: "\n").map(String.init).compactMap { guardPath($0) }
+            let paths = out.split(separator: "\n").map(String.init).filter { $0.hasPrefix("/") }.compactMap { guardPath($0) } // mdfind log lines are not paths
             return ["text": paths.isEmpty ? "No matching files." : page(paths.map(short), a, 200)]
         case "list_files_by_date":
             let days = (a["days_back"] as? Int) ?? Int("\(a["days_back"] ?? "7")") ?? 7

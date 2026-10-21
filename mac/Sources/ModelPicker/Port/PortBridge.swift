@@ -93,6 +93,9 @@ enum PortTools {
         case "preroute":
             let t = d["text"] as? String ?? ""
             guard let route = PreRouter.match(t) else { return ["handled": false] }
+            if case .openDocument(let q) = route, let req = DocFinder.parse(q) {
+                return mainAwait { await DocFinder.handle(query: q, req: req) }
+            }
             let m = mainAwait { await PreRouter.perform(route) }
             var out: [String: Any] = ["handled": true, "text": m.text, "files": m.filePaths, "tools": m.toolNames]
             if let p = m.pending { let r = pend(p); out["pending"] = r["pending"] ?? false; out["pendingId"] = r["pendingId"] ?? ""; out["preview"] = r["preview"] ?? p.previewText }

@@ -147,7 +147,7 @@ window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 
 // ---- Auto: simple keyword rules choose the model ----
 const CODE_RX=/\b(code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|app|game|snake|regex|compile|error in|sql|api|refactor|algorithm)\b/i;
-const FILE_RX=/\b(file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf)\b/i;
+const FILE_RX=/\b(file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function haveModel(eid){return (S.models[eid]||[]).length>0}
 function autoRoute(text){
  const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
@@ -167,6 +167,7 @@ async function autoSwitch(text){
  if(!S.sel||S.sel.e!==r.e){return null}
  if(S.chat&&!S.chat.lock)S.chat.lock={e:r.e,m:r.m,name:r.name,why:r.why,agent:r.agent}; // after pick(): pick may swap in a fresh empty chat
  $('agent').checked=!!r.agent;$('cur').textContent='Auto · locked to '+r.name+' for this chat';agentUI();return r}
+function showPreNote(){if(S.preNote){addMsg('assistant',S.preNote,'Instant command (no model)');S.preNote=null}}
 window.__undoDone=m=>{if(!S.chat)newChat();addMsg('assistant',m)};
 const UNDO_RX=/^\s*(please\s+)?undo(\s+(that|it|the\s+last(\s+(action|change|move))?|last(\s+(action|change|move))?))?\s*[.!]?\s*$/i;
 async function localCommand(text){
@@ -178,7 +179,7 @@ async function localCommand(text){
  if(UNDO_RX.test(text)){const r=await act('undoLast','');return show(r.text)}
  const pm=text.match(/^\s*(?:please\s+)?open\s+(?:the\s+(?:file|folder|document)\s+)?["'“]?([~\/][^"'”]*?)["'”]?\s*[.!]?\s*$/i);
  if(pm){const o=await act('toolRun','',{name:'open_item',args:JSON.stringify({target:pm[1]})});return show(o.text)}
- const r=await act('preroute','',{text});if(!r.handled)return null;
+ const r=await act('preroute','',{text});if(!r.handled){if(r.note){S.preNote=r.note;S.preHint=r.hint||null;S.needTools=true}return null}
  if(r.pending){const ok=await dialog('Please confirm:\n\n'+r.preview,{yes:'Approve',no:'Deny'});let msg;
   if(ok){const ap=await act('toolApply','',{pendingId:r.pendingId});msg=ap.text;show(msg+(ap.ok?'  (say "undo" to reverse it)':''))}
   else{act('toolCancelId','',{pendingId:r.pendingId});show('Cancelled. Nothing was changed.')}return 'handled'}
@@ -191,13 +192,14 @@ async function send(text){
  else via='';
  S.via=via;
  if(!S.sel){addMsg('err','Pick a model first.');return ''}
+ if(S.needTools){S.needTools=false;if(isAgent(S.sel.m)){$('agent').checked=true;agentUI()}}
  if($('agent').checked&&isAgent(S.sel.m))return sendAgent(text);
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;
  ch.engine=S.sel.e;ch.model=S.sel.m;ch.messages.push({role:'user',content:text});
  if(ch.messages.length===1)ch.title=text.slice(0,40);
- saveChat(ch);addMsg('user',text);
+ saveChat(ch);addMsg('user',text);showPreNote();
  const out=addMsg('assistant','');out.innerHTML='<span class="think">Thinking…</span>';
  return new Promise(async resolve=>{try{
   const id=++SID;let acc='',gotAny=false,errored=false;S.cur=id;
@@ -297,8 +299,8 @@ async function sendAgent(text){
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;S.stopAgent=false;S.nudged=false;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;ch.engine=S.sel.e;ch.model=S.sel.m;
- ch.messages.push({role:'user',content:text});if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text);
- const api=[{role:'system',content:sysPrompt()},...histWithTools(ch.messages)];const turnStart=api.length-1;
+ ch.messages.push({role:'user',content:text});if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text);showPreNote();
+ const hint=S.preHint;S.preHint=null;const api=[{role:'system',content:sysPrompt()+(hint?'\n\n'+hint:'')},...histWithTools(ch.messages)];const turnStart=api.length-1;
  let final='';const wait=addMsg('assistant','');wait.innerHTML='<span class="think working">Working…</span>';
  try{
   const MAXSTEP=30;const prog=t=>{wait.firstChild.textContent=t;$('chat').scrollTop=1e9};

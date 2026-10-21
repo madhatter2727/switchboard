@@ -36,6 +36,8 @@ enum PreRouter {
         }
         if let query = nonempty(polish(capture(text, prefix: "open "))) {
             if contextQueries.contains(query.lowercased()) { return nil }
+            // Only a simple "open <name> [in <folder>]" is handled here; anything else goes to the model.
+            guard DocFinder.parse(query) != nil else { return nil }
             return .openDocument(query)
         }
         if isLastWeekScreenshotArchive(text) {
@@ -67,22 +69,16 @@ enum PreRouter {
                 filePaths: paths
             )
         case .openDocument(let query):
-            let paths = FileTools.searchFiles(query: query)
-            var names = ["search_files"]
-            let summary: String
-            if let doc = topDocument(in: paths) {
-                names.append("open_item")
-                summary = await FileTools2.openItem(doc)
-            } else if paths.isEmpty {
-                summary = foundText(query: query, count: 0)
-            } else {
-                summary = "I found items matching “\(query)”, but no document to open."
+            // Scoped, basename-only match; opens only on exactly one hit (see DocFinder).
+            guard let req = DocFinder.parse(query) else {
+                return ChatMessage(role: .assistant, text: "I'm not sure which file you mean.", toolNames: [])
             }
+            let r = await DocFinder.handle(query: query, req: req)
             return ChatMessage(
                 role: .assistant,
-                text: summary,
-                toolNames: names,
-                filePaths: paths
+                text: (r["text"] as? String) ?? (r["note"] as? String) ?? "",
+                toolNames: (r["tools"] as? [String]) ?? ["search_files"],
+                filePaths: (r["files"] as? [String]) ?? []
             )
         case .moveLastWeekScreenshots:
             return await moveLastWeekScreenshots()

@@ -70,3 +70,16 @@ Results (read-only reads; test files test-sandbox/docs/big-60kb.txt and big-1mb.
 - Raptor (Auto): Desktop Hermes guide -> quoted the real last sentence "Product UI and model names change quickly — re-check official Hermes docs on install day." 60 KB: exact last line, 1 read, ~30 s. 1 MB: correct last line (dropped the "FINAL LINE:" label), read in parts, ~6.5 min.
 - Bonsai 4B: whole Desktop file delivered (7,442 chars) but it quoted the bold "bottom line" sentence instead of the true last one; 60 KB exact; 1 MB correct, ~12.5 min.
 - Gemma 4 E2B: same Desktop behaviour as Bonsai ("ECC and Grok Build stay separate lanes."); 60 KB exact; 1 MB: see below.
+
+## Oct 21 2026 (afternoon): "open <doc> in <folder>" fix
+Bug: "open the gdd document in my test folder" (Auto) opened ~/Desktop/Tabled/claude-fable-builds/claude-fable-builds-MASTER.pdf.
+Root cause: PreRouter sent the whole phrase "the gdd document in my test folder" to FileTools.searchFiles, which ran a Spotlight
+*content* query over all of ~ (any file whose text contains those words), ranked PDFs first, and topDocument() opened hit #1. No folder scoping, no filename matching, no ambiguity check.
+Fix: new Port/DocFinder.swift. Parses name vs folder ("in/on/inside/under/from/within"), resolves the folder case-insensitively
+(Desktop, home, Documents, Downloads; chains like "test folder on my desktop"), walks only that folder (no cap, skips hidden/node_modules/.git/Library/.app insides),
+matches the name against file basenames only (token/substring, case-insensitive; type words like pdf/word/spreadsheet filter extensions).
+Exactly 1 match -> open. Several -> list with Open buttons, opens nothing. None / unknown folder -> plain note, then hands off to the model with file tools
+(folder path passed as a hint). Not a simple open (and/then/summarize/?/long phrase) -> straight to the model. Auto now routes open/doc/document to Raptor+tools.
+Also: search_files tool no longer returns mdfind log lines as fake paths. Dry run: `--dry-run` arg or MP_DRYRUN=1 (no files opened).
+Tests (dry run, GUI selftest + CLI --preroute): her sentence -> ~/Desktop/Test/01-GDD.md; hermes -> hermes-mac-mini-desktop-setup.md; budget -> note + Raptor listed the folder and said it isn't there;
+"open the gdd document" (no folder) -> 6 GDD files listed, none opened; "open the gdd file and summarize it" -> model. Backup: ~/Projects/model-picker-backup-20261021c.
