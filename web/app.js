@@ -212,13 +212,13 @@ async function send(text){
  const out=addMsg('assistant','');out.innerHTML='<span class="think">Thinking…</span>';
  return new Promise(async resolve=>{try{
   const id=++SID;let acc='',gotAny=false,errored=false;S.cur=id;
-  let hist=ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:apiText(m)}));
+  await loadImgs(ch.messages);let hist=ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:imgMsg(m,apiText(m))}));
   const room=roomChars(S.sel.e,S.sel.m,[]);
   if(text.length>room*0.7){out.innerHTML='<span class="think">Your message is long ('+text.length.toLocaleString()+' characters). Reading it in parts…</span>';S.stopAgent=false;
    const notes=await digest(text,'your message','Understand and answer the user\'s message; keep every instruction and question exactly',S.sel.e,S.sel.m,t=>out.firstChild.textContent=t);
    const edge=Math.min(3000,Math.floor(room*0.15));
    hist[hist.length-1]={role:'user',content:'[My message was '+text.length.toLocaleString()+' characters, more than you can hold at once, so the app read all of it in parts. Notes from every part, in order:]\n'+notes+'\n\n[Exact beginning:]\n'+text.slice(0,edge)+'\n\n[Exact ending:]\n'+text.slice(-edge)+(um.attText?'\n\n'+um.attText:'')}}
-  hist=fitHistory([{role:'system',content:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(1);withImages(hist,hist.length-1);
+  hist=fitHistory([{role:'system',content:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(1);
   const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};
   thinkOff(S.sel.e,body);
   pending[id]=ev=>{
@@ -292,7 +292,7 @@ function parseTextCalls(content){ // small models sometimes print the call as JS
  try{const t=content.trim();const o=JSON.parse(t.replace(/^```(json)?|```$/g,'').trim());const arr=Array.isArray(o)?o:o.tool_calls||[o];
   return arr.map((x,i)=>{const f=x.function||x;const n=f.name||x.tool;if(!n||!TOOLS.find(t=>t.function.name===n))return null;let a=f.arguments??f.parameters??{};return{id:'t'+i,type:'function',function:{name:n,arguments:typeof a==='string'?a:JSON.stringify(a)}}}).filter(Boolean)}catch{return[]}}
 function histWithTools(msgs){const out=[];msgs.forEach((m,i)=>{
-  if(m.role==='user'||m.role==='assistant'){out.push({role:m.role,content:apiText(m)});return}
+  if(m.role==='user'||m.role==='assistant'){out.push({role:m.role,content:imgMsg(m,apiText(m))});return}
   if(m.role==='step'&&m.tool&&m.result!=null){const id='h'+i;out.push({role:'assistant',content:null,tool_calls:[{id,type:'function',function:{name:m.tool,arguments:JSON.stringify(m.args||{})}}]});
    out.push({role:'tool',tool_call_id:id,name:m.tool,content:String(m.result)})}});return out}
 // read_file_text without offset: get the whole file; if it does not fit the model, read it in parts (nothing skipped).
@@ -317,7 +317,7 @@ async function sendAgent(text){
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;ch.engine=S.sel.e;ch.model=S.sel.m;
  const um=await userMsg(text);ch.messages.push(um);if(ch.messages.length===1)ch.title=text.slice(0,40);saveChat(ch);addMsg('user',text,undefined,um);showPreNote();
- const hint=S.preHint;S.preHint=null;const api=[{role:'system',content:sysPrompt()+(hint?'\n\n'+hint:'')},...histWithTools(ch.messages)];const turnStart=api.length-1;withImages(api,turnStart);
+ const hint=S.preHint;S.preHint=null;await loadImgs(ch.messages);const api=[{role:'system',content:sysFor(ch)+(hint?'\n\n'+hint:'')},...histWithTools(ch.messages)];const turnStart=api.length-1;
  let final='';const wait=addMsg('assistant','');wait.innerHTML='<span class="think working">Working…</span><span class="elapsed"></span>';const turnFrom=ch.messages.length;
  const t0=Date.now(),tick=setInterval(()=>{const el=wait.querySelector('.elapsed');if(el)el.textContent=' · '+Math.round((Date.now()-t0)/1000)+' s · press Stop to cancel'},1000);
  try{
@@ -325,7 +325,7 @@ async function sendAgent(text){
   for(let step=0;step<MAXSTEP;step++){
    wait.firstChild.textContent='Working… (step '+(step+1)+')';$('chat').appendChild(wait);$('chat').scrollTop=1e9;
    if(S.stopAgent){final='(stopped)';break}
-   const r=await netC({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(thinkOff(S.sel.e,{model:up(S.sel.e,S.sel.m),messages:fitHistory(api,S.sel.e,S.sel.m,turnStart),tools:TOOLS,tool_choice:'auto',stream:false,temperature:0.3,max_tokens:maxOut(S.sel.e,S.sel.m,api),reasoning_effort:'none'}))});
+   const r=await netC({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:S.lastBody=JSON.stringify(thinkOff(S.sel.e,{model:up(S.sel.e,S.sel.m),messages:fitHistory(api,S.sel.e,S.sel.m,turnStart),tools:toolsFor(ch),tool_choice:'auto',stream:false,temperature:0.3,max_tokens:maxOut(S.sel.e,S.sel.m,api),reasoning_effort:'none'}))});
    if(S.stopAgent||r.error==='cancelled'){final='(stopped)';break}
    if(r.status!==200){final='The model could not answer ('+(r.status||'no connection')+').';break}
    let msg;try{msg=JSON.parse(r.body).choices[0].message}catch{final='I could not read the model reply.';break}
@@ -575,7 +575,7 @@ async function userMsg(text){const m={role:'user',content:text};const A=S.att;S.
  for(const a of A){
   if(a.err){parts.push('[Attached file '+a.name+': it could not be read ('+a.err+'). Tell the user plainly.]');continue}
   if(a.kind==='image'){
-   if(vis&&a.dataURL){S.turnImages.push(a.dataURL);parts.push('[Attached picture: '+a.name+'. It is included in this message as an image, and you can see it. Look at it directly and answer. Do NOT call any tool (not ask_photo_reader) for this picture.]');continue}
+   if(vis&&a.dataURL){S.imgCache[a.path]=a.dataURL;parts.push('[Picture attached: '+a.name+']');continue}
    status('Photo Reader is describing '+a.name+' for '+S.sel.m+'…');const r=await act('describeImage','',{path:a.path,question:'Describe this picture in detail. Copy any text in it exactly.'});status('');
    parts.push(r.ok?'[Attached picture: '+a.name+'. You cannot see pictures, so a local picture model (Photo Reader) described it for you. Say so if it matters:]\n'+r.text
      :'[Attached picture: '+a.name+'. You cannot see pictures, and Photo Reader is not running, so nobody could describe it. Tell the user plainly that this model cannot see pictures and they can pick a model marked "can see pictures" (like gemma4:e2b) or open Photo Reader.]');continue}
@@ -616,3 +616,27 @@ window.__selftest=async(mode,eid,mid)=>{if(mode!=='m4')return _st11(mode,eid,mid
 
 const _st12=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='clip')return _st12(m,e,x);await boot;S.chat=null;newChat();addAtt(await act('attachClipboard',''));await sleep(300);
  return JSON.stringify({chips:[...document.querySelectorAll('#atts .chip')].map(c=>c.textContent),kinds:S.att.map(a=>a.kind),hasImage:S.att.some(a=>!!a.dataURL)})};
+
+// ---- selftest img: attach a real photo by path (like the paperclip), ask on Auto (or a picked model), optional follow-up ----
+const _st13=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='img')return _st13(m,e,x);await boot;const [path,agent,follow]=x.split('|');const out={};
+ S.chat=null;if(e==='auto'){S.auto=true;newChat()}else{const [eid,mid]=e.split('@');newChat();await pick(eid,mid);$('agent').checked=agent!=='off';agentUI()}
+ addAtt(await act('attachPath','',{path}));out.chip=[...document.querySelectorAll('#atts .chip')].map(c=>c.textContent);
+ let t=Date.now();out.reply=await send('What is in this picture?');out.ms=Date.now()-t;out.model=S.sel&&S.sel.m;out.agent=$('agent').checked;
+ out.steps=S.chat.messages.filter(m=>m.role==='step').map(m=>m.text+' -> '+String(m.result).slice(0,100));
+ out.lastBodyImages=(S.lastBody||'').split('image_url').length-1;out.lastBodyLen=(S.lastBody||'').length;
+ if(follow){t=Date.now();out.followReply=await send(follow);out.followMs=Date.now()-t;out.followBodyImages=(S.lastBody||'').split('image_url').length-1}
+ out.bodyImages=(S.lastBody||"").split("image_url").length-1;return JSON.stringify(out,null,1)};
+
+// ---- Picture fix (Oct 21, 3:10 PM): vision models get the picture in EVERY request of the chat (follow-ups too), image first,
+// and in agent mode they are told they can see it and are not offered ask_photo_reader (gemma4 refused to look when the
+// agent prompt said pictures go through that tool). Pictures are re-read from their saved file, scaled copies only for sending. ----
+S.imgCache={};
+const chatHasPics=ch=>!!(ch&&ch.messages.some(m=>m.role==='user'&&(m.atts||[]).some(a=>a.kind==='image')));
+const visNow=()=>!!(S.sel&&isVision(S.sel.m));
+async function loadImgs(msgs){if(!visNow())return;for(const m of msgs)if(m.role==='user')for(const a of (m.atts||[]))
+ if(a.kind==='image'&&a.path&&!S.imgCache[a.path]){try{const r=await act('attachPath','',{path:a.path});if(r&&r.dataURL)S.imgCache[a.path]=r.dataURL}catch{}}}
+function imgMsg(m,content){if(m.role!=='user'||!visNow())return content;const urls=(m.atts||[]).filter(a=>a.kind==='image'&&S.imgCache[a.path]).map(a=>S.imgCache[a.path]);
+ if(!urls.length)return content;return [...urls.map(u=>({type:'image_url',image_url:{url:u}})),{type:'text',text:String(content)}]}
+function sysFor(ch){const p=sysPrompt();if(!(visNow()&&chatHasPics(ch)))return p;
+ return p.replace(/,?\s*ask_photo_reader for questions about an image/,'')+'\nPICTURES: you can see pictures. When the user attaches a picture it is part of their message: look at it and answer directly from what you see. Never say you cannot see it, and never use a tool to view it.'}
+function toolsFor(ch){return visNow()&&chatHasPics(ch)?TOOLS.filter(t=>t.function.name!=='ask_photo_reader'):TOOLS}

@@ -159,7 +159,8 @@ enum PortTools {
         case "describeImage":
             let p = d["path"] as? String ?? "", q = d["question"] as? String ?? "Describe this image in detail, including any text in it."
             guard p.hasPrefix(Attachments.dir + "/") || FileManager.default.fileExists(atPath: p) else { return ["ok": false] }
-            let t = mainAwait { await FileTools2.describeAttachment(path: p, question: q) }
+            let sendPath = Attachments.sendCopy(p)
+            let t = mainAwait { await FileTools2.describeAttachment(path: sendPath, question: q) }
             let bad = t.hasPrefix("Photo Reader is offline") || t.hasPrefix("No file") || t.hasPrefix("That ") || t.hasPrefix("Couldn't")
             return ["ok": !bad, "text": t]
         case "revealPath":

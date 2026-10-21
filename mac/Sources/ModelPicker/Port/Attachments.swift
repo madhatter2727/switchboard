@@ -23,6 +23,17 @@ enum Attachments {
         return "data:image/jpeg;base64," + jpg.base64EncodedString()
     }
 
+    /// A JPEG copy (max 2048 px) for sending to Photo Reader, which can't read HEIC; the original is never changed.
+    static func sendCopy(_ path: String) -> String {
+        let ext = (path as NSString).pathExtension.lowercased()
+        let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int) ?? 0
+        guard ["heic", "heif", "tiff", "tif", "bmp", "webp"].contains(ext) || size > 3_000_000,
+              let u = dataURL(path), let d = Data(base64Encoded: String(u.dropFirst("data:image/jpeg;base64,".count))) else { return path }
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let out = dir + "/send-copy-" + String(UUID().uuidString.prefix(8)) + ".jpg"
+        return (try? d.write(to: URL(fileURLWithPath: out))) != nil ? out : path
+    }
+
     /// Everything the chat needs about one file.
     static func info(_ path: String, real: Bool) -> [String: Any] {
         let name = (path as NSString).lastPathComponent
