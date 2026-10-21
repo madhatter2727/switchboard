@@ -81,11 +81,7 @@ extension FileTools2 {
             return readAttributed(url, type: .docFormat)
         case "odt":
             return readAttributed(url, type: .openDocument)
-        case "html", "htm":
-            let raw = readPlain(url)
-            return raw.replacingOccurrences(of: "<script[\\s\\S]*?</script>|<style[\\s\\S]*?</style>", with: " ", options: .regularExpression)
-                .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
-                .replacingOccurrences(of: "[ \\t]+", with: " ", options: .regularExpression)
+        // HTML is read as its real source (tags and scripts included) so models can fix or extend web pages and games.
         default:
             return readPlain(url)
         }

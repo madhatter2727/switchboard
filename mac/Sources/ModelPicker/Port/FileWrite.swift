@@ -16,7 +16,8 @@ enum FileWrite {
         case "doc": let a = attr(); return try? a.data(from: all(a), documentAttributes: [.documentType: NSAttributedString.DocumentType.docFormat])
         case "rtf": let a = attr(); return try? a.data(from: all(a), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
         case "odt": let a = attr(); return try? a.data(from: all(a), documentAttributes: [.documentType: NSAttributedString.DocumentType.openDocument])
-        case "html", "htm": let a = attr(); return try? a.data(from: all(a), documentAttributes: [.documentType: NSAttributedString.DocumentType.html])
+        // HTML is code: write the model's text exactly as given. (Converting it as "styled text" escaped every tag,
+        // so browsers showed the code instead of running the page: the Space Invaders bug, Oct 21.)
         default: return text.data(using: .utf8)
         }
     }
@@ -93,7 +94,7 @@ enum FileWrite {
         }
         guard let data = encode(new, ext: ext) else { return .failed(kind: .editFile, summary: "Could not write .\(ext) files.") }
         var warns: [String] = ["A backup of the current file is kept, and Undo puts it back."]
-        if ["docx", "doc", "rtf", "odt", "html", "htm"].contains(ext) { warns.append("Note: this rewrites the document as plain styled text, so special formatting (images, tables, colours) may be lost. Undo brings the original back.") }
+        if ["docx", "doc", "rtf", "odt"].contains(ext) { warns.append("Note: this rewrites the document as plain styled text, so special formatting (images, tables, colours) may be lost. Undo brings the original back.") }
         var a = PendingAction(id: UUID(), kind: .editFile, title: "Edit \(AgentTools.short(p))", summary: what, transfers: [], warnings: warns, phase: .pending, resultText: nil, undoID: nil, ensureFolder: nil)
         a.editPath = p; a.editData = data
         return a

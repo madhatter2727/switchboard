@@ -28,7 +28,8 @@ main{flex:1;display:flex;flex-direction:column;min-width:0}header{padding:12px 2
 #agentNote{padding:6px 20px;font-size:12px;color:#8b90a7;border-bottom:1px solid #232637}#agentNote:empty{display:none}
 .step{max-width:780px;margin:0 auto 8px;padding:6px 12px;border-left:3px solid #6d8bff;color:#a9b2d9;font-size:13px;white-space:pre-wrap}
 .step.denied{border-color:#e55}.step.done{border-color:#3ddc84}.step .res{color:#7c829f;font-size:12px;margin-top:3px}
-#mtext{white-space:pre-wrap;max-width:460px}
+#mtext{white-space:pre-wrap;max-width:min(720px,80vw);max-height:60vh;overflow:auto;word-break:break-word}
+#modal .box{max-height:90vh;display:flex;flex-direction:column}
 .working::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4) infinite}@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
 .msg .via{margin-top:8px;font-size:11px;color:#7c829f}
 .step button.undo{margin-top:6px;margin-left:0;background:#2b3358;color:#cfe;border:1px solid #6d8bff;border-radius:6px;padding:3px 10px;cursor:pointer}

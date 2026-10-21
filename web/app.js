@@ -88,7 +88,8 @@ function dialog(text,{input=null,yes='OK',no='Cancel'}={}){return new Promise(re
  if(input!==null)mi.focus();
  const done=v=>{$('modal').hidden=true;res(v)};
  $('myes').onclick=()=>done(input===null?true:mi.value);$('mno').onclick=()=>done(null);
- mi.onkeydown=e=>{if(e.key==='Enter')$('myes').click()}})}
+ mi.onkeydown=e=>{if(e.key==='Enter')$('myes').click()};
+ document.onkeydown=e=>{if(!$('modal').hidden&&e.key==='Escape'){e.preventDefault();$('mno').click()}}})}
 
 // ---- chat history (saved to ~/Library/Application Support/Model Picker/chats) ----
 async function loadChats(){const r=await act('listChats','');S.chats=(r.chats||[]).map(t=>{try{return JSON.parse(t)}catch{return null}}).filter(Boolean).sort((a,b)=>b.updated-a.updated)}

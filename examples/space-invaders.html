@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Space Invaders</title>
+<style>
+  html,body{margin:0;height:100%;background:#05060d;color:#e8f0ff;font-family:Menlo,monospace;display:flex;align-items:center;justify-content:center;flex-direction:column}
+  canvas{background:#000;border:2px solid #2a3355;border-radius:8px;box-shadow:0 0 40px #1b2a6633;max-width:96vw;max-height:84vh}
+  #help{margin-top:10px;font-size:14px;opacity:.8}
+</style>
+</head>
+<body>
+<canvas id="c" width="800" height="600"></canvas>
+<div id="help">← → move · Space shoot · P pause · Enter start / play again</div>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d'),W=c.width,H=c.height;
+let state='title',score=0,hi=+(localStorage.getItem('si-hi')||0),lives=3,level=1;
+let player,bullets,bombs,aliens,dir,stepTimer,stepEvery,shields,particles,ufo;
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true;if(['ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+  if(e.code==='Enter'&&(state==='title'||state==='over')){score=0;lives=3;level=1;newWave();state='play'}
+  else if(e.code==='KeyP'&&(state==='play'||state==='pause'))state=state==='play'?'pause':'play'});
+addEventListener('keyup',e=>keys[e.code]=false);
+function newWave(){
+  player={x:W/2-22,y:H-60,w:44,h:18,cool:0};bullets=[];bombs=[];particles=[];ufo=null;dir=1;stepTimer=0;
+  stepEvery=Math.max(8,40-level*4);aliens=[];
+  for(let r=0;r<5;r++)for(let k=0;k<11;k++)aliens.push({x:80+k*52,y:70+r*40+Math.min(level-1,4)*12,w:32,h:22,row:r,alive:true});
+  shields=[];for(let s=0;s<4;s++)for(let i=0;i<10;i++)for(let j=0;j<5;j++)shields.push({x:110+s*170+i*8,y:H-140+j*8,w:8,h:8,hp:3});
+}
+function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function boom(px,py,col){for(let i=0;i<14;i++)particles.push({x:px,y:py,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,t:30,col})}
+function update(){
+  if(keys.ArrowLeft)player.x=Math.max(10,player.x-6);
+  if(keys.ArrowRight)player.x=Math.min(W-10-player.w,player.x+6);
+  if(player.cool>0)player.cool--;
+  if(keys.Space&&player.cool===0&&bullets.length<2){bullets.push({x:player.x+player.w/2-2,y:player.y-12,w:4,h:12});player.cool=14}
+  bullets.forEach(b=>b.y-=9);bullets=bullets.filter(b=>b.y>-20);
+  const live=aliens.filter(a=>a.alive);
+  if(++stepTimer>=Math.max(3,Math.floor(stepEvery*live.length/55))){stepTimer=0;
+    let edge=live.some(a=>(dir>0&&a.x+a.w+12>W-10)||(dir<0&&a.x-12<10));
+    if(edge){dir*=-1;live.forEach(a=>a.y+=18)}else live.forEach(a=>a.x+=12*dir)}
+  if(live.length&&Math.random()<0.02+level*0.004){const s=live[Math.floor(Math.random()*live.length)];bombs.push({x:s.x+s.w/2-2,y:s.y+s.h,w:4,h:12})}
+  bombs.forEach(b=>b.y+=4+level*0.5);bombs=bombs.filter(b=>b.y<H);
+  if(!ufo&&Math.random()<0.002)ufo={x:-60,y:36,w:48,h:16,v:2.5};
+  if(ufo){ufo.x+=ufo.v;if(ufo.x>W+60)ufo=null}
+  for(const b of bullets){
+    for(const a of live)if(a.alive&&hit(b,a)){a.alive=false;b.y=-99;score+=[40,30,20,20,10][a.row];boom(a.x+16,a.y+11,'#7CFC00')}
+    if(ufo&&hit(b,ufo)){score+=150;boom(ufo.x+24,ufo.y+8,'#ff4dd2');ufo=null;b.y=-99}
+    for(const s of shields)if(s.hp>0&&hit(b,s)){s.hp--;b.y=-99}}
+  for(const b of bombs){
+    for(const s of shields)if(s.hp>0&&hit(b,s)){s.hp--;b.y=H+99}
+    if(hit(b,player)){b.y=H+99;lives--;boom(player.x+22,player.y+9,'#4dd2ff');if(lives<=0)return end()}}
+  for(const a of live){if(a.y+a.h>=player.y)return end();for(const s of shields)if(s.hp>0&&hit(a,s))s.hp=0}
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.t--});particles=particles.filter(p=>p.t>0);
+  if(!aliens.some(a=>a.alive)){level++;newWave()}
+}
+function end(){state='over';if(score>hi){hi=score;localStorage.setItem('si-hi',hi)}}
+function alien(a){const t=Math.floor(Date.now()/400)%2;x.fillStyle=['#ff5e5e','#ffb84d','#ffe14d','#7CFC00','#4dd2ff'][a.row];
+  x.fillRect(a.x+6,a.y,20,6);x.fillRect(a.x,a.y+6,32,8);x.fillStyle='#000';x.fillRect(a.x+7,a.y+8,5,4);x.fillRect(a.x+20,a.y+8,5,4);
+  x.fillStyle=['#ff5e5e','#ffb84d','#ffe14d','#7CFC00','#4dd2ff'][a.row];
+  if(t){x.fillRect(a.x,a.y+14,6,8);x.fillRect(a.x+26,a.y+14,6,8)}else{x.fillRect(a.x+6,a.y+14,6,8);x.fillRect(a.x+20,a.y+14,6,8)}}
+function text(s,y,size,col){x.fillStyle=col||'#e8f0ff';x.font=size+'px Menlo,monospace';x.textAlign='center';x.fillText(s,W/2,y);x.textAlign='left'}
+function draw(){
+  x.fillStyle='#000';x.fillRect(0,0,W,H);
+  x.fillStyle='#e8f0ff';x.font='18px Menlo,monospace';x.fillText('SCORE '+score,14,26);x.fillText('HI '+hi,W/2-40,26);x.fillText('LIVES '+lives+'  LV '+level,W-200,26);
+  if(state==='title'){text('SPACE INVADERS',H/2-40,48,'#7CFC00');text('Press Enter to start',H/2+20,22);text('← → move   Space shoot   P pause',H/2+60,16,'#9aa6c8');return}
+  shields.forEach(s=>{if(s.hp>0){x.fillStyle=['','#1f6f2a','#2fa23f','#45e05a'][s.hp];x.fillRect(s.x,s.y,s.w,s.h)}});
+  aliens.forEach(a=>a.alive&&alien(a));
+  if(ufo){x.fillStyle='#ff4dd2';x.fillRect(ufo.x,ufo.y+6,48,8);x.fillRect(ufo.x+12,ufo.y,24,6)}
+  x.fillStyle='#4dd2ff';x.fillRect(player.x,player.y+6,player.w,12);x.fillRect(player.x+18,player.y,8,6);
+  x.fillStyle='#fff';bullets.forEach(b=>x.fillRect(b.x,b.y,b.w,b.h));
+  x.fillStyle='#ff6b6b';bombs.forEach(b=>x.fillRect(b.x,b.y,b.w,b.h));
+  particles.forEach(p=>{x.fillStyle=p.col;x.fillRect(p.x,p.y,3,3)});
+  x.fillStyle='#2a3355';x.fillRect(0,H-24,W,2);
+  if(state==='pause')text('PAUSED (P to resume)',H/2,28);
+  if(state==='over'){text('GAME OVER',H/2-20,48,'#ff5e5e');text('Score '+score+'  ·  Press Enter to play again',H/2+30,20)}
+}
+function loop(){if(state==='play')update();draw();requestAnimationFrame(loop)}
+newWave();loop();
+// test hook: ?autoplay starts the game straight away (used to check it runs)
+if(location.search.includes('autoplay')){state='play';keys.Space=true;keys.ArrowRight=true;setTimeout(()=>{keys.ArrowRight=false;keys.ArrowLeft=true},800)}
+</script>
+</body>
+</html>
