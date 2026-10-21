@@ -133,6 +133,12 @@ enum FileWrite {
     nonisolated static func asText(_ s: String) -> String { "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\"" }
 
     /// New blank Pages document with the given text typed in. Optional save path (.pages).
+    /// Automation permission for Pages, checked WITHOUT showing the macOS prompt.
+    nonisolated static func pagesPermission() -> String {
+        let target = NSAppleEventDescriptor(bundleIdentifier: "com.apple.iWork.Pages")
+        let st = AEDeterminePermissionToAutomateTarget(target.aeDesc, typeWildCard, typeWildCard, false)
+        switch Int(st) { case 0: return "allowed"; case -1743: return "denied"; case -1744: return "notAskedYet"; case -600: return "pagesNotRunning"; default: return "status \(st)" }
+    }
     nonisolated static let scriptQueue = DispatchQueue(label: "modelpicker.applescript")
     nonisolated static func pagesNew(text: String, savePath: String?) -> [String: Any] {
         var save = ""
@@ -149,6 +155,7 @@ enum FileWrite {
             }
         }
         let src = """
+        with timeout of 300 seconds
         tell application "Pages"
           activate
           set d to make new document
@@ -156,6 +163,7 @@ enum FileWrite {
           set body text of d to \(asText(text))\(save)
           return name of d
         end tell
+        end timeout
         """
         var err: NSDictionary?
         var r: NSAppleEventDescriptor?
@@ -164,6 +172,9 @@ enum FileWrite {
             let n = (e[NSAppleScript.errorNumber] as? Int) ?? 0
             if n == -1743 || n == -1744 {
                 return ["text": "PERMISSION_DENIED: macOS has not allowed Model Picker to control Pages yet. Tell the user: open System Settings > Privacy & Security > Automation, find Model Picker, and turn on Pages. Then ask again. (Nothing was written.)"]
+            }
+            if n == -1712, pagesPermission() != "allowed" {
+                return ["text": "PERMISSION_PENDING: macOS is showing a box that says “Model Picker wants access to control Pages”. Tell the user plainly: click Allow on that box, then ask again. Nothing was written yet."]
             }
             return ["text": "Pages did not do it (error \(n): \(e[NSAppleScript.errorMessage] ?? "unknown")). Nothing was saved."]
         }

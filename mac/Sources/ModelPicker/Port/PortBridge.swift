@@ -145,7 +145,8 @@ enum PortTools {
             let n: (Int) -> String = { ["notDetermined", "restricted", "denied", "authorized/full", "writeOnly"][min($0, 4)] }
             return ["calendar": n(EKEventStore.authorizationStatus(for: .event).rawValue), "reminders": n(EKEventStore.authorizationStatus(for: .reminder).rawValue),
                     "speech": ["notDetermined", "denied", "restricted", "authorized"][SFSpeechRecognizer.authorizationStatus().rawValue],
-                    "mic": ["notDetermined", "restricted", "denied", "authorized"][AVCaptureDevice.authorizationStatus(for: .audio).rawValue]]
+                    "mic": ["notDetermined", "restricted", "denied", "authorized"][AVCaptureDevice.authorizationStatus(for: .audio).rawValue],
+                    "pages": FileWrite.pagesPermission()]
         case "speechDown": mainSync { Speech.shared.input.holdDown(currentDraft: d["draft"] as? String ?? "") }; return ["ok": true]
         case "speechUp": mainSync { Speech.shared.input.holdUp() }; return ["ok": true]
         case "speechInfo": return mainSync { ["available": Speech.shared.input.available, "hint": Speech.shared.input.hint] }
