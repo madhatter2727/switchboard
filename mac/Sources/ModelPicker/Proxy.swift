@@ -21,7 +21,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         listener?.newConnectionHandler = { [weak self] c in self?.accept(c) }
         listener?.stateUpdateHandler = { [weak self] st in
             if case .failed(let e) = st { self?.log("listener failed \(e)"); exit(1) }
-            if case .ready = st { self?.log("Model Picker proxy listening on 127.0.0.1:7777") } }
+            if case .ready = st { self?.log("Switchboard proxy listening on 127.0.0.1:7777") } }
         listener?.start(queue: .global())
     }
 
@@ -88,7 +88,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         if path == "/v1/chat/completions" && method == "POST" {
             guard var j = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { err(c, 400, "Body must be JSON."); return }
             DispatchQueue.global().async {
-                guard let (e, m) = self.route(j["model"] as? String) else { self.err(c, 400, "No model picked in Model Picker and none named in the request, or that model was not found on any engine."); return }
+                guard let (e, m) = self.route(j["model"] as? String) else { self.err(c, 400, "No model picked in Switchboard and none named in the request, or that model was not found on any engine."); return }
                 self.log("chat -> \(e.id) / \(m)")
                 guard ensureEngineUp(e) else { self.err(c, 503, "Could not start \(e.name)."); return }
                 if e.id == "magnitude" && self.lastMagnitude != m { _ = engineAct("load", "magnitude", ["model": m]); self.lastMagnitude = m }
@@ -103,7 +103,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
             }
             return
         }
-        if path == "/" || path == "/health" { respond(c, 200, Data("{\"ok\":true,\"name\":\"Model Picker proxy\"}".utf8)); return }
+        if path == "/" || path == "/health" { respond(c, 200, Data("{\"ok\":true,\"name\":\"Switchboard proxy\"}".utf8)); return }
         err(c, 404, "Not found. Use /v1/models or /v1/chat/completions.")
     }
 

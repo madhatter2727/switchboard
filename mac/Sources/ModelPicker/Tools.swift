@@ -129,7 +129,7 @@ enum AgentTools {
             status = EKEventStore.authorizationStatus(for: .event)
         }
         guard status == .fullAccess else {
-            return "PERMISSION_DENIED: Model Picker does not have calendar access. Tell Tara plainly to open System Settings > Privacy & Security > Calendars and turn on Model Picker, then ask again."
+            return "PERMISSION_DENIED: Switchboard does not have calendar access. Tell Tara plainly to open System Settings > Privacy & Security > Calendars and turn on Switchboard, then ask again."
         }
         let cal = Calendar.current; let now = Date(); let sod = cal.startOfDay(for: now)
         var start = sod, end = cal.date(byAdding: .day, value: 1, to: sod)!, label = "Today"

@@ -176,10 +176,10 @@ enum FileWrite {
         if let e = err {
             let n = (e[NSAppleScript.errorNumber] as? Int) ?? 0
             if n == -1743 || n == -1744 {
-                return ["text": "PERMISSION_DENIED: macOS has not allowed Model Picker to control Pages yet. Tell the user: open System Settings > Privacy & Security > Automation, find Model Picker, and turn on Pages. Then ask again. (Nothing was written.)"]
+                return ["text": "PERMISSION_DENIED: macOS has not allowed Switchboard to control Pages yet. Tell the user: open System Settings > Privacy & Security > Automation, find Model Picker, and turn on Pages. Then ask again. (Nothing was written.)"]
             }
             if n == -1712, pagesPermission() != "allowed" {
-                return ["text": "PERMISSION_PENDING: macOS is showing a box that says “Model Picker wants access to control Pages”. Tell the user plainly: click Allow on that box, then ask again. Nothing was written yet."]
+                return ["text": "PERMISSION_PENDING: macOS is showing a box that says “Switchboard wants access to control Pages”. Tell the user plainly: click Allow on that box, then ask again. Nothing was written yet."]
             }
             return ["text": "Pages did not do it (error \(n): \(e[NSAppleScript.errorMessage] ?? "unknown")). Nothing was saved."]
         }

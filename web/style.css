@@ -66,6 +66,6 @@ body.mini header{flex-wrap:wrap}body.mini #cur{font-size:12px}
 body.dropping #chat{outline:3px dashed #4d7cff;outline-offset:-8px}
 /* M4: collapsible model groups */
 .eng .eh{cursor:pointer;user-select:none}.eng:first-child .eh{cursor:default}
-.tog{background:none;border:none;color:#aab;cursor:pointer;padding:0 2px;font-size:12px;width:16px}
+.tog{background:none;border:none;color:#dde;cursor:pointer;padding:0 2px;font-size:15px;width:18px}
 .cnt{margin-left:auto;font-weight:400;font-size:11px;opacity:.6}.eng.collapsed{margin-bottom:8px}
 .badges{display:flex;gap:4px}.badge.see{background:#3a2a5a;color:#d9c6ff}

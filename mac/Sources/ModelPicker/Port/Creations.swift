@@ -2,10 +2,10 @@ import AppKit
 import Foundation
 
 /// Web pages and games the models make. They are saved as real .html files and opened in the web browser,
-/// never run inside the app (so a broken or endless game can't freeze Model Picker).
+/// never run inside the app (so a broken or endless game can't freeze Switchboard).
 @MainActor
 enum Creations {
-    nonisolated static let dir = NSHomeDirectory() + "/Documents/Model Picker Creations"
+    nonisolated static let dir = NSHomeDirectory() + "/Documents/Switchboard Creations"
     nonisolated static func isWeb(_ p: String) -> Bool { ["html", "htm"].contains((p as NSString).pathExtension.lowercased()) }
 
     /// The user's default web browser (whatever opens https links), or nil.
@@ -30,7 +30,7 @@ enum Creations {
         return nil
     }
 
-    /// Save code from a chat answer as a new .html file in ~/Documents/Model Picker Creations (never overwrites).
+    /// Save code from a chat answer as a new .html file in ~/Documents/Switchboard Creations (never overwrites).
     static func save(name: String, html: String) -> String? {
         let fm = FileManager.default
         try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true)

@@ -121,12 +121,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         ucc.add(bridge, name: "stream"); cfg.userContentController = ucc; mainSync { Speech.shared.pages = [{ [weak self] in self?.web }] }
         web = WKWebView(frame: .zero, configuration: cfg); bridge.web = web
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Model Picker"; window.contentView = web; window.center(); window.setFrameAutosaveName("ModelPicker"); window.delegate = self; window.isReleasedWhenClosed = false; setUpStatusItem()
+        window.title = "Switchboard"; window.contentView = web; window.center(); window.setFrameAutosaveName("ModelPicker"); window.delegate = self; window.isReleasedWhenClosed = false; setUpStatusItem()
+        // Login item follows the app if it moves or is renamed (Model Picker.app -> Switchboard.app, Oct 21).
+        let regKey = "loginItemPath"
+        if UserDefaults.standard.string(forKey: regKey) != Bundle.main.bundlePath { try? SMAppService.mainApp.unregister(); UserDefaults.standard.set(Bundle.main.bundlePath, forKey: regKey) }
         if SMAppService.mainApp.status != .enabled { try? SMAppService.mainApp.register() }
         window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
         if let res = Bundle.main.resourceURL?.appendingPathComponent("web") { web.loadFileURL(res.appendingPathComponent("index.html"), allowingReadAccessTo: res) }
         let menu = NSMenu(); let appItem = NSMenuItem(); menu.addItem(appItem)
-        let sub = NSMenu(); sub.addItem(withTitle: "Quit Model Picker", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); appItem.submenu = sub
+        let sub = NSMenu(); sub.addItem(withTitle: "About Switchboard", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: ""); sub.addItem(.separator()); sub.addItem(withTitle: "Hide Switchboard", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h"); sub.addItem(withTitle: "Quit Switchboard", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); appItem.submenu = sub
         let editItem = NSMenuItem(); menu.addItem(editItem); let em = NSMenu(title: "Edit")
         em.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"); em.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         em.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"); em.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
@@ -200,9 +203,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if UserDefaults.standard.object(forKey: posKey) == nil { UserDefaults.standard.set(520.0, forKey: posKey) }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.autosaveName = "ModelPickerStatus"; item.behavior = []
-        if let b = item.button { b.image = NSImage(systemSymbolName: "rectangle.3.group.bubble", accessibilityDescription: "Model Picker"); b.toolTip = "Model Picker" }
+        if let b = item.button { b.image = NSImage(systemSymbolName: "rectangle.3.group.bubble", accessibilityDescription: "Switchboard"); b.toolTip = "Switchboard" }
         let m = NSMenu()
-        let o = NSMenuItem(title: "Open Model Picker", action: #selector(showWindow), keyEquivalent: ""); o.target = self
+        let o = NSMenuItem(title: "Open Switchboard", action: #selector(showWindow), keyEquivalent: ""); o.target = self
         let q = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let u = NSMenuItem(title: "Undo Last Action", action: #selector(undoLastFromMenu), keyEquivalent: ""); u.target = self; undoStatusItem = u
         let qc = NSMenuItem(title: "Quick Chat", action: #selector(quickChat), keyEquivalent: ""); qc.target = self

@@ -10,8 +10,8 @@ enum CalendarSpan: Equatable {
 /// EventKit reads. The store is main-actor only; EventKit is not thread-safe.
 @MainActor
 enum CalendarTools {
-    static let denialEvents = "Model Picker needs full calendar access. Turn it on in System Settings > Privacy & Security > Calendars, then try again."
-    static let denialReminders = "Model Picker needs full reminders access. Turn it on in System Settings > Privacy & Security > Reminders, then try again."
+    static let denialEvents = "Switchboard needs full calendar access. Turn it on in System Settings > Privacy & Security > Calendars, then try again."
+    static let denialReminders = "Switchboard needs full reminders access. Turn it on in System Settings > Privacy & Security > Reminders, then try again."
     static let noWritableCalendar = "There's no calendar I can add to. Check that a calendar that allows new events is ticked under Settings > Calendars to read."
 
     static let store = EKEventStore()
