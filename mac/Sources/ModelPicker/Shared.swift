@@ -5,6 +5,10 @@ let OSAURUS = "/Applications/osaurus.app/Contents/Helpers/osaurus"
 let MAGNITUDE = home + "/Applications/Magnitude.app/Contents/Resources/magnitude"
 let LMS = home + "/.lmstudio/bin/lms"
 let BONSAI = home + "/Models/bonsai2/start.sh"
+/// Apple Brain: serves Apple's built-in on-device model on 8100 (Tech Demos, Oct 22). Only started when "Apple (built-in)" is picked.
+let APPLE_BRAIN = [home + "/Applications/Apple Brain.app/Contents/MacOS/AppleBrain", home + "/Projects/apple-brain/.build/release/AppleBrain"].first { FileManager.default.isExecutableFile(atPath: $0) } ?? ""
+let APPLE_OWNER_TAG = "--owner"   // Switchboard's copy runs with "--owner switchboard", so stopping it never touches Apple Brain.app
+func stopAppleBrain() { _ = runCmd("/usr/bin/pkill", ["-f", "AppleBrain --port 8100 --owner switchboard"]) }
 let SUPPORT = home + "/Library/Application Support/Model Picker"
 /// Saved chats. `--chats-dir PATH` points a test run at a copy instead of the real chats.
 let CHATS: String = {
@@ -42,6 +46,7 @@ let ENGINE_DEFS = [
     EngineDef(id: "bonsai9b", name: "Bonsai 2 9B", port: 8098, path: "/v1"),
     EngineDef(id: "spark", name: "Spark X2.5 4B", port: 8095, path: "/v1"),
     EngineDef(id: "bonsai27b", name: "Bonsai 2 27B", port: 8096, path: "/v1"),
+    EngineDef(id: "apple", name: "Apple (built-in)", port: 8100, path: "/v1"),
 ]
 
 /// Blocking GET/POST helper (used off the main thread).
@@ -58,7 +63,7 @@ func syncHTTP(_ url: String, method: String = "GET", body: Data? = nil, timeout:
 func engineUp(_ e: EngineDef) -> Bool { if let (c, _) = syncHTTP(e.base + "/models", timeout: 2), c == 200 { return true }; return false }
 
 /// Engines that serve exactly one model; the picker shows a friendly alias for it.
-let SINGLE_ALIAS = ["bonsai4b": "bonsai-2-4b", "bonsai9b": "bonsai-2-9b", "spark": "spark-x2.5-4b-mlx", "bonsai27b": "bonsai-2-27b"]
+let SINGLE_ALIAS = ["bonsai4b": "bonsai-2-4b", "bonsai9b": "bonsai-2-9b", "spark": "spark-x2.5-4b-mlx", "bonsai27b": "bonsai-2-27b", "apple": "apple-builtin"]
 /// What the engine itself calls the model in requests.
 func upstreamModel(_ e: EngineDef, _ alias: String) -> String {
     if e.id == "spark" { return home + "/MLXModels/Spark-X2.5-4B-MLX-4bit" }
@@ -91,6 +96,7 @@ func offlineLines(_ id: String) -> [String] {
     case "bonsai27b": return FileManager.default.fileExists(atPath: home + "/MLXModels/Bonsai-2-27B-JANG-CRACK-1.75bit") && FileManager.default.isExecutableFile(atPath: BUILTIN_SCRIPT["bonsai27b"]!) ? ["bonsai-2-27b"] : []
     case "bonsai4b": return FileManager.default.fileExists(atPath: home + "/Models/bonsai2/4b") ? ["bonsai-2-4b"] : []
     case "bonsai9b": return FileManager.default.fileExists(atPath: home + "/Models/bonsai2/9b") ? ["bonsai-2-9b"] : []
+    case "apple": return APPLE_BRAIN.isEmpty ? [] : ["apple-builtin"]
     default: return []
     }
 }
@@ -106,7 +112,7 @@ func modelIds(_ e: EngineDef) -> [String] {
     }
     let L = offlineLines(e.id).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     switch e.id {
-    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama": return L.filter { !isEmbedName($0) }
+    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama", "apple": return L.filter { !isEmbedName($0) }
     case "lmstudio": return L.filter { !isEmbedName($0) }
     case "magnitude":
         var out: [String] = []; var on = false
@@ -120,10 +126,11 @@ func modelIds(_ e: EngineDef) -> [String] {
 /// Start / stop / load engines. Shared by the window and the background proxy.
 func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String: Any] {
     switch (op, eng) {
-    case ("start", _) where ["osaurus", "ollama", "lmstudio", "magnitude"].contains(eng):
+    case ("start", _) where ["osaurus", "ollama", "lmstudio", "magnitude", "apple"].contains(eng):
         // One guarded launch: checks the port and the running app first, and coordinates the window and the proxy.
         if let e = ENGINE_DEFS.first(where: { $0.id == eng }) { return ["ok": ensureEngineUp(e)] }
     case ("stop", "osaurus"): _ = runCmd(OSAURUS, ["stop"]); Owned.forget(eng)
+    case ("stop", "apple"): stopAppleBrain(); Owned.forget(eng)
     case ("stop", "lmstudio"): _ = runCmd(LMS, ["server", "stop"]); Owned.forget(eng)
     case ("stop", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "stop"])
     case ("load", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "load", d["model"] as? String ?? ""]); Owned.noteUsed("magnitude", d["model"] as? String ?? "")
@@ -164,7 +171,7 @@ func ensureEngineUp(_ e: EngineDef, seconds: Int = 300) -> Bool {
     return false
 }
 /// Backends that are separate apps/services and get the guarded, start-on-demand launch.
-let GUARDED: Set<String> = ["osaurus", "ollama", "lmstudio", "magnitude"]
+let GUARDED: Set<String> = ["osaurus", "ollama", "lmstudio", "magnitude", "apple"]
 var isProxyProcess: Bool { CommandLine.arguments.contains("--proxy") }
 private var _mutexes: [String: NSLock] = [:]; private let _mutexLock = NSLock()
 func engineMutex(_ id: String) -> NSLock { _mutexLock.lock(); defer { _mutexLock.unlock() }
@@ -176,6 +183,7 @@ func appRunning(_ id: String) -> Bool {
     case "ollama": return pgrepAny(["ollama serve", "Ollama.app/Contents/MacOS/Ollama"])
     case "lmstudio": return pgrepAny(["LM Studio.app/Contents/MacOS/LM Studio"])
     case "magnitude": return pgrepAny(["magnitude serve", "Magnitude.app/Contents/MacOS"])
+    case "apple": return pgrepAny(["AppleBrain --port 8100 --owner switchboard"])
     default: return false
     }
 }
@@ -194,6 +202,8 @@ func launchEngine(_ id: String, appAlreadyRunning: Bool) {
         } else { _ = runCmd("/usr/bin/open", ["-g", "-j", "-a", "Ollama"]) }
     case "lmstudio": _ = runCmd(LMS, ["server", "start"])
     case "magnitude": if !appAlreadyRunning { _ = runCmd(MAGNITUDE, ["serve"], detach: true) }
+    case "apple":   // tiny helper (no model download; Apple's model is part of macOS)
+        if !appAlreadyRunning && !APPLE_BRAIN.isEmpty { _ = runCmd(APPLE_BRAIN, ["--port", "8100", "--owner", "switchboard"], detach: true) }
     default: break
     }
 }

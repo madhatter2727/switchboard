@@ -72,6 +72,7 @@ enum Owned {
                     if kind == "app" { _ = runCmd("/usr/bin/pkill", ["-f", "osaurus.app/Contents/MacOS/osaurus"]) }   // we launched the app, so we close it
                 case "lmstudio": _ = runCmd(LMS, ["server", "stop"])   // the LM Studio app itself is left as it was
                 case "magnitude": _ = runCmd(MAGNITUDE, ["models", "stop"]); if kind == "app" { _ = runCmd("/usr/bin/pkill", ["-f", "magnitude serve"]) }
+                case "apple": stopAppleBrain()   // only Switchboard's own copy; Apple Brain.app is left alone
                 case "ollama": break   // Ollama's own background service stays (tiny); its models were unloaded above
                 default: break }
                 done.append(id); s[id] = nil
