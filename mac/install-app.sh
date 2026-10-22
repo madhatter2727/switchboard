@@ -13,6 +13,7 @@ rm -f "$APP/Contents/MacOS/ModelPicker"; cp "$BIN" "$APP/Contents/MacOS/Switchbo
 cp -R ../web/* "$APP/Contents/Resources/web/"
 P="$APP/Contents/Info.plist"; cp Resources/Info.plist "$P"
 pb(){ /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$P"; }
+cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"; pb CFBundleIconFile AppIcon   # app icon (source: AppIcon-1024.png)
 pb CFBundleExecutable Switchboard; pb CFBundleIdentifier com.tara.modelpicker; pb CFBundlePackageType APPL
 pb NSCalendarsFullAccessUsageDescription "Switchboard reads your calendar to answer schedule questions, and adds an event only after you press Approve."
 pb NSRemindersFullAccessUsageDescription "Switchboard lists your open reminders when you ask. It never changes them."
