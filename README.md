@@ -22,7 +22,7 @@ Switchboard is a Mac app for chatting with AI models that run **on your own comp
 | Spark | Switchboard server, port 8095 | No |
 | Raptor 0.6 4B, Bonsai 2 27B | Osaurus (port 1337) | No |
 | gemma4:e2b, gemma2:2b, ornith, qwen2.5-coder | Ollama (port 11434) | gemma4:e2b only |
-| Apple (built-in), `apple-builtin` | Apple Brain helper, port 8100 ([apple-brain](https://github.com/madhatter2727/apple-brain)). Started only when you pick it, stopped when Switchboard quits. Never used by Auto. Chat only. | No |
+| Apple (built-in), `apple-builtin` | Apple Brain helper, port 8100 ([apple-brain](https://github.com/madhatter2727/apple-brain)). Started only when you or Auto pick it, stopped when Switchboard quits. Auto uses it only for plain, short chat: no attachments, files, app control, coding or long reasoning, and the chat plus reply under ~2,500 tokens. If it won't start or errors, Auto falls back once to its usual pick. Chat only. | No |
 
 ## How it fits together
 

@@ -11,7 +11,7 @@ const ENGINES=[
  {id:'bonsai9b',name:'Bonsai 2 9B (Prism)',base:'http://127.0.0.1:8098/v1'},
  {id:'spark',name:'Spark X2.5 4B',base:'http://127.0.0.1:8095/v1'},
  {id:'bonsai27b',name:'Bonsai 2 27B (big: ~9 GB memory)',base:'http://127.0.0.1:8096/v1'},
- {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; pick it yourself (Auto never uses it)
+ {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
 const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin'};
@@ -170,11 +170,39 @@ function autoRoute(text){
  if(FILE_RX.test(text))return {...R,agent:true,why:'files or calendar'};
  if(haveModel('bonsai4b'))return {e:'bonsai4b',m:ALIAS.bonsai4b,name:'Bonsai 4B',agent:false,why:'quick chat'};
  return {...R,why:'quick chat'}}
+// ---- Auto may pick Apple (built-in) for plain, short chat only (Oct 22). Apple's model holds about 4,000 tokens. ----
+const APPLE_BUDGET=2500,APPLE_REPLY=1000; // chat so far + this message + room for the reply must stay under ~2,500 tokens
+const ACTION_RX=/\b(open|close|quit|launch|start|run|create|make|write|edit|change|update|save|delete|remove|trash|move|rename|copy|paste|install|download|upload|send|email|mail|text|message|remind|reminder|reminders|click|type|play|record|turn on|turn off|set up|setup|browser|safari|finder|terminal|apps?|website|url|link)\b/i;
+const REASON_RX=/\b(step[- ]by[- ]step|in detail|detailed|in depth|thorough|thoroughly|prove|proof|derive|analy[sz]e|analysis|compare|comparison|pros and cons|plan|planning|strategy|research|essay|report|summari[sz]e|translate|calculate|solve|math|equation|reasoning|think through|evaluate|review|outline|itinerary|lesson)\b/i;
+const estTok=s=>Math.ceil(String(s||'').length/3);
+function chatTokens(ch){return (ch&&ch.messages||[]).reduce((n,m)=>n+4+estTok(typeof m.content==='string'?m.content:JSON.stringify(m.content))+(m.attText?estTok(m.attText):0),0)}
+function appleCheck(text){
+ if(!haveModel('apple'))return {ok:false,why:'Apple (built-in) not installed'};
+ if(S.appleDown)return {ok:false,why:'Apple Brain did not start earlier'};
+ if(S.chat&&S.chat.appleFailed)return {ok:false,why:'Apple had an error in this chat'};
+ if(S.att.length)return {ok:false,why:'attachment'};
+ if(S.chat&&(S.chat.messages||[]).some(m=>(m.atts&&m.atts.length)||Array.isArray(m.content)||m.role==='tool'))return {ok:false,why:'chat has attachments or tool results'};
+ if(CODE_RX.test(text))return {ok:false,why:'coding'};
+ if(FILE_RX.test(text)||ACTION_RX.test(text))return {ok:false,why:'files or app control'};
+ if(REASON_RX.test(text))return {ok:false,why:'long reasoning'};
+ if(text.length>500||text.split('\n').length>6)return {ok:false,why:'long message'};
+ const t=chatTokens(S.chat)+estTok(text)+60+APPLE_REPLY;
+ if(t>APPLE_BUDGET)return {ok:false,why:'chat too long for Apple (~'+t+' tokens)',tokens:t};
+ return {ok:true,why:'plain short chat',tokens:t}}
+const _autoRouteBase=autoRoute;
+autoRoute=function(text){const base=_autoRouteBase(text);if(base.why!=='quick chat')return base; // pictures, coding and files keep their usual models
+ const a=appleCheck(text);return a.ok?{e:'apple',m:ALIAS.apple,name:'Apple (built-in)',agent:false,why:'plain short chat'}:base};
+function appleFallback(text,reason){const b=_autoRouteBase(text);return {...b,agent:!!b.agent||isAgent(b.m),why:b.why+(reason?' · '+reason:'')}}
 async function autoSwitch(text){
  const ch=S.chat;let r=ch&&ch.lock;
+ // A chat locked to Apple moves to the usual model once it stops being plain and short (Apple can't hold more).
+ if(r&&r.e==='apple'){const a=appleCheck(text);if(!a.ok){ch.lock=null;r=appleFallback(text,'moved off Apple: '+a.why)}}
  if(!r){r=autoRoute(text);r={...r,agent:!!r.agent||isAgent(r.m)}}
  S.lastAuto=r;
  if(!S.sel||S.sel.e!==r.e||S.sel.m!==r.m){status('Auto: switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
+ if(r.e==='apple'&&(!S.sel||S.sel.e!=='apple')){ // Apple Brain didn't start: fall back once, and don't try Apple again this session
+  S.appleDown=true;if(S.chat&&S.chat.lock&&S.chat.lock.e==='apple')S.chat.lock=null;
+  r=appleFallback(text,'Apple did not start');S.lastAuto=r;status('Auto: switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
  if(!S.sel||S.sel.e!==r.e){return null}
  if(S.chat&&!S.chat.lock)S.chat.lock={e:r.e,m:r.m,name:r.name,why:r.why,agent:r.agent}; // after pick(): pick may swap in a fresh empty chat
  $('agent').checked=!!r.agent;$('cur').textContent='Auto · locked to '+r.name+' for this chat';agentUI();return r}
@@ -206,11 +234,13 @@ async function send(text){
  if(S.needTools){S.needTools=false;if(isAgent(S.sel.m)){$('agent').checked=true;agentUI()}}
  if($('agent').checked&&isAgent(S.sel.m))return sendAgent(text);
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;
- if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','That engine is off and would not start.');return ''}
+ if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;
+  if(S.auto&&S.sel.e==='apple'&&!S.appleDown){S.appleDown=true;if(S.chat){S.chat.lock=null;S.chat.appleFailed=true}return send(text)} // Apple off: retry once on the usual model
+  addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;
  ch.engine=S.sel.e;ch.model=S.sel.m;const um=await userMsg(text);ch.messages.push(um);
  if(ch.messages.length===1)ch.title=text.slice(0,40);
- saveChat(ch);addMsg('user',text,undefined,um);showPreNote();
+ saveChat(ch);const ub=addMsg('user',text,undefined,um);showPreNote();
  const out=addMsg('assistant','');out.innerHTML='<span class="think">Thinking…</span>';
  return new Promise(async resolve=>{try{
   const id=++SID;let acc='',gotAny=false,errored=false;S.cur=id;
@@ -228,6 +258,9 @@ async function send(text){
      try{const o=JSON.parse(j);const dl=o.choices?.[0]?.delta||{};if(dl.content){acc+=dl.content;gotAny=true;if(!S.raf)S.raf=requestAnimationFrame(()=>{S.raf=0;if(pending[id]){out.textContent=acc;$('chat').scrollTop=1e9}})}}catch{}}
    else if(ev.type==='error'){errored=true;out.className='msg err';out.textContent=ev.text}
    else if(ev.type==='done'){delete pending[id];
+     if(errored&&S.auto&&S.sel&&S.sel.e==='apple'&&ch.lock&&ch.lock.e==='apple'&&!ch.appleFailed&&!gotAny){ // Apple errored: redo this turn once on the usual model
+       ch.appleFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
+       status('Apple had a problem, trying '+appleFallback(text,'').name+'…');resolve(send(text));return}
      if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined};ch.messages.push(mo);if(/```/.test(acc)){out.textContent='';richText(out,acc,mo)}else out.textContent=acc;tagVia(out,via);saveChat(ch)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
@@ -644,3 +677,30 @@ function imgMsg(m,content){if(m.role!=='user'||!visNow())return content;const ur
 function sysFor(ch){const p=sysPrompt();if(!(visNow()&&chatHasPics(ch)))return p;
  return p.replace(/,?\s*ask_photo_reader for questions about an image/,'')+'\nPICTURES: you can see pictures. When the user attaches a picture it is part of their message: look at it and answer directly from what you see. Never say you cannot see it, and never use a tool to view it.'}
 function toolsFor(ch){return visNow()&&chatHasPics(ch)?TOOLS.filter(t=>t.function.name!=='ask_photo_reader'):TOOLS}
+
+// ---- selftest "route": asks Auto which model it WOULD pick for sample requests. Starts nothing, sends nothing. ----
+const _stRoute=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='route')return _stRoute(m,e,x);await boot;const out=[];
+ const long=Array.from({length:14},(_,i)=>({role:i%2?'assistant':'user',content:'We talked about the weather and weekend plans, turn '+i+'. '+'x'.repeat(420)}));
+ const L={e:'apple',m:'apple-builtin',name:'Apple (built-in)',why:'plain short chat'};
+ const cases=[
+  {name:'short chat',text:'Hi! How are you today?'},
+  {name:'short chat 2',text:'What is a good name for a golden retriever puppy?'},
+  {name:'long chat history',text:'And what do you think about that?',hist:long},
+  {name:'long message',text:'Tell me something nice. '.repeat(30)},
+  {name:'image attached',text:'What is in this picture?',att:[{kind:'image',name:'cat.png'}]},
+  {name:'file attached',text:'What is this about?',att:[{kind:'file',name:'notes.txt'}]},
+  {name:'file command',text:'Open my Downloads folder and find the PDF from yesterday'},
+  {name:'app command',text:'Make a new Pages document called Ideas'},
+  {name:'coding ask',text:'Write a python script that renames photos'},
+  {name:'long reasoning',text:'Compare the pros and cons of renting vs buying, step by step'},
+  {name:'Apple-locked chat turns into coding',text:'Can you debug this javascript function?',lock:L},
+  {name:'Apple-locked chat still short',text:'Thanks, and one more fun fact?',lock:L}];
+ const keepChat=S.chat,keepAtt=S.att,keepDown=S.appleDown;
+ try{
+ for(const c of cases){S.chat={id:'route-test',messages:c.hist||[],lock:c.lock||null};S.att=c.att||[];
+  let r=S.chat.lock;let moved='';if(r&&r.e==='apple'){const a=appleCheck(c.text);if(!a.ok){r=null;moved=' (moved off Apple: '+a.why+')'}}
+  if(!r)r=autoRoute(c.text);const a=appleCheck(c.text);
+  out.push({case:c.name,picked:r.name+moved,engine:r.e,why:r.why,appleRule:a.ok?'ok':'no: '+a.why,tokens:a.tokens||null})}
+ S.appleDown=true;S.chat={id:'route-test',messages:[]};S.att=[];const r2=autoRoute('Hi! How are you today?');out.push({case:'short chat after Apple failed to start',picked:r2.name,engine:r2.e,why:r2.why});
+ }finally{S.chat=keepChat;S.att=keepAtt;S.appleDown=keepDown}
+ return JSON.stringify({appleInstalled:haveModel('apple'),bonsai4bInstalled:haveModel('bonsai4b'),results:out},null,1)};
