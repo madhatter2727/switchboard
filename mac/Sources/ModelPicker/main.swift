@@ -295,6 +295,16 @@ if let i = CommandLine.arguments.firstIndex(of: "--preroute"), CommandLine.argum
         fflush(stdout); exit(0) }
     RunLoop.main.run()
 }
+if let i = CommandLine.arguments.firstIndex(of: "--transcribe-live"), CommandLine.arguments.count > i + 1 {
+    // Voice self-test: feeds an audio file through the same path the mic uses, in real time. No model, no network.
+    let f = CommandLine.arguments[i + 1]
+    Task {
+        var out = "SpeechTranscriber not available on this macOS"
+        if #available(macOS 26.0, *) { let e = CommandLine.arguments.firstIndex(of: "--end-at").flatMap { Double(CommandLine.arguments[$0 + 1]) }; out = await LiveTranscriber.liveFile(f, endAt: e) }
+        print(out); fflush(stdout); exit(0)
+    }
+    RunLoop.main.run()
+}
 if let i = CommandLine.arguments.firstIndex(of: "--transcribe"), CommandLine.arguments.count > i + 1 {
     let f = CommandLine.arguments[i + 1]
     Task {

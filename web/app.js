@@ -413,21 +413,23 @@ const _showChat=showChat;showChat=function(){_showChat();const e=$('chat').query
  if(e){const d=document.createElement('div');d.className='chips';CHIPS.forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t;
   b.onclick=()=>{const x=$('input');if(t.endsWith('\u2026')){x.value='Open the PDF about ';x.focus()}else{x.value=t.replace('\u2019',"'");$('form').requestSubmit()}};d.appendChild(b)});e.appendChild(d)}};
 showChat();
-// voice: hold the mic button, speech stays on this Mac
+// voice: click the mic to start, click again to stop. No time limit, no silence stop. Speech stays on this Mac.
 let micDown=false;
 let micWait=false,warnTimer=null;
 // a voice warning shows for a few seconds, then clears itself (also on the next mic press, send or new chat)
 function voiceWarn(t){clearTimeout(warnTimer);status(t);$('status').classList.add('warn');warnTimer=setTimeout(clearVoiceWarn,6000)}
-function clearVoiceWarn(){clearTimeout(warnTimer);if($('status').classList.contains('warn')){$('status').classList.remove('warn');status('')}$('mic').title='Hold to talk'}
+function clearVoiceWarn(){clearTimeout(warnTimer);if($('status').classList.contains('warn')){$('status').classList.remove('warn');status('')}$('mic').title='Click to talk, click again to stop'}
 window.__speech=ev=>{const m=$('mic');m.classList.toggle('on',!!ev.listening);
  if(ev.text&&(micDown||micWait||ev.listening))$('input').value=ev.text;
  if(ev.text&&micWait&&!ev.listening){micWait=false;status('')}
  if(ev.warning){m.title=ev.warning;if(micDown||micWait){micDown=false;micWait=false;voiceWarn(ev.warning)}}else if(!micDown&&!micWait)clearVoiceWarn()};
-const micStart=()=>{if(S.busy)return;clearVoiceWarn();micDown=true;status('Listening… release to stop');act('speechDown','',{draft:$('input').value})};
+const micStart=()=>{if(S.busy||micDown)return;clearVoiceWarn();micDown=true;$('mic').title='Click to stop';status('Listening… click 🎙 again to stop');act('speechDown','',{draft:$('input').value})};
 const micStop=()=>{if(!micDown)return;micDown=false;micWait=true;status('Finishing…');act('speechUp','');setTimeout(()=>{if(micWait){micWait=false;if(!$('status').classList.contains('warn'))status('')}},8000)};
 const _nc=newChat;newChat=function(){clearVoiceWarn();return _nc()};
-const _send=send;send=function(t){clearVoiceWarn();return _send(t)};
-$('mic').onmousedown=micStart;window.addEventListener('mouseup',micStop);$('mic').onmouseleave=()=>{};
+const _send=send;send=function(t){clearVoiceWarn();if(micDown||micWait){micDown=false;micWait=false;act('speechUp','')}return _send(t)};
+// Toggle, not hold: holding a trackpad click for a whole sentence lets go early and cut the words off.
+$('mic').onmousedown=e=>e.preventDefault();$('mic').onclick=e=>{e.preventDefault();micDown?micStop():micStart()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&micDown)micStop()});
 act('speechInfo','').then(r=>{if(!r.available){$('mic').style.opacity=.35;$('mic').title=r.hint}});
 // Photo Reader
 $('photo').onclick=async()=>{if(S.busy)return;const r=await act('pickImage','');if(!r.path)return;
@@ -444,7 +446,7 @@ async function openSettings(){const b=$('sbody');$('settings').hidden=false;
   +'<div class="row"><label><input type="checkbox" id="sAuto" '+(S.auto?'checked':'')+'> Use Auto for new chats</label></div>'
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
   +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Not running. Open Photo Reader first, then use the 📷 button.')+'</div>'
-  +'<h3>Voice</h3><div class="note">Hold the 🎙 button to talk. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
+  +'<h3>Voice</h3><div class="note">Click 🎙 to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
   +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>';
  b.innerHTML=h;
  $('sAuto').onchange=e=>{S.auto=e.target.checked;if(S.chat){S.chat.auto=S.auto}if(S.auto)$('cur').textContent=AUTOCUR;render()};
@@ -461,7 +463,7 @@ window.__selftest=async(mode,eid,mid)=>{
   if(r.pending){const ap=await act('toolApply','',{name:n,args:a,pendingId:r.pendingId});return JSON.stringify({preview:r.preview,applied:ap},null,1)}
   return JSON.stringify(r,null,1)}
  if(mode==='mic'){await boot;const ev=[];const old=window.__speech;window.__speech=e=>{ev.push(JSON.stringify(e));old(e)};
-  micStart();await sleep(Number(mid)||8000);micStop();await sleep(5000);const r={events:ev.slice(-8),mic:$('mic').title,input:$('input').value,status:$('status').textContent};await sleep(7000);r.statusAfter7s=$('status').textContent;return JSON.stringify(r,null,1)}
+  $('mic').click();await sleep(Number(mid)||8000);const live=$('input').value;$('mic').click();await sleep(5000);ev.push('LIVE_BEFORE_STOP '+live.split(' ').length+' words');const r={events:ev.slice(-8),mic:$('mic').title,input:$('input').value,status:$('status').textContent};await sleep(7000);r.statusAfter7s=$('status').textContent;return JSON.stringify(r,null,1)}
  if(mode==='settings'){await boot;openSettings();await sleep(2500);return $('sbody').innerText}
  return _st4(mode,eid,mid)};
 const _st5=window.__selftest;

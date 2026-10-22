@@ -2,14 +2,14 @@ import AVFoundation
 import Speech
 import SwiftUI
 
-/// Hold the mic to dictate into the text field. Recognition stays on this Mac.
+/// Click the mic to dictate (click again to stop) into the text field. Recognition stays on this Mac.
 @MainActor
 final class SpeechInput: ObservableObject {
     @Published private(set) var available = false
     @Published private(set) var listening = false
     /// Full text for the field (what was already typed, plus the new phrase).
     @Published private(set) var dictation = ""
-    @Published private(set) var hint = "Hold to talk. Speech stays on this Mac."
+    @Published private(set) var hint = "Click to talk, click again to stop. Speech stays on this Mac."
     @Published private(set) var warning: String?
 
     private let engine = AVAudioEngine()
@@ -100,7 +100,7 @@ final class SpeechInput: ObservableObject {
         let text = await lt.stop()
         live = nil; liveStopping = false
         if text.isEmpty {
-            fail(heldFor < 0.8 ? "Keep holding the mic while you talk, then let go." : "Didn't catch that. Hold the mic and try again.")
+            fail(heldFor < 0.8 ? "Click the mic, talk, then click it again to stop." : "Didn't catch that. Click the mic and try again.")
         } else {
             dictation = prefix.isEmpty ? text : prefix + " " + text
         }
@@ -211,7 +211,7 @@ final class SpeechInput: ObservableObject {
         }
         guard failed, holding else { return }
         if spoken.isEmpty {
-            fail("Didn't catch that. Hold the mic and try again.")
+            fail("Didn't catch that. Click the mic and try again.")
         }
         holdUp()
     }
@@ -235,7 +235,7 @@ final class SpeechInput: ObservableObject {
     }
 
     private func ready() {
-        hint = "Hold to talk. Speech stays on this Mac."
+        hint = "Click to talk, click again to stop. Speech stays on this Mac."
         warning = nil
     }
 
@@ -255,7 +255,7 @@ final class SpeechInput: ObservableObject {
     func clearWarning() {
         clearTask?.cancel(); clearTask = nil
         if warning != nil { warning = nil }
-        hint = "Hold to talk. Speech stays on this Mac."
+        hint = "Click to talk, click again to stop. Speech stays on this Mac."
     }
 
     private static func allowSpeech() async -> Bool {
