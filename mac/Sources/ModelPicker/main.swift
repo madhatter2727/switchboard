@@ -72,6 +72,14 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "state":
             if let t = d["json"] as? String { try? t.write(toFile: STATE, atomically: true, encoding: .utf8) }
             return ["ok": true]
+        case "mem":   // read-only: Mac memory in use vs total, same maths as Activity Monitor's "Memory Used" (app + wired + compressed). Changes nothing.
+            var vm = vm_statistics64(); var cnt = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
+            let kr = withUnsafeMutablePointer(to: &vm) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(cnt)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &cnt) } }
+            var ps: vm_size_t = 0; host_page_size(mach_host_self(), &ps)
+            guard kr == KERN_SUCCESS else { return ["ok": false] }
+            let app = UInt64(vm.internal_page_count) > UInt64(vm.purgeable_count) ? UInt64(vm.internal_page_count) - UInt64(vm.purgeable_count) : 0
+            let used = (app + UInt64(vm.wire_count) + UInt64(vm.compressor_page_count)) * UInt64(ps)
+            return ["ok": true, "used": Int(used), "total": Int(ProcessInfo.processInfo.physicalMemory)]
         default: if let r = PortTools.handle(op, d) { return r }; return engineAct(op, eng, d)
         }
     }

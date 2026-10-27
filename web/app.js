@@ -89,7 +89,7 @@ function render(){agentUI();
    x.innerHTML=`<span class="mi" style="--c1:${br.c1}">${IC(br.icon,20)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span><span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span><span class="led" title="${up?'Ready':'Off (starts when you pick it)'}"></span>`;
    x.onclick=()=>pick(e.id,m.id);d.appendChild(x)}
   $('engines').appendChild(d)}
- renderChats();updateChip();lightsWake();
+ renderChats();updateChip();lightsWake();memSoon();
 }
 // status lights: green = ready, yellow = waking up (the app says "Starting X…"), hollow = off. Reads the status text only; nothing here starts or stops anything.
 function lightsWake(){const t=($('status').textContent||'');const w=ENGINES.find(x=>t==='Starting '+x.name+'…');
@@ -99,6 +99,20 @@ function updateChip(){const el=$('curChip');if(!el)return;let k='auto',c='#F29A8
  else if(S.auto&&S.chat&&S.chat.lock){const b=brandOf(S.chat.lock.m+' '+S.chat.lock.e);k=b.icon;c=b.c1}
  el.style.background=c;el.innerHTML=IC(k,20)}
 const status=t=>{$('status').textContent=t||'';try{lightsWake()}catch{}};
+// ---- Brain space: how much of the Mac's memory is in use. Read-only 'mem' question to the app (no engine is touched). ----
+let memLast=0,memBusy=false,memTimer=null;
+async function memUpdate(){if(memBusy||document.hidden||document.body.classList.contains('mini'))return;memBusy=true;memLast=Date.now();
+ try{const r=await act('mem','');const box=$('mem');if(!r||!r.total||r.used==null){box.hidden=true;return}
+  const G=1024*1024*1024,pct=Math.max(0,Math.min(100,r.used/r.total*100));
+  box.hidden=false;box.classList.toggle('warn',pct>75&&pct<=90);box.classList.toggle('hot',pct>90);
+  $('memFill').style.width=pct.toFixed(1)+'%';
+  const tot=r.total/G;$('memTxt').textContent=(r.used/G).toFixed(1)+' of '+(Number.isInteger(tot)?tot:tot.toFixed(1))+' GB used';
+  $('memBar').setAttribute('aria-valuenow',Math.round(pct));$('memBar').title=Math.round(pct)+'% of memory in use'+(pct>90?' (very full)':pct>75?' (getting full)':'')}
+ catch{try{$('mem').hidden=true}catch{}}finally{memBusy=false}}
+// after a model starts or stops (render runs after those): look again soon, and once more when its memory has settled. At most one look per 5 seconds.
+function memSoon(){if(Date.now()-memLast<5000)return;clearTimeout(memTimer);memTimer=setTimeout(()=>{memUpdate();memTimer=setTimeout(memUpdate,7000)},1500)}
+setInterval(memUpdate,10000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)memUpdate()});
+
 
 // ---- in-page dialogs (WKWebView has no confirm/prompt) ----
 function dialog(text,{input=null,yes='OK',no='Cancel'}={}){return new Promise(res=>{

@@ -94,6 +94,16 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px soli
 @keyframes cord{0%{box-shadow:0 0 0 0 rgba(242,154,138,.9)}70%{box-shadow:0 0 0 10px rgba(242,154,138,0)}100%{box-shadow:2px 2px 0 var(--shadow)}}
 @keyframes wiggle{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
 
+/* Brain space (memory) bar */
+.mem{margin-top:auto;position:sticky;bottom:-16px;background:var(--side);padding:12px 6px 16px;border-top:2px dashed var(--soft)}
+aside #refresh{margin-bottom:12px}
+.mem .lbl{font:800 12px var(--font);letter-spacing:.4px;margin-bottom:6px;color:var(--ink)}
+.mem .bar{height:16px;background:var(--card);border:2px solid var(--line);border-radius:9px;overflow:hidden}
+.mem .bar>div{height:100%;width:0;background:var(--sky);border-right:2px solid var(--line);transition:width .6s ease,background .3s}
+.mem .bar>div[style*="width: 0%"],.mem .bar>div[style*="width:0%"]{border-right:0}
+.mem.warn .bar>div{background:var(--butter)}.mem.hot .bar>div{background:var(--coral)}
+.mem .sm{font:600 12px var(--font);color:var(--muted);margin-top:5px}
+
 /* ---------- main ---------- */
 main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
 header{display:flex;align-items:center;gap:14px;padding:14px 32px;border-bottom:2px solid var(--line);background:var(--card)}
