@@ -66,11 +66,16 @@ async function digest(text,label,question,eid,m,progress,depth=0){
  if(all.length>size&&depth<6)all=await digest(all,label,question,eid,m,progress,depth+1);
  return all}
 function lockLabel(L){return 'Auto picked '+L.name+' ('+L.why+') · locked for this chat'}
+// ---- Beauty M1: model look (icon colours + "good for" tags). Visual only: nothing here touches routing. ----
+const BRANDS=[[/apple/i,'🍎','#8b93a7','#2d3242'],[/bonsai/i,'🌳','#34d27b','#0e8a52'],[/raptor/i,'🦅','#ffb347','#e0701a'],[/spark/i,'⚡','#ffd84a','#ff8a1f'],
+ [/gemma/i,'💎','#4aa3ff','#2f56d9'],[/qwen/i,'Q','#a56bff','#5a3bd6'],[/llama/i,'🦙','#ff7ab8','#c23b8a'],[/ornith/i,'🦜','#2fd5c4','#0f8f9a'],[/magnitude/i,'🧲','#ff6b6b','#c73a5a']];
+function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2],c2:b[3]};return{icon:(t.replace(/[^a-z0-9]/gi,'')[0]||'•').toUpperCase(),c1:'#6a78b8',c2:'#3b4678'}}
+const goodFor=m=>/apple/i.test(m)?'quick chat':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':'';
 function render(){agentUI();
  $('proxy').innerHTML=S.proxy?'<span class="dot on" style="display:inline-block"></span> Fixed address for other apps:<br><b>http://127.0.0.1:7777/v1</b>':'<span class="dot" style="display:inline-block"></span> Fixed address (7777) is off';
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
- const ax=document.createElement('div');ax.className='m'+(S.auto?' sel':'');ax.innerHTML='<span>Auto (recommended)</span><span class="badge agent">default</span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
+ const ax=document.createElement('div');ax.className='m'+(S.auto?' sel':'');ax.innerHTML='<span class="mi" style="--c1:#3fd0ff;--c2:#ff4fd8">✦</span><span class="mt"><span class="mn">Auto (recommended)</span><span class="mtags"><span class="badge agent">default</span></span></span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
  for(const e of ENGINES){
   const d=document.createElement('div');d.className='eng';const up=S.up[e.id];const ms=S.models[e.id]||[];
   const col=S.collapsed.has(e.id);const inUse=!S.auto&&S.sel&&S.sel.e===e.id;if(col)d.classList.add('collapsed');
@@ -79,7 +84,8 @@ function render(){agentUI();
   if(col){$('engines').appendChild(d);continue}
   if(!ms.length){const s=document.createElement('div');s.className='sub';s.textContent='no chat models found';d.appendChild(s)}
   for(const m of ms){const x=document.createElement('div');x.className='m'+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');
-   x.innerHTML=`<span>${esc(m.label)}</span><span class="badges">${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span>`;
+   const br=brandOf(m.id+' '+e.id),gf=goodFor(m.id);
+   x.innerHTML=`<span class="mi" style="--c1:${br.c1};--c2:${br.c2}">${esc(br.icon)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span><span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span>`;
    x.onclick=()=>pick(e.id,m.id);d.appendChild(x)}
   $('engines').appendChild(d)}
  renderChats();
@@ -146,7 +152,7 @@ async function pick(eid,mid,keepAuto){
   await refresh();
  }finally{S.switching=false}
 }
-function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v)}
+function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v);const b=brandOf(via);if(b.c1!=='#6a78b8')d.style.setProperty('--edge',b.c1);}
 function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
  if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
  if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.textContent=(a.kind==='image'?'🖼 ':'📄 ')+a.name;r.appendChild(c)});d.appendChild(r)}
