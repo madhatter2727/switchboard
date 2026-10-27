@@ -26,8 +26,11 @@ async function refresh(){
  await Promise.all(ENGINES.map(async e=>{
   const j=await getJSON(e.base+'/models');
   if(j&&j.data){S.up[e.id]=true;let ids=j.data.map(m=>m.id).filter(m=>!isEmbed(m));
-    if(ALIAS[e.id])ids=[ALIAS[e.id]];S.models[e.id]=ids.map(m=>({id:m,label:m}))}
-  else{S.up[e.id]=false;const r=await act('list',e.id);S.models[e.id]=(r.lines||[]).map(m=>({id:m,label:m}))}
+    if(ALIAS[e.id])ids=[ALIAS[e.id]];S.models[e.id]=ids.map(m=>({id:m,label:m}));
+    // Magnitude: remember its list while it runs so the models still show (and can be picked) when it is off. Saved only when the list changes.
+    if(e.id==='magnitude'){const k=ids.join('|');if(k&&S.magSaved!==k){S.magSaved=k;act('list','magnitude')}}}
+  else{S.up[e.id]=false;if(e.id==='magnitude')S.magLoaded=null; // Magnitude stopped: whatever was loaded is gone, so load again on the next pick
+   const r=await act('list',e.id);S.models[e.id]=(r.lines||[]).map(m=>({id:m,label:m}))}
  }));
  S.proxy=!!(await getJSON('http://127.0.0.1:7777/v1/models',2));
  render()}

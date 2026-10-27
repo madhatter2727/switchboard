@@ -91,7 +91,9 @@ func offlineLines(_ id: String) -> [String] {
     case "osaurus": return cachedIds("osaurus") ?? osaurusDiskModels()
     case "lmstudio": return cachedIds("lmstudio") ?? lmstudioDiskModels()
     case "ollama": return cachedIds("ollama") ?? ollamaDiskModels()
-    case "magnitude": return runCmd(MAGNITUDE, ["models", "status"]).1.split(separator: "\n").map(String.init)
+    // Magnitude's own commands (`models status` etc.) need its server running and never start it, so while it is off
+    // use the list saved the last time it was running (the same as Osaurus/Ollama). Reads one small file, starts nothing.
+    case "magnitude": return cachedIds("magnitude") ?? []
     case "spark": return FileManager.default.fileExists(atPath: home + "/MLXModels/Spark-X2.5-4B-MLX-4bit") && FileManager.default.isExecutableFile(atPath: BUILTIN_SCRIPT["spark"]!) ? ["spark-x2.5-4b-mlx"] : []
     case "bonsai27b": return FileManager.default.fileExists(atPath: home + "/MLXModels/Bonsai-2-27B-JANG-CRACK-1.75bit") && FileManager.default.isExecutableFile(atPath: BUILTIN_SCRIPT["bonsai27b"]!) ? ["bonsai-2-27b"] : []
     case "bonsai4b": return FileManager.default.fileExists(atPath: home + "/Models/bonsai2/4b") ? ["bonsai-2-4b"] : []
@@ -107,18 +109,14 @@ func modelIds(_ e: EngineDef) -> [String] {
         var ids = ((j["data"] as? [[String: Any]]) ?? (j["models"] as? [[String: Any]]) ?? []).compactMap { $0["id"] as? String ?? $0["name"] as? String }
         if let a = SINGLE_ALIAS[e.id] { ids = [a] }
         ids = ids.filter { !isEmbedName($0) }
-        if ["osaurus", "lmstudio", "ollama"].contains(e.id) { saveCachedIds(e.id, ids) }
+        if ["osaurus", "lmstudio", "ollama", "magnitude"].contains(e.id) { saveCachedIds(e.id, ids) }
         return ids
     }
     let L = offlineLines(e.id).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     switch e.id {
     case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama", "apple": return L.filter { !isEmbedName($0) }
     case "lmstudio": return L.filter { !isEmbedName($0) }
-    case "magnitude":
-        var out: [String] = []; var on = false
-        for l in L { if l.hasPrefix("MODEL") && l.contains("MODEL ID") { on = true; continue }
-            if on, let last = l.split(separator: " ").last { out.append(String(last)) } }
-        return out
+    case "magnitude": return L   // saved ids of the models Magnitude can run (the live /models list leaves out the ones it can't)
     default: return []
     }
 }
