@@ -86,6 +86,7 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px soli
 .badge{font:700 10.5px var(--font);padding:1px 7px;border-radius:999px;border:1.5px solid var(--line);white-space:nowrap;background:transparent;color:var(--muted)}
 .badge.agent{background:rgba(134,207,174,.35);color:var(--ink)}.badge.see{background:rgba(185,163,238,.35);color:var(--ink)}
 .badge.use{background:rgba(242,213,138,.45);color:var(--ink)}.badge.chat{border-color:var(--soft)}
+.msub{font:700 11.5px var(--font);color:var(--muted);margin-top:-1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Auto "patch cord" pulse when Auto picks a model: pure CSS, switched on by a class */
 .m.autorow.pulse{animation:cord 1.5s ease-out}.m.autorow.pulse .mi{animation:wiggle .6s ease-out 2}
 @keyframes cord{0%{box-shadow:0 0 0 0 rgba(242,154,138,.9)}70%{box-shadow:0 0 0 10px rgba(242,154,138,0)}100%{box-shadow:2px 2px 0 var(--shadow)}}

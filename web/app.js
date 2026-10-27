@@ -76,17 +76,29 @@ function render(){agentUI();
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
  const ax=document.createElement('div');ax.className='m autorow on'+(S.auto?' sel':'');ax.innerHTML='<span class="mi" style="--c1:#F29A8A">'+IC('auto',20)+'</span><span class="mt"><span class="mn">Auto (recommended)</span><span class="mtags"><span class="badge agent">default</span></span></span><span class="led" title="Ready"></span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
+ // Big multi-model servers keep their own heading; engines that list exactly ONE model go together under "Other".
+ const MULTI=new Set(['osaurus','ollama','lmstudio']);
+ const single=ENGINES.filter(e=>!MULTI.has(e.id)&&(S.models[e.id]||[]).length===1),singleIds=new Set(single.map(e=>e.id));
+ const modelRow=(e,m,up,showEng)=>{const x=document.createElement('div');x.className='m '+(up?'on':'off')+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');x.dataset.eid=e.id;
+  const br=brandOf(m.id+' '+e.id),gf=goodFor(m.id);
+  x.innerHTML=`<span class="mi" style="--c1:${br.c1}">${IC(br.icon,20)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span>${showEng?`<span class="msub">${esc(e.name)}</span>`:''}<span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span><span class="led" title="${up?'Ready':'Off (starts when you pick it)'}"></span>`;
+  x.onclick=()=>pick(e.id,m.id);return x};
  for(const e of ENGINES){
+  if(singleIds.has(e.id))continue;
   const d=document.createElement('div');d.className='eng';d.dataset.eid=e.id;const up=S.up[e.id];const ms=S.models[e.id]||[];
   const col=S.collapsed.has(e.id);const inUse=!S.auto&&S.sel&&S.sel.e===e.id;if(col)d.classList.add('collapsed');
   d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${IC(col?'chevR':'chevD',14,2.6)}</button><span class="dot ${up?'on':''}"></span>${e.name}${col?`<span class="cnt">${ms.length} model${ms.length===1?'':'s'}</span>`:''}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
   d.querySelector('.eh').onclick=()=>{if(S.collapsed.has(e.id))S.collapsed.delete(e.id);else S.collapsed.add(e.id);act('prefsSet','',{key:'collapsed',value:[...S.collapsed]});render()};
   if(col){$('engines').appendChild(d);continue}
   if(!ms.length){const s=document.createElement('div');s.className='sub';s.textContent='no chat models found';d.appendChild(s)}
-  for(const m of ms){const x=document.createElement('div');x.className='m '+(up?'on':'off')+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');x.dataset.eid=e.id;
-   const br=brandOf(m.id+' '+e.id),gf=goodFor(m.id);
-   x.innerHTML=`<span class="mi" style="--c1:${br.c1}">${IC(br.icon,20)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span><span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span><span class="led" title="${up?'Ready':'Off (starts when you pick it)'}"></span>`;
-   x.onclick=()=>pick(e.id,m.id);d.appendChild(x)}
+  for(const m of ms)d.appendChild(modelRow(e,m,up,false));
+  $('engines').appendChild(d)}
+ if(single.length){
+  const col=S.collapsed.has('other'),anyUp=single.some(e=>S.up[e.id]),inUse=!S.auto&&S.sel&&single.some(e=>e.id===S.sel.e);
+  const d=document.createElement('div');d.className='eng other'+(col?' collapsed':'');
+  d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${IC(col?'chevR':'chevD',14,2.6)}</button><span class="dot ${anyUp?'on':''}"></span>Other<span class="cnt">${single.length} model${single.length===1?'':'s'}</span></div><div class="sub">engines with just one model each${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
+  d.querySelector('.eh').onclick=()=>{if(S.collapsed.has('other'))S.collapsed.delete('other');else S.collapsed.add('other');act('prefsSet','',{key:'collapsed',value:[...S.collapsed]});render()};
+  if(!col)for(const e of single)d.appendChild(modelRow(e,S.models[e.id][0],S.up[e.id],true));
   $('engines').appendChild(d)}
  renderChats();updateChip();lightsWake();memSoon();
 }
@@ -763,4 +775,4 @@ function autoUI(){const on=!!S.autoApprove;$('autoAp').checked=on;$('autoBox').c
 $('autoAp').onchange=()=>{S.autoApprove=$('autoAp').checked;act('prefsSet','',{key:'autoApprove',value:S.autoApprove});autoUI()};
 (async()=>{try{const p=await act('prefsGet','',{key:'autoApprove'});S.autoApprove=p&&p.value===true}catch{}autoUI()})();
 // selftest: copy through the real app (the caller restores the clipboard afterwards)
-const _stCopy=window.__selftest;window.__selftest=async(mode,eid,mid)=>{if(mode==='copytest'){await boot;const ok=await copyText('Switchboard copy test 123');return JSON.stringify({ok})}return _stCopy(mode,eid,mid)};
+const _stCopy=window.__selftest;window.__selftest=async(mode,eid,mid)=>{if(mode==='sidebottom'){await boot;await new Promise(r=>setTimeout(r,2500));document.querySelector('aside').scrollTop=1e5;await new Promise(r=>setTimeout(r,600));return 'scrolled'}if(mode==='copytest'){await boot;const ok=await copyText('Switchboard copy test 123');return JSON.stringify({ok})}return _stCopy(mode,eid,mid)};
