@@ -72,6 +72,9 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "state":
             if let t = d["json"] as? String { try? t.write(toFile: STATE, atomically: true, encoding: .utf8) }
             return ["ok": true]
+        case "copy":   // puts plain text on the Mac clipboard (the Copy buttons use this; WKWebView's own clipboard can be blocked)
+            if let t = d["text"] as? String, t.count < 2_000_000 { DispatchQueue.main.sync { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(t, forType: .string) }; return ["ok": true, "copied": true] }
+            return ["ok": false]
         case "mem":   // read-only: Mac memory in use vs total, same maths as Activity Monitor's "Memory Used" (app + wired + compressed). Changes nothing.
             var vm = vm_statistics64(); var cnt = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
             let kr = withUnsafeMutablePointer(to: &vm) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(cnt)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &cnt) } }

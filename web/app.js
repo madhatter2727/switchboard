@@ -73,7 +73,6 @@ const BRAND_DEFAULT='#DDD3C0';
 function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2]};return{icon:'chip',c1:BRAND_DEFAULT}}
 const goodFor=m=>/apple/i.test(m)?'quick chat':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':'';
 function render(){agentUI();
- $('proxy').innerHTML=S.proxy?'<span class="dot on" style="display:inline-block"></span> Fixed address for other apps:<br><b>http://127.0.0.1:7777/v1</b>':'<span class="dot" style="display:inline-block"></span> Fixed address (7777) is off';
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
  const ax=document.createElement('div');ax.className='m autorow on'+(S.auto?' sel':'');ax.innerHTML='<span class="mi" style="--c1:#F29A8A">'+IC('auto',20)+'</span><span class="mt"><span class="mn">Auto (recommended)</span><span class="mtags"><span class="badge agent">default</span></span></span><span class="led" title="Ready"></span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
@@ -131,11 +130,11 @@ function saveChat(c){c.updated=Date.now();act('saveChat','',{id:c.id,json:JSON.s
 function newChat(){S.chat={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:'New chat',created:Date.now(),updated:Date.now(),engine:S.sel?.e||null,model:S.sel?.m||null,auto:S.auto,lock:null,agent:S.sel?isAgent(S.sel.m):undefined,messages:[],saved:false};if(S.auto)$('cur').textContent=AUTOCUR;if(!S.auto&&S.sel)$('agent').checked=isAgent(S.sel.m);showChat();agentUI()}
 function showChat(){const c=$('chat');c.innerHTML='';
  if(!S.chat||!S.chat.messages.length)c.innerHTML='<div class="empty"><div class="wlogo">'+LOGO(64)+'</div><h2>What shall we do today?</h2><p>'+(S.auto?'Ready. Just type what you want. Auto picks the right model for you.':S.sel?'Ready. Say hi to '+esc(S.sel.m)+'.':'Pick a model on the left, then say hi.')+'</p></div>';
- else S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via,m));renderChats();updateChip()}
+ else{S.hist=true;try{S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via,m))}finally{S.hist=false}}renderChats();updateChip()}
 function renderChats(){const box=$('chats');box.innerHTML='';
  if(!S.chats.length)box.innerHTML='<div class="sub" style="margin-left:0">No saved chats yet.</div>';
  for(const c of S.chats){const d=document.createElement('div');d.className='ch'+(S.chat&&S.chat.id===c.id?' sel':'');
-  d.innerHTML=`<span class="ci">${IC('chat',15)}</span><span class="t" title="${esc(c.model||'')}">${esc(c.title)}</span><button class="ren" title="Rename" aria-label="Rename">${IC('pencil',14)}</button><button class="del" title="Delete" aria-label="Delete">${IC('trash',14)}</button>`;
+  d.innerHTML=`<span class="ci">${IC('chat',15)}</span><span class="t" title="${esc(c.model||'')}">${esc(c.title)}</span><span class="when" title="${c.updated?esc(new Date(c.updated).toLocaleString()):''}">${esc(fmtChatWhen(c.updated))}</span><button class="ren" title="Rename" aria-label="Rename">${IC('pencil',14)}</button><button class="del" title="Delete" aria-label="Delete">${IC('trash',14)}</button>`;
   d.onclick=()=>openChat(c.id);
   d.querySelector('.ren').onclick=async ev=>{ev.stopPropagation();const n=await dialog('Rename chat',{input:c.title});if(n&&n.trim()){c.title=n.trim();saveChat(c)}};
   d.querySelector('.del').onclick=async ev=>{ev.stopPropagation();if(await dialog('Delete the chat "'+c.title+'"? It goes to the Trash.')){await act('trashChat','',{id:c.id});S.chats=S.chats.filter(x=>x.id!==c.id);if(S.chat&&S.chat.id===c.id)newChat();else renderChats()}};
@@ -176,10 +175,29 @@ async function pick(eid,mid,keepAuto){
 }
 function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v);const b=brandOf(via);if(b.c1!==BRAND_DEFAULT)d.style.setProperty('--edge',b.c1);
  if(/^Auto picked/.test(via)){v.classList.add('cord');if(S.busy){try{const a=document.querySelector('#engines .autorow');if(a){a.classList.remove('pulse');void a.offsetWidth;a.classList.add('pulse');setTimeout(()=>a.classList.remove('pulse'),1800)}}catch{}}}}
+// ---- times + copy (Oct 27) ----
+const TFMT={hour:'numeric',minute:'2-digit'};
+function fmtMsgTime(ts){if(!ts)return '';const d=new Date(ts),n=new Date();const t=d.toLocaleTimeString('en-US',TFMT);
+ if(d.toDateString()===n.toDateString())return t;
+ return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',...(d.getFullYear()!==n.getFullYear()?{year:'numeric'}:{})})+' \u00b7 '+t}
+function fmtChatWhen(ts){if(!ts)return '';const d=new Date(ts),n=new Date();if(d.toDateString()===n.toDateString())return d.toLocaleTimeString('en-US',TFMT);
+ const y=new Date(n);y.setDate(n.getDate()-1);if(d.toDateString()===y.toDateString())return 'Yesterday';
+ return d.toLocaleDateString('en-US',{month:'short',day:'numeric',...(d.getFullYear()!==n.getFullYear()?{year:'numeric'}:{})})}
+async function copyText(t){t=String(t==null?'':t);
+ try{const r=await act('copy','',{text:t});if(r&&r.copied)return true}catch{}
+ try{await navigator.clipboard.writeText(t);return true}catch{}
+ try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0;left:-9999px;top:0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok}catch{return false}}
+function rawOf(d){if(d._raw!=null)return d._raw;const c=d.cloneNode(true);c.querySelectorAll('.via,.mtime,.cpy,.attrow,.play,.frow').forEach(x=>x.remove());return c.textContent}
+function decorate(d,ts,raw){d.querySelectorAll(':scope>.mtime,:scope>.cpy').forEach(x=>x.remove());if(raw!=null)d._raw=raw;
+ const tm=fmtMsgTime(ts);if(tm){const t=document.createElement('div');t.className='mtime';t.textContent=tm;t.title=new Date(ts).toLocaleString();d.appendChild(t)}
+ const b=document.createElement('button');b.type='button';b.className='cpy';b.title='Copy';b.setAttribute('aria-label','Copy this message');b.innerHTML=IC('copy',15);
+ b.onclick=async e=>{e.stopPropagation();if(await copyText(rawOf(d))){b.classList.add('done');b.innerHTML=IC('check',15);b.title='Copied';setTimeout(()=>{b.classList.remove('done');b.innerHTML=IC('copy',15);b.title='Copy'},1400)}};d.appendChild(b)}
 function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
  if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
  if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.innerHTML=IC(a.kind==='image'?'img':'doc',14);c.append(' '+a.name);r.appendChild(c)});d.appendChild(r)}
- if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
+ if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);
+ if(cls==='user'||cls==='assistant'){let ts=mo&&mo.ts;if(!ts&&!S.hist){ts=Date.now();if(mo)mo.ts=ts}if(text||mo)decorate(d,ts,mo&&typeof mo.content==='string'?mo.content:text)}
+ c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 let SID=0;const pending={};
 window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 
@@ -243,7 +261,7 @@ async function localCommand(text){
  const show=(reply,files)=>{ch.messages.push({role:'user',content:text});if(ch.messages.length===1)ch.title=text.slice(0,40);addMsg('user',text);
   const d=addMsg('assistant',reply,'Instant command (no model)');(files||[]).forEach(f=>{const r=document.createElement('div');r.className='frow';r.innerHTML='<span>'+esc(f)+'</span> ';
    [['Open','openPath'],['Reveal in Finder','revealPath']].forEach(([l,op])=>{const b=document.createElement('button');b.textContent=l;b.onclick=()=>act(op,'',{path:f});r.appendChild(b)});d.appendChild(r)});
-  ch.messages.push({role:'assistant',content:reply,via:'Instant command (no model)'});saveChat(ch);return reply};
+  ch.messages.push({role:'assistant',content:reply,via:'Instant command (no model)',ts:Date.now()});saveChat(ch);return reply};
  if(UNDO_RX.test(text)){const r=await act('undoLast','');return show(r.text)}
  const pm=text.match(/^\s*(?:please\s+)?open\s+(?:the\s+(?:file|folder|document)\s+)?["'“]?([~\/][^"'”]*?)["'”]?\s*[.!]?\s*$/i);
  if(pm){const o=await act('toolRun','',{name:'open_item',args:JSON.stringify({target:pm[1]})});return show(o.text)}
@@ -290,7 +308,7 @@ async function send(text){
      if(errored&&S.auto&&S.sel&&S.sel.e==='apple'&&ch.lock&&ch.lock.e==='apple'&&!ch.appleFailed&&!gotAny){ // Apple errored: redo this turn once on the usual model
        ch.appleFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
        status('Apple had a problem, trying '+appleFallback(text,'').name+'…');resolve(send(text));return}
-     if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined};ch.messages.push(mo);if(/```/.test(acc)){out.textContent='';richText(out,acc,mo)}else out.textContent=acc;tagVia(out,via);saveChat(ch)}}
+     if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};ch.messages.push(mo);if(/```/.test(acc)){out.textContent='';richText(out,acc,mo)}else out.textContent=acc;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
@@ -343,6 +361,8 @@ const TOOLS=[
  ['edit_file','CHANGE AN EXISTING FILE: add text to the end (append), add text at the top (prepend), replace some exact text (replace, give find + text), or rewrite the whole file (overwrite). Use this whenever the user asks you to edit, update, add to, fix or change a file. You do the editing yourself; never tell the user how. The user sees an Approve card first; a backup is kept and Undo puts the old version back. Works for .txt, .md, .docx, .rtf, .html and code files (read_file_text first if you need the exact current words).',{path:['string','The file to change.'],mode:['string','append, prepend, replace or overwrite'],text:['string','The new text (for replace: what to put instead).'],find:['string','For replace only: the exact text to find in the file.']},['path','mode','text']],
  ['pages_new_document','OPEN A NEW BLANK PAGES DOCUMENT AND TYPE TEXT INTO IT, right now. Use this whenever the user mentions Pages and wants something written in it, e.g. "open a blank Pages doc and write Test at the top". You do the typing yourself; never tell the user to type it. Optional save_path saves it as a .pages file.',{text:['string','Exactly what to type into the document. For "write Test at the top", this is: Test'],save_path:['string','Optional: where to save it, e.g. Desktop/Notes.pages. Leave out to just leave it open in Pages.']},['text']],
 ].map(([name,description,props,required])=>({type:'function',function:{name,description,parameters:{type:'object',properties:Object.fromEntries(Object.entries(props).map(([k,[t,d]])=>[k,t==='array'?{type:'array',items:{type:'string'},description:d}:{type:t,description:d}])),required}}}));
+// Auto approve: only these never-overwrite, never-delete actions may skip the dialog (copy / move / rename always pick a free name, and Undo works). Trash and editing existing files ALWAYS ask.
+const AUTO_OK=['copy_items','create_folder','move_items','rename_item','create_calendar_event'];
 const CHANGING=['move_items','rename_item','copy_items','create_folder','trash_items','create_calendar_event','edit_file'];
 function sysPrompt(){return 'You are a private assistant on this Mac running in Switchboard. Nothing goes to the cloud.\nNow: '+new Date().toString()+'. Use tools for files and folders; do not invent paths or contents. If a tool fails, say so plainly. Keep replies short.\nmove_items and rename_item only prepare a preview. Nothing changes until the user approves. Never say a file was changed before the tool result says it moved. You can never permanently delete files; trash_items only moves to the Trash after the user approves. Use open_item to open a file or app, reminders for open reminders, ask_photo_reader for questions about an image, and create_calendar_event (needs approval) to add an event. For schedule questions use list_calendar_events (read-only). If the result says PERMISSION_PENDING or PERMISSION_DENIED, tell the user plainly what to do.\nYOU CAN WRITE FILES. When the user asks you to write, type, create, save or change something in a file or document, DO IT with a tool: create_file for a new text, Markdown or Word file; edit_file to change an existing file (the user approves first, Undo is available); pages_new_document to open a new Pages document and type text into it. Never answer with instructions for the user to do it themselves, and never just open an app and stop. Only say it is done after the tool result says DONE.\nWEB PAGES AND GAMES: when asked for a web page, browser game or web app, write ONE complete .html file (HTML, CSS and JavaScript together; every function you call must exist) with create_file in Documents/Switchboard Creations/, then call open_item on it: that opens it in the web browser so it runs, and the app shows the user a Play button. To fix a bug, use edit_file with mode replace on the exact broken lines; never paste the whole file back with overwrite. If the user says a page shows code instead of running, read the file with read_file_text to check it before answering.'}
 function describe(n,a){const p=x=>(x||'').toString();
@@ -409,8 +429,9 @@ async function sendAgent(text){
     else{res=await act('toolRun','',{name:n,args:JSON.stringify(a)});out=res.text||'';if(res.undoId){st.undoId=res.undoId;st.status='done'}
      if(!res.pending&&n!=='read_file_text')out=await morePages(n,a,out,api)}
     if(res.pending){
-      const ok=await dialog('The assistant wants to change something:\n\n'+res.preview,{yes:'Approve',no:'Deny'});
-      if(ok){const ap=await act('toolApply','',{name:n,args:JSON.stringify(a),pendingId:res.pendingId||''});out=ap.text;st.status='done';st.text+=' approved';if(ap.undoId)st.undoId=ap.undoId}
+      const auto=!!S.autoApprove&&AUTO_OK.includes(n)&&!!res.pendingId;
+      const ok=auto||await dialog('The assistant wants to change something:\n\n'+res.preview,{yes:'Approve',no:'Deny'});
+      if(ok){const ap=await act('toolApply','',{name:n,args:JSON.stringify(a),pendingId:res.pendingId||''});out=ap.text;st.status='done';st.text+=auto?' approved (auto)':' approved';if(ap.undoId)st.undoId=ap.undoId}
       else{if(res.pendingId)act('toolCancelId','',{pendingId:res.pendingId});out='The user denied this action. Nothing was changed.';st.status='denied';st.text+=' denied'}}
     st.result=out;ch.messages.push(st);saveChat(ch);el.replaceWith(addStep(st));
     api.push({role:'tool',tool_call_id:c.id,name:n,content:String(out)});
@@ -419,7 +440,7 @@ async function sendAgent(text){
    if(step===MAXSTEP-1)final='I used '+MAXSTEP+' tool steps in a row and paused so I do not loop forever. Say "continue" and I will keep going.';
   }
  }finally{
-  clearInterval(tick);wait.remove();const mo={role:'assistant',content:final,via:S.via||undefined};const wf=webFilesOf(ch.messages.slice(turnFrom));if(wf.length)mo.webFiles=wf;
+  clearInterval(tick);wait.remove();const mo={role:'assistant',content:final,via:S.via||undefined,ts:Date.now()};const wf=webFilesOf(ch.messages.slice(turnFrom));if(wf.length)mo.webFiles=wf;
   addMsg('assistant',final,S.via,mo);ch.messages.push(mo);saveChat(ch);
   S.busy=false;$('send').hidden=false;$('stop').hidden=true}
  return final}
@@ -496,21 +517,23 @@ act('speechInfo','').then(r=>{if(!r.available){$('mic').style.opacity=.35;$('mic
 // Photo Reader
 $('photo').onclick=async()=>{if(S.busy)return;const r=await act('pickImage','');if(!r.path)return;
  const q=await dialog('Ask Photo Reader about\n'+r.path+'\n\nWhat do you want to know?',{input:'Describe this image.',yes:'Ask'});if(!q)return;
- if(!S.chat)newChat();const ch=S.chat;ch.messages.push({role:'user',content:'[Photo] '+q+'  ('+r.path+')'});if(ch.messages.length===1)ch.title='Photo: '+q.slice(0,30);addMsg('user','[Photo] '+q+'  ('+r.path+')');
+ if(!S.chat)newChat();const ch=S.chat;ch.messages.push({role:'user',content:'[Photo] '+q+'  ('+r.path+')',ts:Date.now()});if(ch.messages.length===1)ch.title='Photo: '+q.slice(0,30);addMsg('user','[Photo] '+q+'  ('+r.path+')');
  const st={role:'step',tool:'ask_photo_reader',args:{path:r.path,question:q},text:'Asking Photo Reader about '+r.path+'…',status:''};const el=addStep(st);
  const res=await act('toolRun','',{name:'ask_photo_reader',args:JSON.stringify(st.args)});st.result=res.text;st.status='done';el.replaceWith(addStep(st));ch.messages.push(st);
- const ans=(res.text||'').split('\n').slice(1).join('\n')||res.text;ch.messages.push({role:'assistant',content:ans,via:'Photo Reader'});addMsg('assistant',ans,'Photo Reader');saveChat(ch)};
+ const ans=(res.text||'').split('\n').slice(1).join('\n')||res.text;ch.messages.push({role:'assistant',content:ans,via:'Photo Reader',ts:Date.now()});addMsg('assistant',ans,'Photo Reader');saveChat(ch)};
 // Settings (only what applies here: model choice lives on the left, calendars and permissions here)
 async function openSettings(){const b=$('sbody');$('settings').hidden=false;
  const cur=S.auto?'Auto (picks the best model for each message)':(S.sel?(ENGINES.find(x=>x.id===S.sel.e)||{}).name+' · '+S.sel.m:'none picked yet');
  const ph=await getJSON('http://127.0.0.1:8093/v1/models',2);
  let h='<h3>Engine and model</h3><div class="row">Now using: <b>'+esc(cur)+'</b></div><div class="note">Pick an engine or model on the left, or choose Auto. The fixed address for other apps is http://127.0.0.1:7777/v1.</div>'
   +'<div class="row"><label><input type="checkbox" id="sAuto" '+(S.auto?'checked':'')+'> Use Auto for new chats</label></div>'
+  +'<h3>Address for other apps</h3><div class="row"><span class="addr">http://127.0.0.1:7777/v1</span><button type="button" id="sCopyAddr" class="smallcopy" title="Copy this address">'+IC('copy',14)+' Copy</button></div><div class="note">Other apps on this Mac can use this fixed address ('+(S.proxy?'running now':'off right now')+').</div>'
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
   +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Not running. Open Photo Reader first, then use the camera button.')+'</div>'
   +'<h3>Voice</h3><div class="note">Click the mic button to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
   +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>';
  b.innerHTML=h;
+ $('sCopyAddr').onclick=async e=>{const b=e.currentTarget;if(await copyText('http://127.0.0.1:7777/v1')){b.innerHTML=IC('check',14)+' Copied';setTimeout(()=>{b.innerHTML=IC('copy',14)+' Copy'},1400)}};
  $('sAuto').onchange=e=>{S.auto=e.target.checked;if(S.chat){S.chat.auto=S.auto}if(S.auto)$('cur').textContent=AUTOCUR;render()};
  const cal=await act('calList','');const box=$('calBox');if(!box)return;
  if(cal.denied){box.textContent=cal.text;return}
@@ -575,7 +598,7 @@ function richText(d,text,mo){const rx=/```([\w+#.-]*)[^\n]*\n([\s\S]*?)(?:```|$)
  if(last<text.length){const s=document.createElement('span');s.textContent=text.slice(last);d.appendChild(s)}}
 function codeBlock(lang,code,mo,idx){const lines=code.split('\n').length;const box=document.createElement('div');box.className='code';
  const bar=document.createElement('div');bar.className='codebar';const lab=document.createElement('span');lab.textContent=(lang||'code')+' · '+lines.toLocaleString()+' lines';bar.appendChild(lab);
- const cp=document.createElement('button');cp.type='button';cp.textContent='Copy';cp.onclick=()=>{navigator.clipboard.writeText(code).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1500)},()=>{})};bar.appendChild(cp);
+ const cp=document.createElement('button');cp.type='button';cp.title='Copy just this code';cp.innerHTML=IC('copy',13)+' Copy';cp.onclick=async()=>{if(await copyText(code)){cp.innerHTML=IC('check',13)+' Copied';setTimeout(()=>{cp.innerHTML=IC('copy',13)+' Copy'},1500)}};bar.appendChild(cp);
  if(isWebCode(lang,code)){const pb=document.createElement('button');pb.type='button';pb.className='playbtn';pb.innerHTML=IC('play',13,2.4)+' Play / Open in browser';
   pb.onclick=async()=>{mo=mo||{};mo.saved=mo.saved||{};let p=mo.saved[idx];
    if(!p){const r=await act('saveCreation','',{name:(S.chat&&S.chat.title)||'creation',html:code});if(!r.ok){status('Could not save the page.');return}p=r.path;mo.saved[idx]=p;if(S.chat&&S.chat.messages.includes(mo))saveChat(S.chat)}
@@ -635,7 +658,7 @@ window.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classL
 window.addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('dropping');const fs=[...(e.dataTransfer&&e.dataTransfer.files||[])];if(fs.length)addFiles(fs)});
 function withImages(arr,i){if(!S.turnImages||!S.turnImages.length||!arr[i]||arr[i].role!=='user')return;
  arr[i]={role:'user',content:[{type:'text',text:String(arr[i].content)},...S.turnImages.map(u=>({type:'image_url',image_url:{url:u}}))]}}
-async function userMsg(text){const m={role:'user',content:text};const A=S.att;S.att=[];S.turnImages=[];renderAtts();if(!A.length)return m;
+async function userMsg(text){const m={role:'user',content:text,ts:Date.now()};const A=S.att;S.att=[];S.turnImages=[];renderAtts();if(!A.length)return m;
  m.atts=A.map(a=>({name:a.name,kind:a.kind,path:a.path,chars:a.chars}));const vis=isVision(S.sel.m);const parts=[];
  let budget=Math.floor(roomChars(S.sel.e,S.sel.m,[])*0.7)-text.length;
  for(const a of A){
@@ -733,3 +756,10 @@ const _stRoute=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='route'
  S.appleDown=true;S.chat={id:'route-test',messages:[]};S.att=[];const r2=autoRoute('Hi! How are you today?');out.push({case:'short chat after Apple failed to start',picked:r2.name,engine:r2.e,why:r2.why});
  }finally{S.chat=keepChat;S.att=keepAtt;S.appleDown=keepDown}
  return JSON.stringify({appleInstalled:haveModel('apple'),bonsai4bInstalled:haveModel('bonsai4b'),results:out},null,1)};
+
+// ---- Auto approve toggle (default OFF, remembered between launches) ----
+function autoUI(){const on=!!S.autoApprove;$('autoAp').checked=on;$('autoBox').classList.toggle('on',on);$('autoBox').querySelector('span').textContent=on?'Auto approve ON':'Auto approve'}
+$('autoAp').onchange=()=>{S.autoApprove=$('autoAp').checked;act('prefsSet','',{key:'autoApprove',value:S.autoApprove});autoUI()};
+(async()=>{try{const p=await act('prefsGet','',{key:'autoApprove'});S.autoApprove=p&&p.value===true}catch{}autoUI()})();
+// selftest: copy through the real app (the caller restores the clipboard afterwards)
+const _stCopy=window.__selftest;window.__selftest=async(mode,eid,mid)=>{if(mode==='copytest'){await boot;const ok=await copyText('Switchboard copy test 123');return JSON.stringify({ok})}return _stCopy(mode,eid,mid)};

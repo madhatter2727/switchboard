@@ -4,7 +4,6 @@
 <div id="app">
  <aside>
   <div class="brand"><span class="logo"></span><h1>Switchboard</h1></div>
-  <div id="proxy" class="hint"></div>
   <button id="newChat"><span class="bi" data-ic="plus" data-s="16"></span><span>New chat</span></button>
   <div class="sec">Your chats</div>
   <div id="chats"></div>
@@ -15,7 +14,7 @@
   <div class="mem" id="mem" hidden><div class="lbl">Brain space</div><div class="bar" id="memBar" role="progressbar" aria-label="Brain space (memory in use)"><div id="memFill"></div></div><div class="sm" id="memTxt"></div></div>
  </aside>
  <main>
-  <header><div class="cur"><span id="curChip" class="curchip"></span><div id="cur">No model picked yet</div></div><div id="status"></div><div class="hr"><label id="agentBox"><input type="checkbox" id="agent"><span>Agent mode</span></label><button id="gear" type="button" class="ib" title="Settings" aria-label="Settings"><span class="bi" data-ic="gear" data-s="20"></span></button></div></header><div id="agentNote"></div>
+  <header><div class="cur"><span id="curChip" class="curchip"></span><div id="cur">No model picked yet</div></div><div id="status"></div><div class="hr"><label id="autoBox" title="When ON, the assistant can copy, move, rename, make folders and add calendar events without asking each time. Moving to the Trash and editing existing files always still ask."><input type="checkbox" id="autoAp"><span>Auto approve</span></label><label id="agentBox"><input type="checkbox" id="agent"><span>Agent mode</span></label><button id="gear" type="button" class="ib" title="Settings" aria-label="Settings"><span class="bi" data-ic="gear" data-s="20"></span></button></div></header><div id="agentNote"></div>
   <div id="chat"><div class="empty">Pick a model on the left, then say hi.</div></div>
   <form id="form"><div id="atts"></div><textarea id="input" rows="2" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>
    <span class="btns"><button id="clip" type="button" class="ib" title="Add files or pictures (you can also paste with Cmd+V or drag them in)" aria-label="Add files or pictures"><span class="bi" data-ic="clip" data-s="20"></span></button><button id="photo" type="button" class="ib" title="Ask Photo Reader about an image" aria-label="Ask Photo Reader about an image"><span class="bi" data-ic="cam" data-s="20"></span></button><button id="mic" type="button" class="ib" title="Click to talk, click again to stop. Speech stays on this Mac." aria-label="Talk"><span class="bi" data-ic="mic" data-s="20"></span></button><button id="send" type="submit"><span class="bi" data-ic="send" data-s="16" data-sw="2"></span><span>Send</span></button><button id="stop" type="button" hidden>Stop</button></span></form>
