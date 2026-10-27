@@ -120,6 +120,12 @@ aside #refresh{margin-bottom:12px}
 #autoBox.on{background:var(--coral);color:#3A3F5C;box-shadow:2px 2px 0 var(--shadow)}
 #autoBox.on input{background:#fff}
 
+#autoNote{padding:6px 32px;font:700 12.5px var(--font);color:#3A3F5C;background:var(--coral);border-bottom:2px solid var(--line)}
+.step.auto{background:rgba(242,154,138,.22);border-style:solid;border-color:var(--coral);border-width:2px}
+.autotag{display:inline-flex;align-items:center;gap:4px;font:800 12px var(--font);background:var(--coral);color:#3A3F5C;border:2px solid var(--line);border-radius:10px;padding:0 7px;vertical-align:1px}
+.autotag .ic{display:inline-block}
+.stime{float:right;margin-left:12px;font:700 11px var(--font);color:var(--muted)}
+
 /* ---------- main ---------- */
 main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
 header{display:flex;align-items:center;gap:10px;padding:14px 24px;border-bottom:2px solid var(--line);background:var(--card)}
