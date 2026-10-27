@@ -219,6 +219,7 @@ window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 // ---- Auto: simple keyword rules choose the model ----
 const CODE_RX=/\b(code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|app|game|snake|regex|compile|error in|sql|api|refactor|algorithm)\b/i;
 const FILE_RX=/\b(pages|keynote|textedit|docx|txt|markdown|note|notes|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
+function chatNote(t){const n=document.createElement('div');n.className='attnote';n.textContent=t;const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight}
 function haveModel(eid){return (S.models[eid]||[]).length>0}
 // ---- Picture routing (Oct 27): with a picture attached Auto picks the BEST model that can see pictures, on any engine. ----
 // Ranking, best first (only models that are installed/listed; an engine that is off still lists what it has, and Switchboard starts it on pick):
@@ -275,13 +276,14 @@ async function autoSwitch(text){
  if(r&&r.e==='apple'){const a=appleCheck(text);if(!a.ok){ch.lock=null;r=appleFallback(text,'moved off Apple: '+a.why)}}
  if(r&&hasPic()&&!isVision(r.m)){const v=visionRoute();if(v){ch.lock=null;r=null}} // a chat locked to a text-only model moves to a picture-capable one when a picture arrives
  if(!r){r=autoRoute(text);r={...r,agent:!!r.agent||isAgent(r.m)}}
- if(hasPic()&&!isVision(r.m)){const n=document.createElement('div');n.className='attnote';n.textContent='No picture-capable model is available, so Photo Reader described it.';const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight}
+ const noVis=hasPic()&&!isVision(r.m); // note is added after pick(): picking into an empty chat redraws it
  S.lastAuto=r;
  if(!S.sel||S.sel.e!==r.e||S.sel.m!==r.m){status('Auto: switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
  if(r.e==='apple'&&(!S.sel||S.sel.e!=='apple')){ // Apple Brain didn't start: fall back once, and don't try Apple again this session
   S.appleDown=true;if(S.chat&&S.chat.lock&&S.chat.lock.e==='apple')S.chat.lock=null;
   r=appleFallback(text,'Apple did not start');S.lastAuto=r;status('Auto: switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
  if(!S.sel||S.sel.e!==r.e){return null}
+ if(noVis)chatNote('No picture-capable model is available, so Photo Reader described it.');
  if(S.chat&&!S.chat.lock)S.chat.lock={e:r.e,m:r.m,name:r.name,why:r.why,agent:r.agent}; // after pick(): pick may swap in a fresh empty chat
  $('agent').checked=!!r.agent;$('cur').textContent='Auto · locked to '+r.name+' for this chat';agentUI();return r}
 function showPreNote(){if(S.preNote){addMsg('assistant',S.preNote,'Instant command (no model)');S.preNote=null}}
@@ -301,9 +303,26 @@ async function localCommand(text){
   if(ok){const ap=await act('toolApply','',{pendingId:r.pendingId});msg=ap.text;show(msg+(ap.ok?'  (say "undo" to reverse it)':''))}
   else{act('toolCancelId','',{pendingId:r.pendingId});show('Cancelled. Nothing was changed.')}return 'handled'}
  return show(r.text||'Done.',r.files)}
+// ---- Picture gate (Oct 27): runs before a message with a picture goes out. Never leaves a dead end at a stopped Photo Reader. ----
+const PHOTO_DEAD='No model that can see pictures is available and Photo Reader is stopped. Pick a picture-capable model (Bonsai or Gemma 4) or start Photo Reader.';
+const photoUp=async()=>!!(await getJSON('http://127.0.0.1:8093/v1/models',2)); // read-only look; never starts Photo Reader
+async function pictureGate(cam){
+ if(!hasPic()||S.busy||S.switching)return true; // busy: the normal send checks handle it
+ const v=visionRoute();
+ if(S.auto){ // autoSwitch picks a picture-capable model itself; only stop if nothing can see and Photo Reader is stopped too
+  if(!v&&!(await photoUp())){addMsg('err',PHOTO_DEAD);return false}return true}
+ if(S.sel&&isVision(S.sel.m))return true; // a picture-capable model she picked herself: keep it
+ // text-only (or no) model picked: the camera button always moves to the best picture-capable model; the paperclip does too when Photo Reader is stopped
+ if(v&&(cam||!S.sel||!(await photoUp()))){
+  const was=S.sel?S.sel.m:null;
+  await pick(v.e,v.m);if(!S.sel||S.sel.m!==v.m)return false;
+  chatNote((was?was+' can\'t see pictures, so ':'')+'switched to '+v.name+'.');return true}
+ if(!v&&!(await photoUp())){addMsg('err',PHOTO_DEAD);return false}
+ return true}
 async function send(text){
  if(!S.chat)newChat();
  if(!S.busy&&!S.switching&&!S.att.length){const lc=await localCommand(text);if(lc!==null)return lc}
+ if(!(await pictureGate(S.camSend)))return '';
  let via='';
  if(S.auto){S.chat.auto=true;if(S.busy||S.switching)return '';const r=await autoSwitch(text);if(!r){addMsg('err','Auto could not start a model. Try picking one yourself.');return ''}via=lockLabel(r)}
  else via='';
@@ -547,12 +566,11 @@ $('mic').onmousedown=e=>e.preventDefault();$('mic').onclick=e=>{e.preventDefault
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&micDown)micStop()});
 act('speechInfo','').then(r=>{if(!r.available){$('mic').style.opacity=.35;$('mic').title=r.hint}});
 // Photo Reader
-$('photo').onclick=async()=>{if(S.busy)return;const r=await act('pickImage','');if(!r.path)return;
- const q=await dialog('Ask Photo Reader about\n'+r.path+'\n\nWhat do you want to know?',{input:'Describe this image.',yes:'Ask'});if(!q)return;
- if(!S.chat)newChat();const ch=S.chat;ch.messages.push({role:'user',content:'[Photo] '+q+'  ('+r.path+')',ts:Date.now()});if(ch.messages.length===1)ch.title='Photo: '+q.slice(0,30);addMsg('user','[Photo] '+q+'  ('+r.path+')');
- const st={role:'step',tool:'ask_photo_reader',args:{path:r.path,question:q},text:'Asking Photo Reader about '+r.path+'…',status:''};const el=addStep(st);
- const res=await act('toolRun','',{name:'ask_photo_reader',args:JSON.stringify(st.args)});st.result=res.text;st.status='done';el.replaceWith(addStep(st));ch.messages.push(st);
- const ans=(res.text||'').split('\n').slice(1).join('\n')||res.text;ch.messages.push({role:'assistant',content:ans,via:'Photo Reader',ts:Date.now()});addMsg('assistant',ans,'Photo Reader');saveChat(ch)};
+// The camera button sends the picture to the best picture-capable model (same ranking as Auto, see visionRoute); Photo Reader only if none exists.
+$('photo').onclick=async()=>{if(S.busy||S.switching)return;const r=await act('pickImage','');if(!r.path)return;
+ const q=await dialog('Ask about this picture\n'+r.path+'\n\nWhat do you want to know?',{input:'Describe this image.',yes:'Ask'});if(!q)return;
+ const a=await act('attachPath','',{path:r.path});if(!a||a.ok===false||a.err){addMsg('err',(a&&a.err)||'That picture could not be opened.');return}
+ addAtt(a);S.camSend=true;try{await send(q)}finally{S.camSend=false}};
 // Settings (only what applies here: model choice lives on the left, calendars and permissions here)
 async function openSettings(){const b=$('sbody');$('settings').hidden=false;
  const cur=S.auto?'Auto (picks the best model for each message)':(S.sel?(ENGINES.find(x=>x.id===S.sel.e)||{}).name+' · '+S.sel.m:'none picked yet');
@@ -561,7 +579,7 @@ async function openSettings(){const b=$('sbody');$('settings').hidden=false;
   +'<div class="row"><label><input type="checkbox" id="sAuto" '+(S.auto?'checked':'')+'> Use Auto for new chats</label></div>'
   +'<h3>Address for other apps</h3><div class="row"><span class="addr">http://127.0.0.1:7777/v1</span><button type="button" id="sCopyAddr" class="smallcopy" title="Copy this address">'+IC('copy',14)+' Copy</button></div><div class="note">Other apps on this Mac can use this fixed address ('+(S.proxy?'running now':'off right now')+').</div>'
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
-  +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Not running. Open Photo Reader first, then use the camera button.')+'</div>'
+  +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Photo Reader is stopped (only used as a last resort). Picture-capable models handle photos.')+'</div>'
   +'<h3>Voice</h3><div class="note">Click the mic button to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
   +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>';
  b.innerHTML=h;
