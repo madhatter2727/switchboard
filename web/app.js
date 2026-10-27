@@ -67,30 +67,38 @@ async function digest(text,label,question,eid,m,progress,depth=0){
  return all}
 function lockLabel(L){return 'Auto picked '+L.name+' ('+L.why+') · locked for this chat'}
 // ---- Beauty M1: model look (icon colours + "good for" tags). Visual only: nothing here touches routing. ----
-const BRANDS=[[/apple/i,'🍎','#8b93a7','#2d3242'],[/bonsai/i,'🌳','#34d27b','#0e8a52'],[/raptor/i,'🦅','#ffb347','#e0701a'],[/spark/i,'⚡','#ffd84a','#ff8a1f'],
- [/gemma/i,'💎','#4aa3ff','#2f56d9'],[/qwen/i,'Q','#a56bff','#5a3bd6'],[/llama/i,'🦙','#ff7ab8','#c23b8a'],[/ornith/i,'🦜','#2fd5c4','#0f8f9a'],[/magnitude/i,'🧲','#ff6b6b','#c73a5a']];
-function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2],c2:b[3]};return{icon:(t.replace(/[^a-z0-9]/gi,'')[0]||'•').toUpperCase(),c1:'#6a78b8',c2:'#3b4678'}}
+const BRANDS=[[/apple/i,'apple','#8DB8F0'],[/bonsai/i,'bonsai','#86CFAE'],[/raptor/i,'raptor','#B9A3EE'],[/spark/i,'spark','#F6B98A'],
+ [/gemma/i,'gem','#F2D58A'],[/qwen/i,'qwen','#F0B0D2'],[/llama/i,'llama','#C9DC96'],[/ornith/i,'bird','#9ADBE0'],[/magnitude/i,'magnet','#E7C29A']];
+const BRAND_DEFAULT='#DDD3C0';
+function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2]};return{icon:'chip',c1:BRAND_DEFAULT}}
 const goodFor=m=>/apple/i.test(m)?'quick chat':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':'';
 function render(){agentUI();
  $('proxy').innerHTML=S.proxy?'<span class="dot on" style="display:inline-block"></span> Fixed address for other apps:<br><b>http://127.0.0.1:7777/v1</b>':'<span class="dot" style="display:inline-block"></span> Fixed address (7777) is off';
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
- const ax=document.createElement('div');ax.className='m'+(S.auto?' sel':'');ax.innerHTML='<span class="mi" style="--c1:#3fd0ff;--c2:#ff4fd8">✦</span><span class="mt"><span class="mn">Auto (recommended)</span><span class="mtags"><span class="badge agent">default</span></span></span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
+ const ax=document.createElement('div');ax.className='m autorow on'+(S.auto?' sel':'');ax.innerHTML='<span class="mi" style="--c1:#F29A8A">'+IC('auto',20)+'</span><span class="mt"><span class="mn">Auto (recommended)</span><span class="mtags"><span class="badge agent">default</span></span></span><span class="led" title="Ready"></span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
  for(const e of ENGINES){
-  const d=document.createElement('div');d.className='eng';const up=S.up[e.id];const ms=S.models[e.id]||[];
+  const d=document.createElement('div');d.className='eng';d.dataset.eid=e.id;const up=S.up[e.id];const ms=S.models[e.id]||[];
   const col=S.collapsed.has(e.id);const inUse=!S.auto&&S.sel&&S.sel.e===e.id;if(col)d.classList.add('collapsed');
-  d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${col?'▸':'▾'}</button><span class="dot ${up?'on':''}"></span>${e.name}${col?`<span class="cnt">${ms.length} model${ms.length===1?'':'s'}</span>`:''}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
+  d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${IC(col?'chevR':'chevD',14,2.6)}</button><span class="dot ${up?'on':''}"></span>${e.name}${col?`<span class="cnt">${ms.length} model${ms.length===1?'':'s'}</span>`:''}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
   d.querySelector('.eh').onclick=()=>{if(S.collapsed.has(e.id))S.collapsed.delete(e.id);else S.collapsed.add(e.id);act('prefsSet','',{key:'collapsed',value:[...S.collapsed]});render()};
   if(col){$('engines').appendChild(d);continue}
   if(!ms.length){const s=document.createElement('div');s.className='sub';s.textContent='no chat models found';d.appendChild(s)}
-  for(const m of ms){const x=document.createElement('div');x.className='m'+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');
+  for(const m of ms){const x=document.createElement('div');x.className='m '+(up?'on':'off')+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');x.dataset.eid=e.id;
    const br=brandOf(m.id+' '+e.id),gf=goodFor(m.id);
-   x.innerHTML=`<span class="mi" style="--c1:${br.c1};--c2:${br.c2}">${esc(br.icon)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span><span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span>`;
+   x.innerHTML=`<span class="mi" style="--c1:${br.c1}">${IC(br.icon,20)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span><span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span><span class="led" title="${up?'Ready':'Off (starts when you pick it)'}"></span>`;
    x.onclick=()=>pick(e.id,m.id);d.appendChild(x)}
   $('engines').appendChild(d)}
- renderChats();
+ renderChats();updateChip();lightsWake();
 }
-const status=t=>$('status').textContent=t||'';
+// status lights: green = ready, yellow = waking up (the app says "Starting X…"), hollow = off. Reads the status text only; nothing here starts or stops anything.
+function lightsWake(){const t=($('status').textContent||'');const w=ENGINES.find(x=>t==='Starting '+x.name+'…');
+ document.querySelectorAll('#engines [data-eid]').forEach(el=>el.classList.toggle('wake',!!w&&el.dataset.eid===w.id&&!el.classList.contains('on')))}
+function updateChip(){const el=$('curChip');if(!el)return;let k='auto',c='#F29A8A';
+ if(!S.auto&&S.sel){const b=brandOf(S.sel.m+' '+S.sel.e);k=b.icon;c=b.c1}
+ else if(S.auto&&S.chat&&S.chat.lock){const b=brandOf(S.chat.lock.m+' '+S.chat.lock.e);k=b.icon;c=b.c1}
+ el.style.background=c;el.innerHTML=IC(k,20)}
+const status=t=>{$('status').textContent=t||'';try{lightsWake()}catch{}};
 
 // ---- in-page dialogs (WKWebView has no confirm/prompt) ----
 function dialog(text,{input=null,yes='OK',no='Cancel'}={}){return new Promise(res=>{
@@ -108,12 +116,12 @@ function saveChat(c){c.updated=Date.now();act('saveChat','',{id:c.id,json:JSON.s
  if(!S.chats.find(x=>x.id===c.id))S.chats.unshift(c);S.chats.sort((a,b)=>b.updated-a.updated);renderChats()}
 function newChat(){S.chat={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:'New chat',created:Date.now(),updated:Date.now(),engine:S.sel?.e||null,model:S.sel?.m||null,auto:S.auto,lock:null,agent:S.sel?isAgent(S.sel.m):undefined,messages:[],saved:false};if(S.auto)$('cur').textContent=AUTOCUR;if(!S.auto&&S.sel)$('agent').checked=isAgent(S.sel.m);showChat();agentUI()}
 function showChat(){const c=$('chat');c.innerHTML='';
- if(!S.chat||!S.chat.messages.length)c.innerHTML='<div class="empty">'+(S.auto?'Ready. Just type what you want. Auto picks the right model for you.':S.sel?'Ready. Say hi to '+esc(S.sel.m)+'.':'Pick a model on the left, then say hi.')+'</div>';
- else S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via,m));renderChats()}
+ if(!S.chat||!S.chat.messages.length)c.innerHTML='<div class="empty"><div class="wlogo">'+LOGO(64)+'</div><h2>What shall we do today?</h2><p>'+(S.auto?'Ready. Just type what you want. Auto picks the right model for you.':S.sel?'Ready. Say hi to '+esc(S.sel.m)+'.':'Pick a model on the left, then say hi.')+'</p></div>';
+ else S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via,m));renderChats();updateChip()}
 function renderChats(){const box=$('chats');box.innerHTML='';
  if(!S.chats.length)box.innerHTML='<div class="sub" style="margin-left:0">No saved chats yet.</div>';
  for(const c of S.chats){const d=document.createElement('div');d.className='ch'+(S.chat&&S.chat.id===c.id?' sel':'');
-  d.innerHTML=`<span class="t" title="${esc(c.model||'')}">${esc(c.title)}</span><button class="ren" title="Rename">✎</button><button class="del" title="Delete">🗑</button>`;
+  d.innerHTML=`<span class="ci">${IC('chat',15)}</span><span class="t" title="${esc(c.model||'')}">${esc(c.title)}</span><button class="ren" title="Rename" aria-label="Rename">${IC('pencil',14)}</button><button class="del" title="Delete" aria-label="Delete">${IC('trash',14)}</button>`;
   d.onclick=()=>openChat(c.id);
   d.querySelector('.ren').onclick=async ev=>{ev.stopPropagation();const n=await dialog('Rename chat',{input:c.title});if(n&&n.trim()){c.title=n.trim();saveChat(c)}};
   d.querySelector('.del').onclick=async ev=>{ev.stopPropagation();if(await dialog('Delete the chat "'+c.title+'"? It goes to the Trash.')){await act('trashChat','',{id:c.id});S.chats=S.chats.filter(x=>x.id!==c.id);if(S.chat&&S.chat.id===c.id)newChat();else renderChats()}};
@@ -152,10 +160,11 @@ async function pick(eid,mid,keepAuto){
   await refresh();
  }finally{S.switching=false}
 }
-function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v);const b=brandOf(via);if(b.c1!=='#6a78b8')d.style.setProperty('--edge',b.c1);}
+function tagVia(d,via){if(!via)return;const v=document.createElement('div');v.className='via';v.textContent=via;d.appendChild(v);const b=brandOf(via);if(b.c1!==BRAND_DEFAULT)d.style.setProperty('--edge',b.c1);
+ if(/^Auto picked/.test(via)){v.classList.add('cord');if(S.busy){try{const a=document.querySelector('#engines .autorow');if(a){a.classList.remove('pulse');void a.offsetWidth;a.classList.add('pulse');setTimeout(()=>a.classList.remove('pulse'),1800)}}catch{}}}}
 function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
  if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
- if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.textContent=(a.kind==='image'?'🖼 ':'📄 ')+a.name;r.appendChild(c)});d.appendChild(r)}
+ if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.innerHTML=IC(a.kind==='image'?'img':'doc',14);c.append(' '+a.name);r.appendChild(c)});d.appendChild(r)}
  if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 let SID=0;const pending={};
 window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
@@ -325,7 +334,7 @@ function sysPrompt(){return 'You are a private assistant on this Mac running in 
 function describe(n,a){const p=x=>(x||'').toString();
  return {list_folder:'Looking in '+p(a.path)+'…',search_files:'Searching for “'+p(a.query)+'”…',list_files_by_date:'Finding files in '+p(a.folder||'Desktop')+' from the last '+(a.days_back??7)+' day(s)…',file_info:'Checking '+p(a.path)+'…',read_file_text:'Reading '+p(a.path)+'…',list_calendar_events:'Checking your calendar for '+p(a.range||((a.start_date||'')+' '+(a.end_date||'')).trim()||'today')+'…',copy_items:'Preparing to copy '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to '+p(a.destination_folder)+'…',create_folder:'Preparing a new folder '+p(a.path)+'…',trash_items:'Preparing to move '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to the Trash…',open_item:'Opening '+p(a.target)+'…',reminders:'Checking your reminders…',create_calendar_event:'Preparing to add “'+p(a.title)+'” to your calendar…',ask_photo_reader:'Asking Photo Reader about '+p(a.path)+'…',move_items:'Preparing to move '+(Array.isArray(a.paths)?a.paths.length:1)+' item(s) to '+p(a.destination_folder)+'…',rename_item:'Preparing to rename '+p(a.path)+'…',create_file:'Creating '+p(a.path)+'…',edit_file:'Preparing to edit '+p(a.path)+' ('+p(a.mode||'append')+')…',pages_new_document:'Opening a new Pages document and typing “'+p(a.text).slice(0,60)+'”…'}[n]||'Using '+n+'…'}
 function addStep(st){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='step '+(st.status||'');
- const R=st.result?String(st.result):'';d.innerHTML='🔧 '+esc(st.text)+(R?(R.length>600?'<details class="res"><summary>'+esc(R.slice(0,600))+'… (show all '+R.length.toLocaleString()+' characters)</summary>'+esc(R)+'</details>':'<div class="res">'+esc(R)+'</div>'):'');
+ const R=st.result?String(st.result):'';d.innerHTML='<span class="stool">'+IC('tool',15)+'</span> '+esc(st.text)+(R?(R.length>600?'<details class="res"><summary>'+esc(R.slice(0,600))+'… (show all '+R.length.toLocaleString()+' characters)</summary>'+esc(R)+'</details>':'<div class="res">'+esc(R)+'</div>'):'');
  if(st.status!=='denied'&&['create_file','edit_file','open_item'].includes(st.tool)){const wp=(st.args||{}).path||(st.args||{}).target;if(wp&&/\.html?$/i.test(wp)&&/DONE|Opened|approved/.test(String(st.result)+st.text))d.appendChild(playRow(wp))}
  if(st.undoId&&!st.undone){const b=document.createElement('button');b.textContent='Undo';b.className='undo';b.onclick=async()=>{b.disabled=true;const r=await act('undoLast','');if(r.ok)st.undone=true;d.querySelector('.res').textContent+='\n'+r.text;if(r.ok)b.remove();else b.disabled=false;if(S.chat)saveChat(S.chat)};d.appendChild(b)}
  c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
@@ -447,10 +456,10 @@ window.__selftest=async(mode,eid,mid)=>{
 if(window.__MINI){document.body.classList.add('mini');$('miniOpen').onclick=()=>act('openMain','');$('miniQuit').onclick=()=>act('quitApp','');
  window.__miniOpen=()=>{if(!S.busy&&S.chat&&S.chat.messages.length)newChat();$('input').focus()}}
 // suggestion chips on the empty chat (same ones Ask My Mac shows)
-const CHIPS=['Find my resume','What is on my calendar today?','Move last week\u2019s screenshots to an Archive folder','Open the PDF about\u2026'];
+const TRIES=[['cal','What is on my calendar today?'],['search','Find my resume'],['star','Tell me a fun fact about space'],['bulb','Help me plan a relaxed Saturday']];
 const _showChat=showChat;showChat=function(){_showChat();const e=$('chat').querySelector('.empty');
- if(e){const d=document.createElement('div');d.className='chips';CHIPS.forEach(t=>{const b=document.createElement('button');b.type='button';b.textContent=t;
-  b.onclick=()=>{const x=$('input');if(t.endsWith('\u2026')){x.value='Open the PDF about ';x.focus()}else{x.value=t.replace('\u2019',"'");$('form').requestSubmit()}};d.appendChild(b)});e.appendChild(d)}};
+ if(e){const d=document.createElement('div');d.className='tries';TRIES.forEach(([ic,t])=>{const b=document.createElement('button');b.type='button';b.className='try';b.innerHTML='<span class="ti">'+IC(ic,18)+'</span><span></span>';b.lastChild.textContent=t;
+  b.onclick=()=>{const x=$('input');x.value=t;x.focus();x.setSelectionRange(t.length,t.length)};d.appendChild(b)});e.appendChild(d)}};
 showChat();
 // voice: click the mic to start, click again to stop. No time limit, no silence stop. Speech stays on this Mac.
 let micDown=false;
@@ -462,7 +471,7 @@ window.__speech=ev=>{const m=$('mic');m.classList.toggle('on',!!ev.listening);
  if(ev.text&&(micDown||micWait||ev.listening))$('input').value=ev.text;
  if(ev.text&&micWait&&!ev.listening){micWait=false;status('')}
  if(ev.warning){m.title=ev.warning;if(micDown||micWait){micDown=false;micWait=false;voiceWarn(ev.warning)}}else if(!micDown&&!micWait)clearVoiceWarn()};
-const micStart=()=>{if(S.busy||micDown)return;clearVoiceWarn();micDown=true;$('mic').title='Click to stop';status('Listening… click 🎙 again to stop');act('speechDown','',{draft:$('input').value})};
+const micStart=()=>{if(S.busy||micDown)return;clearVoiceWarn();micDown=true;$('mic').title='Click to stop';status('Listening… click the mic again to stop');act('speechDown','',{draft:$('input').value})};
 const micStop=()=>{if(!micDown)return;micDown=false;micWait=true;status('Finishing…');act('speechUp','');setTimeout(()=>{if(micWait){micWait=false;if(!$('status').classList.contains('warn'))status('')}},8000)};
 const _nc=newChat;newChat=function(){clearVoiceWarn();return _nc()};
 const _send=send;send=function(t){clearVoiceWarn();if(micDown||micWait){micDown=false;micWait=false;act('speechUp','')}return _send(t)};
@@ -484,8 +493,8 @@ async function openSettings(){const b=$('sbody');$('settings').hidden=false;
  let h='<h3>Engine and model</h3><div class="row">Now using: <b>'+esc(cur)+'</b></div><div class="note">Pick an engine or model on the left, or choose Auto. The fixed address for other apps is http://127.0.0.1:7777/v1.</div>'
   +'<div class="row"><label><input type="checkbox" id="sAuto" '+(S.auto?'checked':'')+'> Use Auto for new chats</label></div>'
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
-  +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Not running. Open Photo Reader first, then use the 📷 button.')+'</div>'
-  +'<h3>Voice</h3><div class="note">Click 🎙 to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
+  +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Not running. Open Photo Reader first, then use the camera button.')+'</div>'
+  +'<h3>Voice</h3><div class="note">Click the mic button to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
   +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>';
  b.innerHTML=h;
  $('sAuto').onchange=e=>{S.auto=e.target.checked;if(S.chat){S.chat.auto=S.auto}if(S.auto)$('cur').textContent=AUTOCUR;render()};
@@ -553,7 +562,7 @@ function richText(d,text,mo){const rx=/```([\w+#.-]*)[^\n]*\n([\s\S]*?)(?:```|$)
 function codeBlock(lang,code,mo,idx){const lines=code.split('\n').length;const box=document.createElement('div');box.className='code';
  const bar=document.createElement('div');bar.className='codebar';const lab=document.createElement('span');lab.textContent=(lang||'code')+' · '+lines.toLocaleString()+' lines';bar.appendChild(lab);
  const cp=document.createElement('button');cp.type='button';cp.textContent='Copy';cp.onclick=()=>{navigator.clipboard.writeText(code).then(()=>{cp.textContent='Copied';setTimeout(()=>cp.textContent='Copy',1500)},()=>{})};bar.appendChild(cp);
- if(isWebCode(lang,code)){const pb=document.createElement('button');pb.type='button';pb.className='playbtn';pb.textContent='▶ Play / Open in browser';
+ if(isWebCode(lang,code)){const pb=document.createElement('button');pb.type='button';pb.className='playbtn';pb.innerHTML=IC('play',13,2.4)+' Play / Open in browser';
   pb.onclick=async()=>{mo=mo||{};mo.saved=mo.saved||{};let p=mo.saved[idx];
    if(!p){const r=await act('saveCreation','',{name:(S.chat&&S.chat.title)||'creation',html:code});if(!r.ok){status('Could not save the page.');return}p=r.path;mo.saved[idx]=p;if(S.chat&&S.chat.messages.includes(mo))saveChat(S.chat)}
    const o=await act('openInBrowser','',{path:p});status(o.ok?'Saved as '+p.replace(/^\/Users\/[^/]+/,'~')+' and opened in '+o.browser+'.':'Could not open '+p);setTimeout(()=>status(''),6000)};bar.appendChild(pb)}
@@ -590,7 +599,7 @@ const apiText=m=>m.attText?(m.content+'\n\n'+m.attText):m.content;
 function kb(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB'}
 function renderAtts(){const b=$('atts');b.innerHTML='';
  S.att.forEach(a=>{const c=document.createElement('span');c.className='chip'+(a.err?' bad':'');
-  if(a.kind==='image'&&a.dataURL){const i=document.createElement('img');i.src=a.dataURL;c.appendChild(i)}else c.append(a.kind==='image'?'🖼 ':'📄 ');
+  if(a.kind==='image'&&a.dataURL){const i=document.createElement('img');i.src=a.dataURL;c.appendChild(i)}else c.insertAdjacentHTML('beforeend',IC(a.kind==='image'?'img':'doc',14));
   const t=document.createElement('span');t.textContent=a.name+(a.err?' (can\'t read: '+a.err+')':a.chars!=null?' · '+a.chars.toLocaleString()+' characters':a.bytes?' · '+kb(a.bytes):'');c.appendChild(t);
   const x=document.createElement('button');x.type='button';x.className='x';x.title='Remove';x.textContent='×';x.onclick=()=>{S.att=S.att.filter(y=>y!==a);renderAtts()};c.appendChild(x);b.appendChild(c)});
  if(S.attLoading){const c=document.createElement('span');c.className='chip';c.textContent='Adding…';b.appendChild(c)}
