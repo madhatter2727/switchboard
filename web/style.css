@@ -243,3 +243,4 @@ body.mini .tries{grid-template-columns:1fr;gap:8px;margin-top:16px}body.mini .em
 ::-webkit-scrollbar{width:12px;height:12px}::-webkit-scrollbar-thumb{background:var(--soft);border-radius:8px;border:3px solid transparent;background-clip:content-box}::-webkit-scrollbar-thumb:hover{background:var(--faint);background-clip:content-box;border:3px solid transparent}::-webkit-scrollbar-track{background:transparent}
 @media (max-width:820px){aside{width:230px}.tries{grid-template-columns:1fr}header{padding:12px 16px}#chat{padding:20px 16px 8px}#form{margin:6px 16px 16px}}
 @media (prefers-reduced-motion:reduce){.msg,.empty .wlogo,.via.cord,#mic.on::after,#mic.on::before,.dot,.led,.m{animation:none!important;transition:none}}
+#chat>.attnote{margin:6px 18px;font-weight:600}

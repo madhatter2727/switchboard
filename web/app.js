@@ -217,9 +217,23 @@ window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 const CODE_RX=/\b(code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|app|game|snake|regex|compile|error in|sql|api|refactor|algorithm)\b/i;
 const FILE_RX=/\b(pages|keynote|textedit|docx|txt|markdown|note|notes|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function haveModel(eid){return (S.models[eid]||[]).length>0}
+// ---- Picture routing (Oct 27): with a picture attached Auto picks the BEST model that can see pictures, on any engine. ----
+// Ranking, best first (only models that are installed/listed; an engine that is off still lists what it has, and Switchboard starts it on pick):
+//   1 Bonsai 2 9B  2 Bonsai 2 4B  3 a Gemma 4 model on any engine  4 any other picture-capable model on any engine.
+// Inside tier 3 or 4: a model whose engine is already running wins over one that must be started, then the bigger one wins.
+// Photo Reader is only the last resort (no picture-capable model at all): see autoSwitch.
+const hasPic=()=>S.att.some(a=>a.kind==='image');
+function visionRoute(){
+ const mk=(e,m,n)=>({e,m,name:n+' (can see pictures)',agent:false,why:'picture attached'});
+ if(haveModel('bonsai9b'))return mk('bonsai9b',ALIAS.bonsai9b,'Bonsai 9B');
+ if(haveModel('bonsai4b'))return mk('bonsai4b',ALIAS.bonsai4b,'Bonsai 4B');
+ const size=id=>{const x=/(\d+(?:\.\d+)?)b/i.exec(id);return x?parseFloat(x[1]):0};
+ const c=[];ENGINES.forEach(e=>{if(ALIAS[e.id])return; // Bonsai handled above; Spark/Apple/27B do not see pictures
+  (S.models[e.id]||[]).forEach(m=>{if(isVision(m.id))c.push({e:e.id,m:m.id,g4:/gemma-?4/i.test(m.id)?1:0,up:S.up[e.id]?1:0,sz:size(m.id)})})});
+ c.sort((a,b)=>b.g4-a.g4||b.up-a.up||b.sz-a.sz);
+ return c.length?mk(c[0].e,c[0].m,c[0].m):null}
 function autoRoute(text){
- if(S.att.some(a=>a.kind==='image')){if(haveModel('bonsai4b'))return {e:'bonsai4b',m:ALIAS.bonsai4b,name:'Bonsai 4B (can see pictures)',agent:false,why:'picture attached'};
-  const g=(S.models.ollama||[]).find(m=>isVision(m.id));if(g)return {e:'ollama',m:g.id,name:g.id+' (can see pictures)',agent:false,why:'picture attached'}}
+ if(hasPic()){const v=visionRoute();if(v)return v} // no picture-capable model: fall through to the usual pick; Photo Reader describes the picture (autoSwitch adds a note)
  const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
  const R={e:'osaurus',m:raptor?raptor.id:'raptor-0.6-4b-jang_6m',name:'Raptor',agent:false};
  if(CODE_RX.test(text)){
@@ -256,7 +270,9 @@ async function autoSwitch(text){
  const ch=S.chat;let r=ch&&ch.lock;
  // A chat locked to Apple moves to the usual model once it stops being plain and short (Apple can't hold more).
  if(r&&r.e==='apple'){const a=appleCheck(text);if(!a.ok){ch.lock=null;r=appleFallback(text,'moved off Apple: '+a.why)}}
+ if(r&&hasPic()&&!isVision(r.m)){const v=visionRoute();if(v){ch.lock=null;r=null}} // a chat locked to a text-only model moves to a picture-capable one when a picture arrives
  if(!r){r=autoRoute(text);r={...r,agent:!!r.agent||isAgent(r.m)}}
+ if(hasPic()&&!isVision(r.m)){const n=document.createElement('div');n.className='attnote';n.textContent='No picture-capable model is available, so Photo Reader described it.';const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight}
  S.lastAuto=r;
  if(!S.sel||S.sel.e!==r.e||S.sel.m!==r.m){status('Auto: switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
  if(r.e==='apple'&&(!S.sel||S.sel.e!=='apple')){ // Apple Brain didn't start: fall back once, and don't try Apple again this session
