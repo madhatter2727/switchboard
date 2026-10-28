@@ -45,9 +45,9 @@ $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(
 const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body};
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
- if(eid==='lfm3text')return 114688;if(eid==='lfm3vl')return 16384; // LFM3: llama-server -c 114688 (text) / 16384 (VL), see ~/Models/lfm3/start.sh
+ if(eid==='lfm3text')return 114688;if(eid==='lfm3vl')return 32768; // LFM3: llama-server -c 114688 (text) / 16384 (VL), see ~/Models/lfm3/start.sh
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
-const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(2400)).length)/3); // a picture counts as ~800 tokens, not its base64 size
+const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(S.sel&&S.sel.e==='lfm3vl'?12000:2400)).length)/3); // a picture counts as ~800 tokens (LFM3-VL: ~4,000 at full size), not its base64 size
 const OUT_RESERVE=4096,TOOL_SCHEMA=2500;
 function roomChars(eid,m,msgs){return Math.max(2000,(ctxFor(eid,m)-OUT_RESERVE-TOOL_SCHEMA-tok(msgs))*3)}
 function maxOut(eid,m,msgs){return Math.max(1024,Math.min(16384,ctxFor(eid,m)-TOOL_SCHEMA-tok(msgs)))}
@@ -170,7 +170,7 @@ async function waitUp(e,sec=300){for(let i=0;i<sec;i++){const j=await getJSON(e.
 async function ensureEngine(eid,mid){
  const e=ENGINES.find(x=>x.id===eid);
  if(!(await getJSON(e.base+'/models'))){status('Starting '+e.name+'…');await act('start',eid);S.startedByUs.add(eid);
-   if(!(await waitUp(e))){status('');return false}}
+   if(!(await waitUp(e,(eid==='lfm3vl'||eid==='lfm3text')?60:300))){status('');return false}}
  if(eid==='magnitude'&&S.magLoaded!==mid){status('Loading model into Magnitude…');await act('load','magnitude',{model:mid});S.magLoaded=mid}
  status('');return true}
 async function pick(eid,mid,keepAuto){
@@ -181,7 +181,7 @@ async function pick(eid,mid,keepAuto){
    if(S.startedByUs.has(prev.e)){await act('stop',prev.e);S.startedByUs.delete(prev.e)}
    else if(prev.e==='magnitude'){await act('stop','magnitude');S.magLoaded=null}
    else if(prev.e==='ollama')await nativeNet({url:'http://127.0.0.1:11434/api/generate',method:'POST',body:JSON.stringify({model:prev.m,keep_alive:0}),timeout:10});}
-  if(!(await ensureEngine(eid,mid))){addMsg('err','Could not start '+e.name+'. Try opening it yourself once.');return}
+  if(!(await ensureEngine(eid,mid))){if(!(eid==='lfm3vl'&&keepAuto))addMsg('err','Could not start '+e.name+'. Try opening it yourself once.');return}
   S.sel={e:eid,m:mid};writeState();
   if(!S.chat||S.chat.messages.length===0)newChat();
   if(!S.auto){$('cur').textContent=e.name+' · '+mid+(isAgent(mid)?'  (agent-capable)':'');
@@ -227,14 +227,17 @@ function chatNote(t){const n=document.createElement('div');n.className='attnote'
 function haveModel(eid){return (S.models[eid]||[]).length>0}
 // ---- Picture routing (Oct 27): with a picture attached Auto picks the BEST model that can see pictures, on any engine. ----
 // Ranking, best first (only models that are installed/listed; an engine that is off still lists what it has, and Switchboard starts it on pick):
-//   1 Bonsai 2 9B  2 Bonsai 2 4B  3 a Gemma 4 model on any engine  4 any other picture-capable model on any engine.
-// Inside tier 3 or 4: a model whose engine is already running wins over one that must be started, then the bigger one wins.
+//   1 LFM3-VL 2B (Oct 28: first picture reader; fast, photos go at up to ~2048 px / ~4,000 picture tokens; skipped for the session if it fails to start or errors)
+//   2 Bonsai 2 4B (backup; faster than 9B, same score in the m4 photo test)  3 Bonsai 2 9B  4 a Gemma 4 model on any engine  5 any other picture-capable model on any engine.
+// Inside tier 4 or 5: a model whose engine is already running wins over one that must be started, then the bigger one wins.
 // Photo Reader is only the last resort (no picture-capable model at all): see autoSwitch.
 const hasPic=()=>S.att.some(a=>a.kind==='image');
+const lfmOK=()=>!S.lfmDown&&!(S.chat&&S.chat.lfmFailed); // LFM3-VL is tried first; after one failure it is skipped (this session / this chat) and Bonsai takes over
 function visionRoute(){
  const mk=(e,m,n)=>({e,m,name:n+' (can see pictures)',agent:false,why:'picture attached'});
- if(haveModel('bonsai9b'))return mk('bonsai9b',ALIAS.bonsai9b,'Bonsai 9B');
+ if(lfmOK()&&haveModel('lfm3vl'))return mk('lfm3vl',ALIAS.lfm3vl,'LFM3-VL 2B');
  if(haveModel('bonsai4b'))return mk('bonsai4b',ALIAS.bonsai4b,'Bonsai 4B');
+ if(haveModel('bonsai9b'))return mk('bonsai9b',ALIAS.bonsai9b,'Bonsai 9B');
  const size=id=>{const x=/(\d+(?:\.\d+)?)b/i.exec(id);return x?parseFloat(x[1]):0};
  const c=[];ENGINES.forEach(e=>{if(ALIAS[e.id])return; // Bonsai handled above; Spark/Apple/27B do not see pictures
   (S.models[e.id]||[]).forEach(m=>{if(isVision(m.id))c.push({e:e.id,m:m.id,g4:/gemma-?4/i.test(m.id)?1:0,up:S.up[e.id]?1:0,sz:size(m.id)})})});
@@ -286,6 +289,9 @@ async function autoSwitch(text){
  if(r.e==='apple'&&(!S.sel||S.sel.e!=='apple')){ // Apple Brain didn't start: fall back once, and don't try Apple again this session
   S.appleDown=true;if(S.chat&&S.chat.lock&&S.chat.lock.e==='apple')S.chat.lock=null;
   r=appleFallback(text,'Apple did not start');S.lastAuto=r;status('Auto: switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
+ if(r.e==='lfm3vl'&&(!S.sel||S.sel.e!=='lfm3vl')){ // LFM3-VL didn't start: use Bonsai (next in the picture ranking) and don't try LFM3-VL again this session
+  S.lfmDown=true;if(S.chat&&S.chat.lock&&S.chat.lock.e==='lfm3vl')S.chat.lock=null;
+  const v=visionRoute();r=v?{...v}:{...autoRoute(text)};r={...r,agent:!!r.agent||isAgent(r.m)};S.lastAuto=r;status('Auto: LFM3-VL did not start, switching to '+r.name+'…');await pick(r.e,r.m,true);status('')}
  if(!S.sel||S.sel.e!==r.e){return null}
  if(noVis)chatNote('No picture-capable model is available, so Photo Reader described it.');
  if(S.chat&&!S.chat.lock)S.chat.lock={e:r.e,m:r.m,name:r.name,why:r.why,agent:r.agent}; // after pick(): pick may swap in a fresh empty chat
@@ -318,9 +324,11 @@ async function pictureGate(cam){
  if(S.sel&&isVision(S.sel.m))return true; // a picture-capable model she picked herself: keep it
  // text-only (or no) model picked: the camera button always moves to the best picture-capable model; the paperclip does too when Photo Reader is stopped
  if(v&&(cam||!S.sel||!(await photoUp()))){
-  const was=S.sel?S.sel.m:null;
-  await pick(v.e,v.m);if(!S.sel||S.sel.m!==v.m)return false;
-  chatNote((was?was+' can\'t see pictures, so ':'')+'switched to '+v.name+'.');return true}
+  const was=S.sel?S.sel.m:null;let w=v;
+  await pick(w.e,w.m);
+  if((!S.sel||S.sel.m!==w.m)&&w.e==='lfm3vl'){S.lfmDown=true;const v2=visionRoute();if(v2){w=v2;await pick(w.e,w.m)}} // LFM3-VL did not start: Bonsai (next in the ranking)
+  if(!S.sel||S.sel.m!==w.m)return false;
+  chatNote((was?was+' can\'t see pictures, so ':'')+'switched to '+w.name+'.');return true}
  if(!v&&!(await photoUp())){addMsg('err',PHOTO_DEAD);return false}
  return true}
 async function send(text){
@@ -337,6 +345,7 @@ async function send(text){
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;
   if(S.auto&&S.sel.e==='apple'&&!S.appleDown){S.appleDown=true;if(S.chat){S.chat.lock=null;S.chat.appleFailed=true}return send(text)} // Apple off: retry once on the usual model
+  if(S.auto&&S.sel.e==='lfm3vl'&&!S.lfmDown){S.lfmDown=true;if(S.chat){S.chat.lock=null;S.chat.lfmFailed=true}return send(text)} // LFM3-VL off: retry once, Bonsai takes over
   addMsg('err','That engine is off and would not start.');return ''}
  const e=ENGINES.find(x=>x.id===S.sel.e);const ch=S.chat;
  ch.engine=S.sel.e;ch.model=S.sel.m;const um=await userMsg(text);ch.messages.push(um);
@@ -362,6 +371,9 @@ async function send(text){
      if(errored&&S.auto&&S.sel&&S.sel.e==='apple'&&ch.lock&&ch.lock.e==='apple'&&!ch.appleFailed&&!gotAny){ // Apple errored: redo this turn once on the usual model
        ch.appleFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
        status('Apple had a problem, trying '+appleFallback(text,'').name+'…');resolve(send(text));return}
+     if(errored&&S.auto&&S.sel&&S.sel.e==='lfm3vl'&&ch.lock&&ch.lock.e==='lfm3vl'&&!ch.lfmFailed&&!gotAny&&(um.atts||[]).every(x=>x.kind==='image'&&S.imgCache[x.path])){ // LFM3-VL errored: redo this turn once on Bonsai, with the same pictures put back
+       S.att=(um.atts||[]).map(x=>({...x,dataURL:S.imgCache[x.path]}));renderAtts();ch.lfmFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
+       status('LFM3-VL had a problem, trying Bonsai…');resolve(send(text));return}
      if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};ch.messages.push(mo);if(/```/.test(acc)){out.textContent='';richText(out,acc,mo)}else out.textContent=acc;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}

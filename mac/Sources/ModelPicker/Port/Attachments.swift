@@ -9,10 +9,11 @@ enum Attachments {
     static let imageExts: Set<String> = ["png", "jpg", "jpeg", "heic", "heif", "gif", "webp", "tiff", "tif", "bmp"]
     static func isImage(_ p: String) -> Bool { imageExts.contains((p as NSString).pathExtension.lowercased()) }
 
-    /// A JPEG/PNG data URL a vision model can take (HEIC/TIFF are converted; very large photos are scaled to 2048 px on the long side).
-    static func dataURL(_ path: String) -> String? {
+    /// A JPEG/PNG data URL a vision model can take (HEIC/TIFF are converted; very large photos are scaled to 3072 px on the long side for chat (2048 for Photo Reader copies)).
+    /// maxSide: 2048 for Photo Reader copies; chat pictures use 3072 (about 4,000 picture tokens for LFM3-VL, which reads small print only at that size).
+    static func dataURL(_ path: String, maxSide: CGFloat = 2048) -> String? {
         guard let img = NSImage(contentsOfFile: path), let cg = img.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        let w = CGFloat(cg.width), h = CGFloat(cg.height), s = min(1, 2048 / max(w, h))
+        let w = CGFloat(cg.width), h = CGFloat(cg.height), s = min(1, maxSide / max(w, h))
         let nw = Int(w * s), nh = Int(h * s)
         guard let ctx = CGContext(data: nil, width: nw, height: nh, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         ctx.setFillColor(NSColor.white.cgColor); ctx.fill(CGRect(x: 0, y: 0, width: nw, height: nh))
@@ -41,7 +42,7 @@ enum Attachments {
         var r: [String: Any] = ["ok": true, "path": path, "name": name, "bytes": size, "real": real]
         if isImage(path) {
             r["kind"] = "image"
-            if let u = dataURL(path) { r["dataURL"] = u } else { r["ok"] = false; r["err"] = "That picture could not be opened." }
+            if let u = dataURL(path, maxSide: 3072) { r["dataURL"] = u } else { r["ok"] = false; r["err"] = "That picture could not be opened." }
             return r
         }
         r["kind"] = "doc"
