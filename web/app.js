@@ -11,10 +11,12 @@ const ENGINES=[
  {id:'bonsai9b',name:'Bonsai 2 9B (Prism)',base:'http://127.0.0.1:8098/v1'},
  {id:'spark',name:'Spark X2.5 4B',base:'http://127.0.0.1:8095/v1'},
  {id:'bonsai27b',name:'Bonsai 2 27B (big: ~9 GB memory)',base:'http://127.0.0.1:8096/v1'},
+ {id:'lfm3text',name:'LFM3 1.7B (Liquid AI)',base:'http://127.0.0.1:8110/v1'}, // Oct 28: own llama.cpp copy; started only when picked; thinking off; long documents up to ~100K tokens
+ {id:'lfm3vl',name:'LFM3-VL 2B (Liquid AI)',base:'http://127.0.0.1:8111/v1'}, // sees pictures; NOT used by Auto's picture routing yet (real-photo tests pending), manual pick only
  {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
 const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
-const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin'};
+const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
 const isAgent=m=>/raptor|spark|bonsai-2-(4b|9b|27b)|^gemma4:e2b|^gemma-4-e2b|^ornith|qwen2\.5-coder/i.test(m); // badge = passed >=4 of 5 in bench/ (gemma2:2b: no tool support)
@@ -40,9 +42,10 @@ function agentUI(){if(S.auto){$('agent').disabled=true;const L=S.chat&&S.chat.lo
  const ok=S.sel&&isAgent(S.sel.m);$('agent').disabled=!ok;$('agentBox').className=ok?'':'off';if(!ok)$('agent').checked=false;
  $('agentNote').textContent=!S.sel?'':ok?(($('agent').checked)?'Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.':''):'Agent mode needs an agent-capable model (like Raptor). This one is chat-only.'}
 $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(S.chat.messages.length)saveChat(S.chat)}agentUI()};
-const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body};
+const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body};
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
+ if(eid==='lfm3text')return 114688;if(eid==='lfm3vl')return 16384; // LFM3: llama-server -c 114688 (text) / 16384 (VL), see ~/Models/lfm3/start.sh
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
 const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(2400)).length)/3); // a picture counts as ~800 tokens, not its base64 size
 const OUT_RESERVE=4096,TOOL_SCHEMA=2500;
@@ -71,10 +74,10 @@ async function digest(text,label,question,eid,m,progress,depth=0){
 function lockLabel(L){return 'Auto picked '+L.name+' ('+L.why+') · locked for this chat'}
 // ---- Beauty M1: model look (icon colours + "good for" tags). Visual only: nothing here touches routing. ----
 const BRANDS=[[/apple/i,'apple','#8DB8F0'],[/bonsai/i,'bonsai','#86CFAE'],[/raptor/i,'raptor','#B9A3EE'],[/spark/i,'spark','#F6B98A'],
- [/gemma/i,'gem','#F2D58A'],[/qwen/i,'qwen','#F0B0D2'],[/llama/i,'llama','#C9DC96'],[/ornith/i,'bird','#9ADBE0'],[/magnitude/i,'magnet','#E7C29A']];
+ [/lfm3|liquid/i,'chip','#9CCBF0'],[/gemma/i,'gem','#F2D58A'],[/qwen/i,'qwen','#F0B0D2'],[/llama/i,'llama','#C9DC96'],[/ornith/i,'bird','#9ADBE0'],[/magnitude/i,'magnet','#E7C29A']];
 const BRAND_DEFAULT='#DDD3C0';
 function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2]};return{icon:'chip',c1:BRAND_DEFAULT}}
-const goodFor=m=>/apple/i.test(m)?'quick chat':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':'';
+const goodFor=m=>/apple/i.test(m)?'quick chat':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':/lfm3-1\.7b/i.test(m)?'long documents':'';
 function render(){agentUI();
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
@@ -682,7 +685,7 @@ window.__selftest=async(mode,eid,mid)=>{if(mode!=='show')return _st9(mode,eid,mi
 
 // ---- M3 (Oct 21): attachments. Paste (Cmd+V), drag and drop, or 📎. Pictures go to models that can see; documents are read in full. ----
 S.att=[];
-const isVision=m=>/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl|bonsai-2-(4b|9b)/i.test(m||''); // Bonsai 2 4B/9B see pictures since Oct 21 (mmproj added in start.sh)
+const isVision=m=>/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl|lfm3-vl|bonsai-2-(4b|9b)/i.test(m||''); // Bonsai 2 4B/9B see pictures since Oct 21 (mmproj added in start.sh)
 const apiText=m=>m.attText?(m.content+'\n\n'+m.attText):m.content;
 function kb(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB'}
 function renderAtts(){const b=$('atts');b.innerHTML='';

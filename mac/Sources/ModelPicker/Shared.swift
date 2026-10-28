@@ -5,6 +5,7 @@ let OSAURUS = "/Applications/osaurus.app/Contents/Helpers/osaurus"
 let MAGNITUDE = home + "/Applications/Magnitude.app/Contents/Resources/magnitude"
 let LMS = home + "/.lmstudio/bin/lms"
 let BONSAI = home + "/Models/bonsai2/start.sh"
+let LFM3 = home + "/Models/lfm3/start.sh"   // LFM3 text (port 8110) and VL (port 8111) via its own llama.cpp copy; started only when picked
 /// Apple Brain: serves Apple's built-in on-device model on 8100 (Tech Demos, Oct 22). Only started when "Apple (built-in)" is picked.
 let APPLE_BRAIN = [home + "/Applications/Apple Brain.app/Contents/MacOS/AppleBrain", home + "/Projects/apple-brain/.build/release/AppleBrain"].first { FileManager.default.isExecutableFile(atPath: $0) } ?? ""
 let APPLE_OWNER_TAG = "--owner"   // Switchboard's copy runs with "--owner switchboard", so stopping it never touches Apple Brain.app
@@ -46,6 +47,8 @@ let ENGINE_DEFS = [
     EngineDef(id: "bonsai9b", name: "Bonsai 2 9B", port: 8098, path: "/v1"),
     EngineDef(id: "spark", name: "Spark X2.5 4B", port: 8095, path: "/v1"),
     EngineDef(id: "bonsai27b", name: "Bonsai 2 27B", port: 8096, path: "/v1"),
+    EngineDef(id: "lfm3text", name: "LFM3 1.7B", port: 8110, path: "/v1"),
+    EngineDef(id: "lfm3vl", name: "LFM3-VL 2B", port: 8111, path: "/v1"),
     EngineDef(id: "apple", name: "Apple (built-in)", port: 8100, path: "/v1"),
 ]
 
@@ -63,7 +66,7 @@ func syncHTTP(_ url: String, method: String = "GET", body: Data? = nil, timeout:
 func engineUp(_ e: EngineDef) -> Bool { if let (c, _) = syncHTTP(e.base + "/models", timeout: 2), c == 200 { return true }; return false }
 
 /// Engines that serve exactly one model; the picker shows a friendly alias for it.
-let SINGLE_ALIAS = ["bonsai4b": "bonsai-2-4b", "bonsai9b": "bonsai-2-9b", "spark": "spark-x2.5-4b-mlx", "bonsai27b": "bonsai-2-27b", "apple": "apple-builtin"]
+let SINGLE_ALIAS = ["bonsai4b": "bonsai-2-4b", "bonsai9b": "bonsai-2-9b", "spark": "spark-x2.5-4b-mlx", "bonsai27b": "bonsai-2-27b", "apple": "apple-builtin", "lfm3text": "lfm3-1.7b", "lfm3vl": "lfm3-vl-2b"]
 /// What the engine itself calls the model in requests.
 func upstreamModel(_ e: EngineDef, _ alias: String) -> String {
     if e.id == "spark" { return home + "/MLXModels/Spark-X2.5-4B-MLX-4bit" }
@@ -76,6 +79,7 @@ func stopBuiltin(_ id: String) { _ = runCmd("/bin/launchctl", ["remove", jobLabe
 /// Bonsai 27B is big (about 9 GB in memory on a 16 GB Mac): stop what the picker can safely stop first.
 func freeMemoryForBig() {
     stopBuiltin("spark"); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
+    _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"])
     if let (c, d) = syncHTTP("http://127.0.0.1:11434/api/ps", timeout: 2), c == 200,
        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let ms = j["models"] as? [[String: Any]] {
         for m in ms { if let n = m["name"] as? String { _ = syncHTTP("http://127.0.0.1:11434/api/generate", method: "POST", body: try? JSONSerialization.data(withJSONObject: ["model": n, "keep_alive": 0]), timeout: 10) } } }
@@ -99,6 +103,9 @@ func offlineLines(_ id: String) -> [String] {
     case "bonsai4b": return FileManager.default.fileExists(atPath: home + "/Models/bonsai2/4b") ? ["bonsai-2-4b"] : []
     case "bonsai9b": return FileManager.default.fileExists(atPath: home + "/Models/bonsai2/9b") ? ["bonsai-2-9b"] : []
     case "apple": return APPLE_BRAIN.isEmpty ? [] : ["apple-builtin"]
+    // LFM3: shown while off when its files and its own llama-server are on disk (reads only; starts nothing)
+    case "lfm3text": return FileManager.default.fileExists(atPath: home + "/Models/lfm3/text/LFM3-1.7B-Q4_K_M.gguf") && FileManager.default.isExecutableFile(atPath: home + "/src/llama.cpp-lfm3/build/bin/llama-server") && FileManager.default.isExecutableFile(atPath: LFM3) ? ["lfm3-1.7b"] : []
+    case "lfm3vl": return FileManager.default.fileExists(atPath: home + "/Models/lfm3/vl/LFM3-VL-2B-Q4_K_M.gguf") && FileManager.default.fileExists(atPath: home + "/Models/lfm3/vl/mmproj-LFM3-VL-2B-Q8_0.gguf") && FileManager.default.isExecutableFile(atPath: home + "/src/llama.cpp-lfm3/build/bin/llama-server") && FileManager.default.isExecutableFile(atPath: LFM3) ? ["lfm3-vl-2b"] : []
     default: return []
     }
 }
@@ -114,7 +121,7 @@ func modelIds(_ e: EngineDef) -> [String] {
     }
     let L = offlineLines(e.id).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     switch e.id {
-    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama", "apple": return L.filter { !isEmbedName($0) }
+    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama", "apple", "lfm3text", "lfm3vl": return L.filter { !isEmbedName($0) }
     case "lmstudio": return L.filter { !isEmbedName($0) }
     case "magnitude": return L   // saved ids of the models Magnitude can run (the live /models list leaves out the ones it can't)
     default: return []
@@ -134,6 +141,10 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
     case ("load", "magnitude"): _ = runCmd(MAGNITUDE, ["models", "load", d["model"] as? String ?? ""]); Owned.noteUsed("magnitude", d["model"] as? String ?? "")
     case ("start", "bonsai4b"): _ = runCmd("/bin/bash", [BONSAI, "4b"], detach: true); Owned.noteStarted(eng)
     case ("start", "bonsai9b"): _ = runCmd("/bin/bash", [BONSAI, "9b"], detach: true); Owned.noteStarted(eng)
+    case ("start", "lfm3text"): _ = runCmd("/bin/bash", [LFM3, "text"], detach: true); Owned.noteStarted(eng)
+    case ("start", "lfm3vl"): _ = runCmd("/bin/bash", [LFM3, "vl"], detach: true); Owned.noteStarted(eng)
+    case ("stop", "lfm3text"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"]); Owned.forget(eng)
+    case ("stop", "lfm3vl"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); Owned.forget(eng)
     case ("stop", "bonsai4b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); Owned.forget(eng)
     case ("stop", "bonsai9b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"]); Owned.forget(eng)
     case ("start", "spark"), ("start", "bonsai27b"):

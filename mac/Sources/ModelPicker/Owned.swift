@@ -66,6 +66,8 @@ enum Owned {
                 switch id {
                 case "bonsai4b": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"])
                 case "bonsai9b": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
+                case "lfm3text": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"])
+                case "lfm3vl": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"])
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
