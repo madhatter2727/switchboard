@@ -217,8 +217,9 @@ let SID=0;const pending={};
 window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 
 // ---- Auto: simple keyword rules choose the model ----
-const CODE_RX=/\b(code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|app|game|snake|regex|compile|error in|sql|api|refactor|algorithm)\b/i;
-const FILE_RX=/\b(pages|keynote|textedit|docx|txt|markdown|note|notes|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|find|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
+// Oct 28: single everyday words no longer trigger by themselves. 'app', 'game', 'note' and 'find' only count in a real request (e.g. "build an app", "make a snake game", "my notes", "find the PDF"); 'code' skips area/zip/promo codes.
+const CODE_RX=/(?<!\b(?:area|zip|postal|promo|country|dress|morse|discount|coupon|access|qr|bar|pin) )\b(?:code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|snake|regex|compile|error in|sql|api|refactor|algorithm|for loop|while loop|snippet|stack ?trace|unit test|typescript|bash)\b|\b(?:build|make|create|write|develop|code|program)\b[^.?!]{0,25}\b(?:app|game)\b|\b(?:html|web|browser|video|text|python|javascript)\s+(?:app|game)\b/i;
+const FILE_RX=/\b(?:pages|keynote|textedit|docx|txt|markdown|notes app|my notes|the notes|take (?:a )?notes?|add (?:a )?notes?|save (?:a )?notes?|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function chatNote(t){const n=document.createElement('div');n.className='attnote';n.textContent=t;const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight}
 function haveModel(eid){return (S.models[eid]||[]).length>0}
 // ---- Picture routing (Oct 27): with a picture attached Auto picks the BEST model that can see pictures, on any engine. ----
