@@ -6,6 +6,7 @@
   <div class="brand"><span class="logo"></span><h1>Switchboard</h1></div>
   <button id="newChat"><span class="bi" data-ic="plus" data-s="16"></span><span>New chat</span></button>
   <button id="notesBtn" type="button" title="Your voice notes: record, read, search and ask about them. Kept on this Mac."><span class="bi" data-ic="mic" data-s="16"></span><span>Notes</span></button>
+<button id="searchBtn" type="button" title="Search the folders you pick, by meaning and exact words. Files stay where they are."><span class="bi" data-ic="search" data-s="16"></span><span>Search my files</span></button>
   <div class="sec">Your chats</div>
   <div id="chats"></div>
   <button id="delAll" type="button" title="Move every saved chat to the Trash"><span class="bi" data-ic="trash" data-s="14"></span><span>Delete all chats</span></button>
@@ -24,6 +25,16 @@
     <div id="nEdit"><div class="nempty">Press Record and say what's on your mind. When you press Stop, it becomes a note here.</div></div></div>
    <form id="nAskF"><input id="nAsk" placeholder="Ask about my notes… (e.g. what do I need to buy?)"><button type="submit" id="nAskB">Ask</button></form>
    <div id="nAns" hidden></div>
+  </section>
+  <section id="searchView" hidden>
+   <div class="nhead"><div><h2>Search my files</h2><div class="sm">Pick folders and search them in plain English. Files stay where they are; nothing is copied or moved.</div></div>
+    <div class="nrow"><button id="sAdd" type="button"><span class="bi" data-ic="plus" data-s="15"></span> Add folder</button><button id="sRefresh" type="button"><span class="bi" data-ic="refresh" data-s="15"></span> Refresh</button></div></div>
+   <div id="sFolders"></div>
+   <div id="sState" class="sm"></div>
+   <form id="sForm" class="sbar"><span class="bi" data-ic="search" data-s="17"></span><input id="sQ" placeholder="What are you looking for? (e.g. the lease that says when rent goes up)"><button type="submit">Search</button></form>
+   <div id="sResults"></div>
+   <form id="sAskF" hidden><input id="sAsk" placeholder="Ask about these results… (e.g. when is the renewal due?)"><button type="submit" id="sAskB">Ask</button></form>
+   <div id="sAns" hidden></div>
   </section>
   <div id="chat"><div class="empty">Pick a model on the left, then say hi.</div></div>
   <form id="form"><div id="atts"></div><textarea id="input" rows="2" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>

@@ -94,6 +94,16 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "noteSave": return NoteStore.save(d)
         case "noteTrash": return NoteStore.trash(d["id"] as? String ?? "")
         case "notePrompt": return NoteAsk.prompt(d["question"] as? String ?? "")
+        case "searchFolders": return ["folders": SearchIndex.folders(), "oneSpace": SearchIndex.oneSpaceFolders()]
+        case "searchPick": guard let p = DispatchQueue.main.sync(execute: { SearchIndex.pickFolder() }) else { return ["ok": false, "cancelled": true] }
+            let r = SearchIndex.addFolder(p); if r["ok"] as? Bool == true { _ = SearchIndexer.start() }; return r
+        case "searchAdd": let r = SearchIndex.addFolder(d["path"] as? String ?? ""); if r["ok"] as? Bool == true { _ = SearchIndexer.start() }; return r
+        case "searchRemove": return SearchIndex.removeFolder(d["path"] as? String ?? "")
+        case "searchIndex": return SearchIndexer.start()
+        case "searchStatus": var s = SearchIndexer.status(); s["sinceLast"] = Date().timeIntervalSince(SearchIndexer.lastRun); return s
+        case "searchStop": SearchIndexer.stop(); return ["ok": true]
+        case "searchQuery": return SearchIndex.search(d["query"] as? String ?? "")
+        case "searchAsk": return SearchIndex.askPrompt(d["query"] as? String ?? "", question: d["question"] as? String ?? "", paths: d["paths"] as? [String] ?? [])
         case "mem":   // read-only: Mac memory in use vs total, same maths as Activity Monitor's "Memory Used" (app + wired + compressed). Changes nothing.
             var vm = vm_statistics64(); var cnt = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
             let kr = withUnsafeMutablePointer(to: &vm) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(cnt)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &cnt) } }
@@ -274,7 +284,7 @@ func switchboardWindowOpen() -> Bool {
     let me = "\(getpid())"
     return out.split(separator: "\n").contains { l in
         let f = l.split(separator: " "); guard let pid = f.first, String(pid) != me else { return false }
-        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") && !l.contains(" --note-") }
+        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") && !l.contains(" --note-") && !l.contains(" --search") }
 }
 func askMyMacOpen() -> Bool { runCmd("/usr/bin/pgrep", ["-x", "AskMyMac"]).0 == 0 }
 
@@ -385,6 +395,38 @@ if let i = CommandLine.arguments.firstIndex(of: "--note-ask"), CommandLine.argum
         if !wasUp { _ = engineAct("stop", "lfm3text") }
     }
     exit(0)
+}
+// Search tests (engines called directly, never 7777). SB_SEARCH_DIR points the index at a test folder.
+// `--search-add DIR`, `--search-index`, `--search "query"`, `--search-ask "query" "question" [--send]`, `--search-onespace` (read-only list).
+if CommandLine.arguments.contains("--search-onespace") { print(SearchIndex.oneSpaceFolders().map { "\($0["name"] ?? "") -> \($0["path"] ?? "")" }.joined(separator: "\n")); exit(0) }
+if let i = CommandLine.arguments.firstIndex(of: "--search-add"), CommandLine.arguments.count > i + 1 { print(SearchIndex.addFolder(CommandLine.arguments[i + 1])); exit(0) }
+if CommandLine.arguments.contains("--search-index") {
+    let j = SearchJob(); SearchIndexer.run(j) { print($0); fflush(stdout) }; SearchIndexer.job = j; print(SearchIndexer.status())
+    if CommandLine.arguments.contains("--stop") { _ = engineAct("stop", "search") }; exit(0)
+}
+if let i = CommandLine.arguments.firstIndex(of: "--search"), CommandLine.arguments.count > i + 1 {
+    let r = SearchIndex.search(CommandLine.arguments[i + 1])
+    print("meaning: \(r["meaning"] ?? "-")  \(String(format: "%.2f", r["secs"] as? Double ?? 0)) s  \(r["note"] ?? "")")
+    for x in (r["results"] as? [[String: Any]] ?? []).prefix(8) { print("\(x["score"] ?? 0)  \(x["name"] ?? "")  [\(x["meaning"] ?? "")] words:\(x["words"] ?? [])\n     \(String((x["snippet"] as? String ?? "").prefix(160)))") }
+    if CommandLine.arguments.contains("--stop") { _ = engineAct("stop", "search") }; exit(0)
+}
+if let i = CommandLine.arguments.firstIndex(of: "--search-ask"), CommandLine.arguments.count > i + 2 {
+    let a = CommandLine.arguments; let r = SearchIndex.search(a[i + 1]); let paths = (r["results"] as? [[String: Any]] ?? []).prefix(5).compactMap { $0["path"] as? String }
+    let pr = SearchIndex.askPrompt(a[i + 1], question: a[i + 2], paths: paths)
+    print("files sent: \(pr["files"] ?? pr["err"] ?? "-") (\(pr["chars"] ?? 0) characters)"); fflush(stdout)
+    if a.contains("--send"), pr["ok"] as? Bool == true, let e = ENGINE_DEFS.first(where: { $0.id == "lfm3text" }) {
+        let wasUp = engineUp(e); let t0 = Date()
+        guard ensureEngineUp(e, seconds: 120) else { print("LFM3 did not start"); exit(1) }
+        let body: [String: Any] = ["model": "lfm3-1.7b", "messages": [["role": "system", "content": pr["system"] as? String ?? ""], ["role": "user", "content": a[i + 2]]],
+                                   "temperature": 0.2, "max_tokens": 1024, "stream": false, "chat_template_kwargs": ["enable_thinking": false]]
+        if let (c, d) = syncHTTP(e.base + "/chat/completions", method: "POST", body: try? JSONSerialization.data(withJSONObject: body), timeout: 600), c == 200,
+           let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+            print(((o["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any])?["content"] ?? "")
+            print("total \(String(format: "%.1f", Date().timeIntervalSince(t0))) s (LFM3 was \(wasUp ? "already on" : "started"))")
+        } else { print("LFM3 request failed") }
+        if !wasUp { _ = engineAct("stop", "lfm3text") }
+    }
+    if a.contains("--stop") { _ = engineAct("stop", "search") }; exit(0)
 }
 if let i = CommandLine.arguments.firstIndex(of: "--undo-last") {
     _ = i; DispatchQueue.global().async { let r = PortTools.handle("undoLast", [:]) ?? [:]; print(r["text"] ?? ""); fflush(stdout); exit(0) }; RunLoop.main.run()

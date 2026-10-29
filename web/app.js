@@ -974,3 +974,70 @@ const _stNotesA=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='notes
  $('nAsk').value=x||'What do I need to buy?';$('nAskF').requestSubmit();await sleep(300);for(let i=0;i<240&&N.asking;i++)await sleep(500);
  const secs=(Date.now()-t0)/1000;if(!was)await act('stop','lfm3text');await sleep(300);
  return JSON.stringify({answer:$('nAns').textContent,secs,lfm3WasOn:was})};
+
+// ---------- Search my files (Oct 29) ----------
+// She adds folders (files stay put). Switchboard keeps its own index; meaning search uses EmbeddingGemma 2 (own engine on 8116,
+// 15-minute idle stop) plus exact-word boosting. Opening the tab or Refresh re-indexes new or changed files.
+// "Ask about these results" sends the top results' best parts to LFM3 1.7B (8110), which names the files it used.
+const SR={results:[],q:'',poll:null,asking:false};
+$('sResults').before($('sAskF'),$('sAns'));
+function searchShow(on){document.body.classList.toggle('search',on);$('searchView').hidden=!on;if(on){notesShow(false);document.body.classList.add('search');$('searchView').hidden=false;searchOpen()}}
+const _notesShowS=notesShow;notesShow=function(on){if(on){document.body.classList.remove('search');$('searchView').hidden=true}return _notesShowS(on)};
+$('searchBtn').onclick=()=>{if(S.busy)return;searchShow(!document.body.classList.contains('search'))};
+const _newChatS=newChat;newChat=function(){searchShow(false);return _newChatS.apply(this,arguments)};
+const _openChatS=openChat;openChat=function(id){searchShow(false);return _openChatS(id)};
+const sState=t=>{$('sState').innerHTML=t||''};
+async function searchFolders(){const r=await act('searchFolders','');const box=$('sFolders');box.innerHTML='';const fs=(r&&r.folders)||[];
+ if(!fs.length){const d=document.createElement('span');d.className='sm';d.textContent='No folders yet. Click "Add folder" to pick one.';box.appendChild(d)}
+ for(const f of fs){const d=document.createElement('span');d.className='sfold';d.title=f.path;
+  d.innerHTML='<span>'+esc(f.name)+'</span><span class="sm">'+(f.exists?f.files+' files':'missing')+'</span><button type="button" title="Stop searching this folder (your files are not touched)">×</button>';
+  d.querySelector('button').onclick=async()=>{if(!(await dialog('Stop searching "'+f.name+'"? Only Switchboard\'s search list changes. Your files stay exactly where they are.')))return;await act('searchRemove','',{path:f.path});searchFolders()};box.appendChild(d)}
+ for(const o of ((r&&r.oneSpace)||[]).filter(o=>!o.added)){const d=document.createElement('span');d.className='sfold os';d.title=o.path+' (a folder you added in One Space)';
+  d.innerHTML='<span class="sm">From One Space:</span><span>'+esc(o.name)+'</span><button type="button">Add</button>';
+  d.querySelector('button').onclick=async()=>{const a=await act('searchAdd','',{path:o.path});if(!a||!a.ok){sState(esc((a&&a.err)||'Could not add that folder.'));return}searchFolders();searchPoll()};box.appendChild(d)}
+ return fs}
+async function searchOpen(){const fs=await searchFolders();const st=await act('searchStatus','');
+ if(st&&(st.state==='indexing'||st.state==='starting'))return searchPoll();
+ if(fs.length&&(!st||st.state==='none'||st.sinceLast>60)){await act('searchIndex','');searchPoll()}}
+$('sAdd').onclick=async()=>{const r=await act('searchPick','');if(!r||r.cancelled)return;if(!r.ok){sState(esc(r.err||'Could not add that folder.'));return}
+ sState(r.already?'That folder is already being searched.':'Added. Reading its files…');searchFolders();searchPoll()};
+$('sRefresh').onclick=async()=>{await act('searchIndex','');searchPoll()};
+function searchPoll(){if(SR.poll)return;SR.poll=setInterval(async()=>{const s=await act('searchStatus','');if(!s)return;
+ if(s.state==='indexing'||s.state==='starting'){sState((s.toDo?'Reading files: '+s.done+' of '+s.toDo+(s.current?' · '+esc(s.current):''):'Looking for new or changed files… ('+s.scanned+' checked)')+(s.note?' · '+esc(s.note):'')+' <button type="button" id="sStop">Stop</button>');
+  const b=$('sStop');if(b)b.onclick=()=>act('searchStop','');return}
+ clearInterval(SR.poll);SR.poll=null;searchFolders();
+ sState(s.state==='stopped'?'Stopped. Files read so far are searchable; Refresh carries on.':s.state==='done'?('Up to date'+(s.done?': read '+s.done+' new or changed file'+(s.done>1?'s':''):'')+(s.removed?', forgot '+s.removed+' gone':'')+' ('+s.scanned+' files, '+(s.secs<90?Math.round(s.secs)+' s':Math.round(s.secs/60)+' min')+').'+(s.meaning?'':' '+esc(s.note))):'');
+ if(SR.q)searchRun(SR.q,true)},700)}
+const hl=(t,ws)=>{let h=esc(t);for(const w of ws||[]){if(w.length<2)continue;h=h.replace(new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'[a-z]*)','gi'),'<mark>$1</mark>')}return h};
+async function searchRun(q,quiet){SR.q=q;if(!quiet){$('sResults').innerHTML='<div class="sm">Searching…</div>';$('sAns').hidden=true}
+ const r=await act('searchQuery','',{query:q});const box=$('sResults');box.innerHTML='';
+ if(!r||!r.ok){box.innerHTML='<div class="sm">'+esc((r&&r.err)||'Search failed.')+'</div>';return}
+ SR.results=r.results||[];$('sAskF').hidden=!SR.results.length;
+ const head=document.createElement('div');head.className='sm';head.textContent=SR.results.length?SR.results.length+' result'+(SR.results.length>1?'s':'')+' ('+(r.secs||0).toFixed(2)+' s)'+(r.note?' · '+r.note:''):(r.note||'Nothing matched. Try other words, or Refresh if you just added files.');box.appendChild(head);
+ for(const x of SR.results){const d=document.createElement('div');d.className='sres';
+  d.innerHTML='<div class="t"><b>'+esc(x.name)+'</b>'+(x.words&&x.words.length?'<span class="tag w">has: '+esc(x.words.join(', '))+'</span>':'')+(x.meaning==='close'?'<span class="tag m">close in meaning</span>':x.meaning==='related'?'<span class="tag">related</span>':'')+(x.kind==='photo'?'<span class="tag">photo (by name)</span>':'')+'</div>'
+   +'<div class="sm">'+esc(x.folder)+'</div><div class="snip">'+hl(x.snippet||'',r.terms)+'</div><div class="nrow"><button type="button" class="o">Open</button><button type="button" class="f">Show in Finder</button></div>';
+  d.querySelector('.o').onclick=()=>act('openPath','',{path:x.path});d.querySelector('.f').onclick=()=>act('revealPath','',{path:x.path});box.appendChild(d)}}
+$('sForm').onsubmit=ev=>{ev.preventDefault();const q=$('sQ').value.trim();if(q)searchRun(q)};
+$('sAskF').onsubmit=async ev=>{ev.preventDefault();const qq=$('sAsk').value.trim();if(!qq||SR.asking||!SR.results.length)return;
+ const pr=await act('searchAsk','',{query:SR.q,question:qq,paths:SR.results.slice(0,5).map(x=>x.path)});const a=$('sAns');a.hidden=false;
+ if(!pr||!pr.ok){a.textContent=(pr&&pr.err)||'Could not read those files.';return}
+ SR.asking=true;$('sAskB').disabled=true;a.textContent='Starting LFM3…';
+ if(!(await ensureEngine('lfm3text',ALIAS.lfm3text))){SR.asking=false;$('sAskB').disabled=false;a.textContent='LFM3 1.7B would not start, so I can\'t answer right now.';return}
+ a.textContent='Reading '+pr.files.length+' file'+(pr.files.length>1?'s':'')+'…';
+ const body={model:ALIAS.lfm3text,messages:[{role:'system',content:pr.system},{role:'user',content:qq}],stream:true,temperature:0.2,max_tokens:1024,chat_template_kwargs:{enable_thinking:false}};
+ const via='LFM3 1.7B · from the top '+pr.files.length+' result'+(pr.files.length>1?'s':'')+': '+pr.files.join(', ');
+ await new Promise(resolve=>{const id=++SID;let acc='',err='';
+  pending[id]=ev=>{if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
+    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;a.textContent=acc}}catch{}}
+   else if(ev.type==='error')err=ev.text;
+   else if(ev.type==='done'){delete pending[id];a.textContent=acc||err||'(no answer)';const v=document.createElement('span');v.className='via';v.textContent=via;a.appendChild(v);resolve()}};
+  window.webkit.messageHandlers.stream.postMessage({id,url:'http://127.0.0.1:8110/v1/chat/completions',body:JSON.stringify(body)})});
+ SR.asking=false;$('sAskB').disabled=false};
+// selftest search (test index only): open the tab, wait for the refresh, run a search, optionally ask (LFM3 8110 directly; stopped again if it was off).
+const _stSearch=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='search')return _stSearch(m,e,x);await boot;searchShow(true);await sleep(1500);
+ for(let i=0;i<240&&SR.poll;i++)await sleep(500);const st=$('sState').textContent;
+ const [q,ask]=(x||'when does the rent go up||').split('||');$('sQ').value=q;const t0=Date.now();await searchRun(q);const secs=(Date.now()-t0)/1000;
+ let ans='';if(ask){const was=!!(await getJSON('http://127.0.0.1:8110/v1/models'));$('sAsk').value=ask;$('sAskF').requestSubmit();await sleep(300);for(let i=0;i<240&&SR.asking;i++)await sleep(500);ans=$('sAns').textContent;if(!was)await act('stop','lfm3text')}
+ await sleep(400);$('searchView').scrollTop=0;
+ return JSON.stringify({state:st,folders:[...document.querySelectorAll('.sfold')].map(d=>d.textContent),results:SR.results.map(r=>r.name),searchSecs:secs,answer:ans})};
