@@ -246,5 +246,5 @@ body.mini .tries{grid-template-columns:1fr;gap:8px;margin-top:16px}body.mini .em
 #chat>.attnote{margin:6px 18px;font-weight:600}
 
 /* Read pages button on a PDF chip (Oct 29) */
-#atts .chip .readpg{margin-left:6px;font:inherit;font-size:12px;padding:1px 8px;border-radius:999px;border:1.5px solid currentColor;background:#F2D58A;color:inherit;cursor:pointer}
+#atts .chip .readpg{margin-left:6px;white-space:nowrap;flex:none;font:inherit;font-size:12px;padding:1px 8px;border-radius:999px;border:1.5px solid currentColor;background:#F2D58A;color:inherit;cursor:pointer}
 #atts .chip .readpg:hover{filter:brightness(.95)}
