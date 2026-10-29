@@ -78,6 +78,11 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "copy":   // puts plain text on the Mac clipboard (the Copy buttons use this; WKWebView's own clipboard can be blocked)
             if let t = d["text"] as? String, t.count < 2_000_000 { DispatchQueue.main.sync { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(t, forType: .string) }; return ["ok": true, "copied": true] }
             return ["ok": false]
+        case "docInfo": return DocStore.info(d["path"] as? String ?? "")
+        case "docRead": return DocReader.start(d["path"] as? String ?? "", first: d["first"] as? Int ?? 1, last: d["last"] as? Int ?? 0)
+        case "docStatus": return DocReader.status()
+        case "docStop": DocReader.stop(); return ["ok": true]
+        case "docPrompt": return DocAsk.prompt(d["id"] as? String ?? "", question: d["question"] as? String ?? "")
         case "mem":   // read-only: Mac memory in use vs total, same maths as Activity Monitor's "Memory Used" (app + wired + compressed). Changes nothing.
             var vm = vm_statistics64(); var cnt = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
             let kr = withUnsafeMutablePointer(to: &vm) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(cnt)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &cnt) } }
@@ -258,7 +263,7 @@ func switchboardWindowOpen() -> Bool {
     let me = "\(getpid())"
     return out.split(separator: "\n").contains { l in
         let f = l.split(separator: " "); guard let pid = f.first, String(pid) != me else { return false }
-        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") }
+        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") }
 }
 func askMyMacOpen() -> Bool { runCmd("/usr/bin/pgrep", ["-x", "AskMyMac"]).0 == 0 }
 
@@ -315,6 +320,34 @@ if let i = CommandLine.arguments.firstIndex(of: "--route-auto"), CommandLine.arg
 if let i = CommandLine.arguments.firstIndex(of: "--idle-check") {
     let off = CommandLine.arguments.count > i + 1 ? Double(CommandLine.arguments[i + 1]) ?? 0 : 0
     print(Owned.stopIdle(dryRun: true, atOffset: off)); exit(0)
+}
+// Document test (calls the engines directly, never 7777): `Switchboard --doc-read PDF FIRST LAST` reads those pages with
+// LightOnOCR on 8114 (started and stopped like in the app) and saves them; `Switchboard --doc-ask PDF "question" [--send]`
+// shows which pages would go to LFM3, and with --send asks LFM3 1.7B on 8110 directly (stopped again if this test started it).
+if let i = CommandLine.arguments.firstIndex(of: "--doc-read"), CommandLine.arguments.count > i + 3 {
+    let a = CommandLine.arguments; let path = a[i + 1]
+    let inf = DocStore.info(path); guard let id = inf["id"] as? String, let n = inf["pages"] as? Int else { print(inf); exit(1) }
+    let j = DocJob(id: id, name: inf["name"] as? String ?? "", path: path, first: Int(a[i + 2]) ?? 1, last: min(n, Int(a[i + 3]) ?? 1), total: n)
+    DocReader.run(j) { print($0); fflush(stdout) }
+    print(DocReader.statusOf(j)); exit(0)
+}
+if let i = CommandLine.arguments.firstIndex(of: "--doc-ask"), CommandLine.arguments.count > i + 2 {
+    let a = CommandLine.arguments; let id = DocStore.id(for: a[i + 1])
+    let pr = DocAsk.prompt(id, question: a[i + 2])
+    print("pages sent: \(pr["pages"] ?? "-") (\(pr["how"] ?? "-"), \(pr["chars"] ?? 0) characters)"); fflush(stdout)
+    if a.contains("--send"), pr["ok"] as? Bool == true, let e = ENGINE_DEFS.first(where: { $0.id == "lfm3text" }) {
+        _ = engineAct("stop", "ocr"); let wasUp = engineUp(e); let t0 = Date()
+        guard ensureEngineUp(e, seconds: 120) else { print("LFM3 did not start"); exit(1) }
+        let body: [String: Any] = ["model": "lfm3-1.7b", "messages": [["role": "system", "content": pr["system"] as? String ?? ""], ["role": "user", "content": a[i + 2]]],
+                                   "temperature": 0.2, "max_tokens": 1024, "stream": false, "chat_template_kwargs": ["enable_thinking": false]]
+        if let (c, d) = syncHTTP(e.base + "/chat/completions", method: "POST", body: try? JSONSerialization.data(withJSONObject: body), timeout: 600), c == 200,
+           let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+            print(((o["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any])?["content"] ?? "")
+            print("timings: \(o["timings"] ?? "-")  total \(String(format: "%.1f", Date().timeIntervalSince(t0))) s")
+        } else { print("LFM3 request failed") }
+        if !wasUp { _ = engineAct("stop", "lfm3text") }
+    }
+    exit(0)
 }
 if let i = CommandLine.arguments.firstIndex(of: "--undo-last") {
     _ = i; DispatchQueue.global().async { let r = PortTools.handle("undoLast", [:]) ?? [:]; print(r["text"] ?? ""); fflush(stdout); exit(0) }; RunLoop.main.run()

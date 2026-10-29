@@ -68,6 +68,7 @@ enum Owned {
                 case "bonsai9b": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
                 case "lfm3text": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"])
                 case "lfm3vl": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"])
+                case "ocr": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
@@ -90,7 +91,7 @@ enum Owned {
 /// and start again on the next pick or message (the window and the 7777 helper both start an engine that is off).
 /// Only these. Never Osaurus, Ollama, LM Studio, Magnitude, Bark (8099), One Space (8080/8081), Photo Reader (8093).
 /// Only engines Switchboard itself started (listed under "started" in owned-engines.json) are ever stopped.
-let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "spark", "bonsai27b", "apple"]
+let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "spark", "bonsai27b", "apple", "ocr"]
 let IDLE_STOP_SECONDS: Double = 15 * 60
 extension Owned {
     static let activityQ = DispatchQueue(label: "owned.activity")   // keeps begin/end of one request in order
@@ -133,6 +134,7 @@ extension Owned {
                 case "bonsai9b": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
                 case "lfm3text": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"])
                 case "lfm3vl": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"])
+                case "ocr": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "apple": stopAppleBrain()   // only Switchboard's own copy
                 default: continue }
@@ -142,5 +144,13 @@ extension Owned {
         }
         if !dryRun && !done.isEmpty { launchLog("owned: stopped [\(done.joined(separator: ", "))] after 15 min with no requests") }
         return done
+    }
+}
+
+extension Owned {
+    /// Ids of the engines Switchboard started (read-only look at owned-engines.json).
+    static func startedIds() -> Set<String> {
+        guard let d = FileManager.default.contents(atPath: OWNED), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return [] }
+        return Set(((j["started"] as? [String: Any]) ?? [:]).keys)
     }
 }

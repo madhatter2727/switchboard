@@ -830,3 +830,60 @@ $('autoAp').onchange=()=>{S.autoApprove=$('autoAp').checked;act('prefsSet','',{k
 (async()=>{try{const p=await act('prefsGet','',{key:'autoApprove'});S.autoApprove=p&&p.value===true}catch{}autoUI()})();
 // selftest: copy through the real app (the caller restores the clipboard afterwards)
 const _stCopy=window.__selftest;window.__selftest=async(mode,eid,mid)=>{if(mode==='sidebottom'){await boot;await new Promise(r=>setTimeout(r,2500));document.querySelector('aside').scrollTop=1e5;await new Promise(r=>setTimeout(r,600));return 'scrolled'}if(mode==='copytest'){await boot;const ok=await copyText('Switchboard copy test 123');return JSON.stringify({ok})}return _stCopy(mode,eid,mid)};
+
+// ---------- Read a document + ask about it (Oct 29) ----------
+// A PDF chip gets a "Read pages" button. Switchboard turns each page into a picture and LightOnOCR-3 (its own engine on
+// port 8114, started only while reading) reads it. Progress shows in the chat; Stop keeps the pages read so far
+// (reading again skips them). Afterwards questions in this chat go to LFM3 1.7B (port 8110) with the best-matching
+// pages, and the answer cites page numbers. Only one of the two models is loaded at a time.
+const isPdf=a=>a&&a.kind==='doc'&&/\.pdf$/i.test(a.name||'');
+function docRow(f){const r=document.createElement('div');r.className='frow';r.innerHTML='<span>'+esc(f)+'</span> ';
+ [['Open text','openPath'],['Show in Finder','revealPath']].forEach(([l,op])=>{const b=document.createElement('button');b.type='button';b.textContent=l;b.onclick=()=>act(op,'',{path:f});r.appendChild(b)});return r}
+const _addMsgD=addMsg;addMsg=function(cls,text,via,mo){const d=_addMsgD(cls,text,via,mo);if(mo&&mo.docOpen)d.appendChild(docRow(mo.docOpen));return d};
+const _renderAttsD=renderAtts;renderAtts=function(){_renderAttsD();
+ [...$('atts').querySelectorAll('.chip')].forEach((c,i)=>{const a=S.att[i];if(!isPdf(a)||c.querySelector('.readpg'))return;
+  const b=document.createElement('button');b.type='button';b.className='readpg';b.title='Read every page with LightOnOCR on this Mac, then ask questions about it';b.textContent='Read pages';
+  b.onclick=ev=>{ev.stopPropagation();if(S.busy)return;S.att=S.att.filter(y=>y!==a);renderAtts();readDoc(a.path,a.name)};c.insertBefore(b,c.querySelector('.x'))})};
+const mins=s=>s<90?Math.round(s)+' s':Math.round(s/60)+' min';
+async function readDoc(path,name){
+ if(S.busy||S.switching)return;if(!S.chat)newChat();const ch=S.chat;
+ const st=await act('docRead','',{path});if(!st||!st.ok){addMsg('err',(st&&st.err)||'That PDF could not be read.');return}
+ S.busy=true;S.docReading=true;$('send').hidden=true;$('stop').hidden=false;
+ const um={role:'user',content:'Read the document "'+name+'"',ts:Date.now()};ch.messages.push(um);if(ch.messages.length===1)ch.title=('Read: '+name).slice(0,40);saveChat(ch);addMsg('user',um.content,undefined,um);
+ const out=addMsg('assistant','');out.innerHTML='<span class="think working">Starting the document reader…</span>';
+ let s;try{for(;;){await new Promise(r=>setTimeout(r,1000));s=await act('docStatus','');
+   if(s.state==='reading'){const left=(s.last-s.current+1)*(s.avgSecs||18);out.firstChild.textContent='Reading page '+s.current+' of '+s.total+'…'+(s.avgSecs?' (about '+Math.round(s.avgSecs)+' s a page, ~'+mins(left)+' left)':'')+' Press Stop to pause; pages read so far are kept.'}
+   else if(s.state==='starting')out.firstChild.textContent=s.note||'Starting the document reader…';
+   else break}}
+ finally{S.busy=false;S.docReading=false;$('send').hidden=false;$('stop').hidden=true}
+ out.remove();const r=s.result||{};
+ if(s.state==='error'&&!r.read){addMsg('err',s.note||'The document reader could not read it.');return}
+ const msg=(s.state==='stopped'?'Stopped. ':'Done. ')+'Read '+(r.read||0)+' of '+(r.pages||s.total)+' pages of "'+name+'"'+(s.avgSecs?' (about '+Math.round(s.avgSecs)+' s a page)':'')+(s.failed?'. '+s.failed+' pages could not be read':'')+'. The text is saved, and you can open it below.\n\nAsk me anything about it in this chat. I\'ll answer from the pages and say which page each fact is on.'+(s.preview?'\n\nStart of the text:\n'+s.preview+(s.preview.length>=1500?' …':''):'');
+ const am={role:'assistant',content:msg,via:'LightOnOCR-3 (document reader, on this Mac)',ts:Date.now(),docOpen:r.openMd};
+ ch.messages.push(am);ch.doc={id:s.id,name,path,read:r.read,pages:r.pages};saveChat(ch);addMsg('assistant',msg,am.via,am)}
+const _stopD=$('stop').onclick;$('stop').onclick=()=>{if(S.docReading){act('docStop','');status('Stopping after this page…');setTimeout(()=>status(''),4000);return}if(_stopD)_stopD()};
+async function sendDoc(text){
+ const ch=S.chat;const doc=ch.doc;
+ await act('stop','ocr'); // only one of the reader and LFM3 is loaded at a time
+ if(!S.sel||S.sel.e!=='lfm3text'){status('Starting LFM3 for questions about the document…');await pick('lfm3text',ALIAS.lfm3text,true);status('')}
+ if(!S.sel||S.sel.e!=='lfm3text'){addMsg('err','LFM3 1.7B did not start, so I can\'t answer about the document right now.');return ''}
+ ch.lock={e:'lfm3text',m:ALIAS.lfm3text,name:'LFM3 1.7B',why:'questions about '+doc.name,agent:false};
+ const pr=await act('docPrompt','',{id:doc.id,question:text});if(!pr||!pr.ok){addMsg('err',(pr&&pr.err)||'Could not load the document text.');return ''}
+ S.busy=true;$('send').hidden=true;$('stop').hidden=false;
+ if(!(await ensureEngine('lfm3text',ALIAS.lfm3text))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;addMsg('err','LFM3 1.7B would not start.');return ''}
+ const um={role:'user',content:text,ts:Date.now()};ch.messages.push(um);saveChat(ch);addMsg('user',text,undefined,um);
+ const prev=ch.messages.slice(0,-1).filter(m=>(m.role==='user'||m.role==='assistant')&&m.docQ).slice(-6).map(m=>({role:m.role,content:String(m.content)}));
+ um.docQ=true;
+ const body={model:ALIAS.lfm3text,messages:[{role:'system',content:pr.system},...prev,{role:'user',content:text}],stream:true,temperature:0.2,max_tokens:2048,chat_template_kwargs:{enable_thinking:false}};
+ const out=addMsg('assistant','');out.innerHTML='<span class="think">Reading '+(pr.pages.length>8?pr.pages.length+' pages':'page'+(pr.pages.length>1?'s ':' ')+pr.pages.join(', '))+'…</span>';
+ const via='LFM3 1.7B · "'+doc.name+'" · '+pr.how+(pr.pages.length<=12?' (p. '+pr.pages.join(', ')+')':'');
+ return new Promise(resolve=>{const id=++SID;let acc='',err='';S.cur=id;
+  pending[id]=ev=>{
+   if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
+    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;out.textContent=acc;$('chat').scrollTop=1e9}}catch{}}
+   else if(ev.type==='error')err=ev.text;
+   else if(ev.type==='done'){delete pending[id];S.busy=false;$('send').hidden=false;$('stop').hidden=true;out.remove();
+    if(!acc&&err){addMsg('err',err);resolve('');return}
+    const am={role:'assistant',content:acc||'(no answer)',via,ts:Date.now(),docQ:true};ch.messages.push(am);saveChat(ch);addMsg('assistant',am.content,via,am);resolve(acc)}};
+  window.webkit.messageHandlers.stream.postMessage({id,url:'http://127.0.0.1:8110/v1/chat/completions',body:JSON.stringify(body)})})}
+const _sendDoc0=send;send=function(t){if(S.chat&&S.chat.doc&&!S.att.length&&!S.busy&&!S.switching)return sendDoc(t);return _sendDoc0(t)};
