@@ -312,3 +312,5 @@ body.search main>header,body.search #agentNote,body.search #autoNote,body.search
 #sAskB{background:var(--mint);color:#3A3F5C;padding:6px 18px;border-radius:14px}
 #sAns{background:var(--asst);border:2px solid var(--line);border-radius:16px;padding:10px 14px;white-space:pre-wrap}
 #sAns .via{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
+.nhead .nrow{flex-wrap:nowrap}
+#searchView .nrow button{white-space:nowrap}

@@ -948,9 +948,9 @@ $('nAskF').onsubmit=async ev=>{ev.preventDefault();const q=$('nAsk').value.trim(
  const via='LFM3 1.7B · '+pr.how;
  await new Promise(resolve=>{const id=++SID;let acc='',err='';
   pending[id]=ev=>{if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
-    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;a.textContent=acc}}catch{}}
+    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;a.textContent=acc.replace(/\*\*/g,'')}}catch{}}
    else if(ev.type==='error')err=ev.text;
-   else if(ev.type==='done'){delete pending[id];a.textContent=acc||err||'(no answer)';const v=document.createElement('span');v.className='via';v.textContent=via;a.appendChild(v);resolve()}};
+   else if(ev.type==='done'){delete pending[id];a.textContent=(acc||err||'(no answer)').replace(/\*\*/g,'');const v=document.createElement('span');v.className='via';v.textContent=via;a.appendChild(v);resolve()}};
   window.webkit.messageHandlers.stream.postMessage({id,url:'http://127.0.0.1:8110/v1/chat/completions',body:JSON.stringify(body)})});
  N.asking=false;$('nAskB').disabled=false};
 // selftest notes: open the Notes tab and pick the newest note. Records nothing, sends nothing.
@@ -1020,18 +1020,19 @@ async function searchRun(q,quiet){SR.q=q;if(!quiet){$('sResults').innerHTML='<di
   d.querySelector('.o').onclick=()=>act('openPath','',{path:x.path});d.querySelector('.f').onclick=()=>act('revealPath','',{path:x.path});box.appendChild(d)}}
 $('sForm').onsubmit=ev=>{ev.preventDefault();const q=$('sQ').value.trim();if(q)searchRun(q)};
 $('sAskF').onsubmit=async ev=>{ev.preventDefault();const qq=$('sAsk').value.trim();if(!qq||SR.asking||!SR.results.length)return;
- const pr=await act('searchAsk','',{query:SR.q,question:qq,paths:SR.results.slice(0,5).map(x=>x.path)});const a=$('sAns');a.hidden=false;
- if(!pr||!pr.ok){a.textContent=(pr&&pr.err)||'Could not read those files.';return}
- SR.asking=true;$('sAskB').disabled=true;a.textContent='Starting LFM3…';
+ SR.asking=true;$('sAskB').disabled=true;const a=$('sAns');a.hidden=false;a.textContent='Reading the top results…';
+ const pr=await act('searchAsk','',{query:SR.q,question:qq,paths:SR.results.slice(0,5).map(x=>x.path)});
+ if(!pr||!pr.ok){SR.asking=false;$('sAskB').disabled=false;a.textContent=(pr&&pr.err)||'Could not read those files.';return}
+$('sAskB').disabled=true;a.textContent='Starting LFM3…';
  if(!(await ensureEngine('lfm3text',ALIAS.lfm3text))){SR.asking=false;$('sAskB').disabled=false;a.textContent='LFM3 1.7B would not start, so I can\'t answer right now.';return}
  a.textContent='Reading '+pr.files.length+' file'+(pr.files.length>1?'s':'')+'…';
- const body={model:ALIAS.lfm3text,messages:[{role:'system',content:pr.system},{role:'user',content:qq}],stream:true,temperature:0.2,max_tokens:1024,chat_template_kwargs:{enable_thinking:false}};
+ const body={model:ALIAS.lfm3text,messages:[{role:'system',content:pr.system},{role:'user',content:pr.context+'\nQuestion: '+qq}],stream:true,temperature:0.2,max_tokens:1024,chat_template_kwargs:{enable_thinking:false}};
  const via='LFM3 1.7B · from the top '+pr.files.length+' result'+(pr.files.length>1?'s':'')+': '+pr.files.join(', ');
  await new Promise(resolve=>{const id=++SID;let acc='',err='';
   pending[id]=ev=>{if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
-    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;a.textContent=acc}}catch{}}
+    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;a.textContent=acc.replace(/\*\*/g,'')}}catch{}}
    else if(ev.type==='error')err=ev.text;
-   else if(ev.type==='done'){delete pending[id];a.textContent=acc||err||'(no answer)';const v=document.createElement('span');v.className='via';v.textContent=via;a.appendChild(v);resolve()}};
+   else if(ev.type==='done'){delete pending[id];a.textContent=(acc||err||'(no answer)').replace(/\*\*/g,'');const v=document.createElement('span');v.className='via';v.textContent=via;a.appendChild(v);resolve()}};
   window.webkit.messageHandlers.stream.postMessage({id,url:'http://127.0.0.1:8110/v1/chat/completions',body:JSON.stringify(body)})});
  SR.asking=false;$('sAskB').disabled=false};
 // selftest search (test index only): open the tab, wait for the refresh, run a search, optionally ask (LFM3 8110 directly; stopped again if it was off).

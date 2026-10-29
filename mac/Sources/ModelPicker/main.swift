@@ -417,7 +417,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--search-ask"), CommandLine.arg
     if a.contains("--send"), pr["ok"] as? Bool == true, let e = ENGINE_DEFS.first(where: { $0.id == "lfm3text" }) {
         let wasUp = engineUp(e); let t0 = Date()
         guard ensureEngineUp(e, seconds: 120) else { print("LFM3 did not start"); exit(1) }
-        let body: [String: Any] = ["model": "lfm3-1.7b", "messages": [["role": "system", "content": pr["system"] as? String ?? ""], ["role": "user", "content": a[i + 2]]],
+        let body: [String: Any] = ["model": "lfm3-1.7b", "messages": [["role": "system", "content": pr["system"] as? String ?? ""], ["role": "user", "content": (pr["context"] as? String ?? "") + "\nQuestion: " + a[i + 2]]],
                                    "temperature": 0.2, "max_tokens": 1024, "stream": false, "chat_template_kwargs": ["enable_thinking": false]]
         if let (c, d) = syncHTTP(e.base + "/chat/completions", method: "POST", body: try? JSONSerialization.data(withJSONObject: body), timeout: 600), c == 200,
            let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {

@@ -151,7 +151,7 @@ enum SearchIndex {
         }
         return t
     }
-    static let chunkSize = 1000, overlap = 150, maxChunks = 300
+    static let chunkSize = 1000, overlap = 150, maxChunks = 2000
     static func chunks(_ text: String) -> [String] {
         let t = text.replacingOccurrences(of: "[ \\t]+", with: " ", options: .regularExpression).replacingOccurrences(of: "\\n{3,}", with: "\n\n", options: .regularExpression)
         let a = Array(t); var out: [String] = []; var i = 0
@@ -274,18 +274,19 @@ enum SearchIndex {
 
     // ---- ask about results ----
     static func askPrompt(_ query: String, question: String, paths: [String]) -> [String: Any] {
-        let ts = terms(question + " " + query); var sys = "You answer questions using ONLY the file excerpts below, from the user's own files. Always name the file(s) you used in quotes, like (from \"budget.xlsx\"). If the excerpts don't answer it, say so plainly. Keep answers short and clear.\n\n"
+        let ts = terms(question + " " + query); let sysText = "You are a helpful assistant. Answer in plain sentences, using only the excerpts from the user's files that they give you. Say which file each fact came from, in quotes, like (from \"budget.txt\"). If the excerpts don't answer the question, say so plainly. Never call tools. Keep it short."
+        var sys = "Excerpts from my files:\n\n"
         var used: [String] = []; var budget = 24_000
         for p in paths.prefix(6) {
             let rows = q("SELECT text FROM chunks WHERE path=? ORDER BY ord", [p]).compactMap { $0.first as? String }
             guard !rows.isEmpty else { continue }
             let ranked = rows.enumerated().map { (i, t) in (i, t, ts.reduce(0) { $0 + DocAsk.count(t.lowercased(), $1) }) }.sorted { $0.2 != $1.2 ? $0.2 > $1.2 : $0.0 < $1.0 }
             let take = ranked.prefix(3).sorted { $0.0 < $1.0 }.map { $0.1 }.joined(separator: "\n…\n")
-            let block = "=== File: \"\((p as NSString).lastPathComponent)\" (in \(((p as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath)) ===\n" + String(take.prefix(6000)) + "\n\n"
+            let block = "--- From the file \"\((p as NSString).lastPathComponent)\" ---\n" + String(take.prefix(6000)) + "\n\n"
             if block.count > budget { break }; budget -= block.count; sys += block; used.append((p as NSString).lastPathComponent)
         }
         guard !used.isEmpty else { return ["ok": false, "err": "Search first, then ask about the results."] }
-        return ["ok": true, "system": sys, "files": used, "chars": sys.count]
+        return ["ok": true, "system": sysText, "context": sys, "files": used, "chars": sys.count]
     }
 }
 
