@@ -10,6 +10,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
     var session: URLSession!
     var relays: [Int: (NWConnection, Bool)] = [:]   // task id -> (connection, headerSent)
     var relayEngine: [Int: String] = [:]
+    var relayTok: [Int: String] = [:]   // task id -> activity token (15-minute idle stop)
     func done(_ eng: String) { lock.lock(); inFlight[eng] = max(0, (inFlight[eng] ?? 1) - 1); if otherUse[eng] != nil { otherUse[eng] = Date() }; lock.unlock() }
     let lock = NSLock()
     var lastMagnitude = ""
@@ -71,7 +72,12 @@ final class Proxy: NSObject, URLSessionDataDelegate {
               let e = j["e"] as? String, let m = j["m"] as? String else { return nil }
         return (e, m)
     }
-    func route(_ model: String?) -> (EngineDef, String)? {
+    func route(_ model: String?, body j: [String: Any] = [:]) -> (EngineDef, String)? {
+        if model == "auto" {   // Oct 29: "auto" uses Auto's rules (see autoRouteForProxy), not the window's last pick
+            let r = autoRouteForProxy(j, ids: { id in ENGINE_DEFS.first { $0.id == id }.map(modelIds) ?? [] })
+            log("auto -> \(r.eng) / \(r.model) (\(r.why))")
+            if let e = ENGINE_DEFS.first(where: { $0.id == r.eng }) { return (e, r.model) }
+        }
         let p = picked()
         if model == nil || ["", "auto", "default", "picked"].contains(model!) {
             guard let p = p, let e = ENGINE_DEFS.first(where: { $0.id == p.0 }) else { return nil }
@@ -99,7 +105,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         if path == "/v1/chat/completions" && method == "POST" {
             guard var j = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { err(c, 400, "Body must be JSON."); return }
             DispatchQueue.global().async {
-                guard let (e, m) = self.route(j["model"] as? String) else { self.err(c, 400, "No model picked in Switchboard and none named in the request, or that model was not found on any engine."); return }
+                guard let (e, m) = self.route(j["model"] as? String, body: j) else { self.err(c, 400, "No model picked in Switchboard and none named in the request, or that model was not found on any engine."); return }
                 let ua = head.split(separator: "\r\n").first { $0.lowercased().hasPrefix("user-agent:") }.map(String.init) ?? ""
                 let known = ua.contains("AskMyMac") || ua.contains("Ask%20My%20Mac") || ua.contains("Switchboard")
                 self.lock.lock(); self.inFlight[e.id, default: 0] += 1; if !known { self.otherUse[e.id] = Date() }; self.lock.unlock()
@@ -109,10 +115,11 @@ final class Proxy: NSObject, URLSessionDataDelegate {
                 if e.id == "magnitude" && self.lastMagnitude != m { _ = engineAct("load", "magnitude", ["model": m]); self.lastMagnitude = m }
                 j["model"] = upstreamModel(e, m)
                 if isRaptor(m) && j["reasoning_effort"] == nil { j["reasoning_effort"] = "none" }
+                let actTok = UUID().uuidString; Owned.noteActivity(engine: e.id, token: actTok, begin: true)
                 var r = URLRequest(url: URL(string: e.base + "/chat/completions")!); r.httpMethod = "POST"; r.timeoutInterval = 900
                 r.httpBody = try? JSONSerialization.data(withJSONObject: j); r.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 let t = self.session.dataTask(with: r)
-                self.lock.lock(); self.relays[t.taskIdentifier] = (c, false); self.relayEngine[t.taskIdentifier] = e.id; self.lock.unlock()
+                self.lock.lock(); self.relays[t.taskIdentifier] = (c, false); self.relayEngine[t.taskIdentifier] = e.id; self.relayTok[t.taskIdentifier] = actTok; self.lock.unlock()
                 c.stateUpdateHandler = { st in if case .cancelled = st { t.cancel() } else if case .failed = st { t.cancel() } }
                 t.resume()
             }
@@ -145,8 +152,8 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         rel?.0.send(content: data, completion: .contentProcessed { _ in })
     }
     func urlSession(_ s: URLSession, task t: URLSessionTask, didCompleteWithError e: Error?) {
-        lock.lock(); let rel = relays.removeValue(forKey: t.taskIdentifier); let eng = relayEngine.removeValue(forKey: t.taskIdentifier); lock.unlock()
-        if let eng = eng { done(eng) }
+        lock.lock(); let rel = relays.removeValue(forKey: t.taskIdentifier); let eng = relayEngine.removeValue(forKey: t.taskIdentifier); let tok = relayTok.removeValue(forKey: t.taskIdentifier); lock.unlock()
+        if let eng = eng { done(eng); if let tok = tok { Owned.noteActivity(engine: eng, token: tok, begin: false) } }
         guard let c = rel?.0 else { return }
         if e != nil && (e as NSError?)?.code != NSURLErrorCancelled {
             let msg = "data: {\"error\":{\"message\":\"engine connection lost\"}}\n\n"
@@ -154,4 +161,38 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         }
         c.send(content: nil, isComplete: true, completion: .contentProcessed { _ in c.cancel() })
     }
+}
+
+/// The 7777 helper's "auto" (Oct 29). Same keyword rules as the window's Auto (CODE_RX / FILE_RX copied from web/app.js),
+/// applied to the last user message. Differences: Apple (built-in) is never picked here (other apps send long system
+/// prompts and tools; Apple holds ~4,000 tokens), and a request that carries tools goes to an agent-capable model.
+/// Order: picture -> LFM3-VL > Bonsai 4B > Bonsai 9B (with tools: Bonsai 4B > 9B first, LFM3-VL has no tools);
+/// coding -> Bonsai 9B > Spark > Raptor; files/calendar words or tools -> Raptor (Osaurus); else Bonsai 4B > Raptor.
+let PROXY_CODE_RX = try! NSRegularExpression(pattern: #"(?<!\b(?:area|zip|postal|promo|country|dress|morse|discount|coupon|access|qr|bar|pin) )\b(?:code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|snake|regex|compile|error in|sql|api|refactor|algorithm|for loop|while loop|snippet|stack ?trace|unit test|typescript|bash)\b|\b(?:build|make|create|write|develop|code|program)\b[^.?!]{0,25}\b(?:app|game)\b|\b(?:html|web|browser|video|text|python|javascript)\s+(?:app|game)\b"#, options: [.caseInsensitive])
+let PROXY_FILE_RX = try! NSRegularExpression(pattern: #"\b(?:pages|keynote|textedit|docx|txt|markdown|notes app|my notes|the notes|take (?:a )?notes?|add (?:a )?notes?|save (?:a )?notes?|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b"#, options: [.caseInsensitive])
+func autoRouteForProxy(_ j: [String: Any], ids: (String) -> [String]) -> (eng: String, model: String, why: String) {
+    let msgs = j["messages"] as? [[String: Any]] ?? []
+    func text(_ c: Any?) -> String { if let t = c as? String { return t }; return ((c as? [[String: Any]]) ?? []).compactMap { $0["text"] as? String }.joined(separator: " ") }
+    func hasImg(_ c: Any?) -> Bool { ((c as? [[String: Any]]) ?? []).contains { ($0["type"] as? String) == "image_url" } }
+    let users = msgs.filter { ($0["role"] as? String) == "user" }
+    let last = text(users.last?["content"]); let rng = NSRange(last.startIndex..., in: last)
+    let pic = users.contains { hasImg($0["content"]) }
+    let tools = !((j["tools"] as? [Any]) ?? []).isEmpty
+    func have(_ e: String) -> Bool { !ids(e).isEmpty }
+    let raptor = ids("osaurus").first { $0.lowercased().contains("raptor") } ?? "raptor-0.6-4b-jang_6m"
+    if pic {
+        if tools { if have("bonsai4b") { return ("bonsai4b", "bonsai-2-4b", "picture + tools") }; if have("bonsai9b") { return ("bonsai9b", "bonsai-2-9b", "picture + tools") } }
+        if have("lfm3vl") { return ("lfm3vl", "lfm3-vl-2b", "picture") }
+        if have("bonsai4b") { return ("bonsai4b", "bonsai-2-4b", "picture") }
+        if have("bonsai9b") { return ("bonsai9b", "bonsai-2-9b", "picture") }
+    }
+    if PROXY_CODE_RX.firstMatch(in: last, range: rng) != nil {
+        if have("bonsai9b") { return ("bonsai9b", "bonsai-2-9b", "coding") }
+        if have("spark") { return ("spark", "spark-x2.5-4b-mlx", "coding") }
+        return ("osaurus", raptor, "coding (no coder installed)")
+    }
+    if PROXY_FILE_RX.firstMatch(in: last, range: rng) != nil { return ("osaurus", raptor, "files or calendar") }
+    if tools { return ("osaurus", raptor, "the app sent tools") }
+    if have("bonsai4b") { return ("bonsai4b", "bonsai-2-4b", "quick chat") }
+    return ("osaurus", raptor, "quick chat")
 }

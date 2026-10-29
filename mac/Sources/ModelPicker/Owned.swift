@@ -85,3 +85,62 @@ enum Owned {
         return done
     }
 }
+
+/// Idle auto-stop (Tara, Oct 29): Switchboard's OWN small model servers stop after 15 minutes with no chat requests,
+/// and start again on the next pick or message (the window and the 7777 helper both start an engine that is off).
+/// Only these. Never Osaurus, Ollama, LM Studio, Magnitude, Bark (8099), One Space (8080/8081), Photo Reader (8093).
+/// Only engines Switchboard itself started (listed under "started" in owned-engines.json) are ever stopped.
+let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "spark", "bonsai27b", "apple"]
+let IDLE_STOP_SECONDS: Double = 15 * 60
+extension Owned {
+    static let activityQ = DispatchQueue(label: "owned.activity")   // keeps begin/end of one request in order
+    /// A chat request to one of Switchboard's own engines begins or ends: remember the time (and that it is mid-answer).
+    static func noteActivity(url: URL, token: String, begin: Bool) {
+        guard let port = url.port, url.path.hasSuffix("/chat/completions"),
+              let e = ENGINE_DEFS.first(where: { $0.port == port }) else { return }
+        noteActivity(engine: e.id, token: token, begin: begin)
+    }
+    static func noteActivity(engine id: String, token: String, begin: Bool) {
+        guard IDLE_STOP_ENGINES.contains(id) else { return }
+        activityQ.async {
+            withLock { j in
+                let now = Date().timeIntervalSince1970
+                var lu = j["lastUse"] as? [String: Double] ?? [:]; lu[id] = now; j["lastUse"] = lu
+                var busy = j["busy"] as? [String: Double] ?? [:]; busy[id + "|" + token] = begin ? now : nil; j["busy"] = busy
+            }
+        }
+    }
+    /// Stops Switchboard-started engines that have had no request for 15 minutes (the 7777 helper calls this every 30 s).
+    /// dryRun: only reports. atOffset: pretend it is this many seconds later (for checks). Returns what it stopped (or would).
+    @discardableResult
+    static func stopIdle(dryRun: Bool = false, atOffset: Double = 0) -> [String] {
+        var done: [String] = []
+        let now = Date().timeIntervalSince1970 + atOffset
+        withLock { j in
+            var s = j["started"] as? [String: [String: Any]] ?? [:]
+            let lu = j["lastUse"] as? [String: Double] ?? [:]
+            var busy = j["busy"] as? [String: Double] ?? [:]
+            if !dryRun { busy = busy.filter { now - $0.value < 45 * 60 }; j["busy"] = busy }   // older than 45 min = left over from a crash
+            for (id, info) in s where IDLE_STOP_ENGINES.contains(id) {
+                if let e = ENGINE_DEFS.first(where: { $0.id == id }), NEVER_TOUCH_PORTS.contains(e.port) { continue }
+                if busy.contains(where: { $0.key.hasPrefix(id + "|") && now - $0.value < 45 * 60 }) { continue }   // mid-answer
+                let last = max(lu[id] ?? 0, (info["at"] as? Double) ?? 0)
+                guard now - last >= IDLE_STOP_SECONDS else { continue }
+                done.append(id)
+                if dryRun { continue }
+                switch id {
+                case "bonsai4b": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"])
+                case "bonsai9b": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
+                case "lfm3text": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"])
+                case "lfm3vl": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"])
+                case "spark", "bonsai27b": stopBuiltin(id)
+                case "apple": stopAppleBrain()   // only Switchboard's own copy
+                default: continue }
+                s[id] = nil
+            }
+            if !dryRun { j["started"] = s }
+        }
+        if !dryRun && !done.isEmpty { launchLog("owned: stopped [\(done.joined(separator: ", "))] after 15 min with no requests") }
+        return done
+    }
+}

@@ -7,6 +7,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
     weak var web: WKWebView?
     var tasks: [Int: URLSessionDataTask] = [:]
     var bufs: [Int: Data] = [:]
+    var streamURL: [Int: URL] = [:]   // stream id -> engine URL (for the 15-minute idle stop)
     var session: URLSession!
     var netTasks: [String: URLSessionDataTask] = [:]   // agent requests the Stop button can cancel
     override init() { super.init(); session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil) }
@@ -17,11 +18,13 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
             guard let us = d["url"] as? String, let url = localOK(us) else { replyHandler(["error": "blocked", "status": 0, "body": ""], nil); return }
             var r = URLRequest(url: url); r.httpMethod = (d["method"] as? String) ?? "GET"; r.timeoutInterval = (d["timeout"] as? Double) ?? 5
             if let b = d["body"] as? String { r.httpBody = b.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type") }
-            if r.httpMethod == "POST" { Owned.noteRequest(url: url, body: r.httpBody) }
+            let act = r.httpMethod == "POST" ? UUID().uuidString : nil
+            if let a = act { Owned.noteRequest(url: url, body: r.httpBody); Owned.noteActivity(url: url, token: a, begin: true) }
             let cfg = URLSessionConfiguration.ephemeral; cfg.timeoutIntervalForRequest = r.timeoutInterval
             let rid = d["rid"] as? String
             let t = URLSession(configuration: cfg).dataTask(with: r) { data, resp, err in
                 if let rid = rid { DispatchQueue.main.async { self.netTasks[rid] = nil } }
+                if let a = act { Owned.noteActivity(url: url, token: a, begin: false) }
                 if let e = err as NSError? { replyHandler(["error": e.code == NSURLErrorCancelled ? "cancelled" : "unreachable", "status": 0, "body": ""], nil); return }
                 replyHandler(["status": (resp as? HTTPURLResponse)?.statusCode ?? 0, "body": String(data: data ?? Data(), encoding: .utf8) ?? ""], nil)
             }
@@ -95,7 +98,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         guard let us = d["url"] as? String, let url = localOK(us) else { emit(id, "error", "blocked"); return }
         var r = URLRequest(url: url); r.httpMethod = "POST"; r.timeoutInterval = 600
         r.httpBody = (d["body"] as? String)?.data(using: .utf8); r.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        Owned.noteRequest(url: url, body: r.httpBody)
+        Owned.noteRequest(url: url, body: r.httpBody); Owned.noteActivity(url: url, token: "s\(id)", begin: true); streamURL[id] = url
         let t = session.dataTask(with: r); tasks[id] = t; bufs[id] = Data(); t.taskDescription = "\(id)"; t.resume()
     }
     func idOf(_ t: URLSessionTask) -> Int { Int(t.taskDescription ?? "") ?? -1 }
@@ -116,6 +119,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         if let rest = bufs[id], !rest.isEmpty, let l = String(data: rest, encoding: .utf8) { emit(id, "line", l) }
         if let e = e as NSError?, e.code != NSURLErrorCancelled { emit(id, "error", "Could not reach the engine.") }
         emit(id, "done", ""); tasks[id] = nil; bufs[id] = nil
+        if let u = streamURL.removeValue(forKey: id) { Owned.noteActivity(url: u, token: "s\(id)", begin: false) }
     }
     func emit(_ id: Int, _ type: String, _ text: String) {
         guard let j = try? JSONSerialization.data(withJSONObject: ["id": id, "type": type, "text": text]), let s = String(data: j, encoding: .utf8) else { return }
@@ -267,7 +271,10 @@ final class Watcher {
     init(_ p: Proxy) { proxy = p }
     let q = DispatchQueue(label: "watcher"); var timer: DispatchSourceTimer?
     func start() { let t = DispatchSource.makeTimerSource(queue: q); t.schedule(deadline: .now() + 5, repeating: 5); t.setEventHandler { [weak self] in self?.tick() }; t.resume(); timer = t }
+    var ticks = 0
     func tick() {
+        ticks += 1
+        if ticks % 6 == 0 { DispatchQueue.global().async { Owned.stopIdle() } }   // every 30 s: Switchboard's own models idle 15 min stop
         let sb = switchboardWindowOpen(), amm = askMyMacOpen()
         if amm { ammGoneSince = nil } else {
             if ammGoneSince == nil { ammGoneSince = Date() }
@@ -293,6 +300,21 @@ if let i = CommandLine.arguments.firstIndex(of: "--tool"), CommandLine.arguments
         fflush(stdout); exit(0)
     }
     RunLoop.main.run()
+}
+// Dry run (no request sent, nothing started): which model would the 7777 helper's "auto" pick for this request body?
+// `Switchboard --route-auto 'BODY_JSON' ['INSTALLED_JSON']`. INSTALLED_JSON (optional) fakes the installed lists, e.g. {"lfm3vl":["lfm3-vl-2b"]}.
+if let i = CommandLine.arguments.firstIndex(of: "--route-auto"), CommandLine.arguments.count > i + 1 {
+    let a = CommandLine.arguments
+    let body = (try? JSONSerialization.jsonObject(with: Data(a[i + 1].utf8))) as? [String: Any] ?? [:]
+    let fake = a.count > i + 2 ? (try? JSONSerialization.jsonObject(with: Data(a[i + 2].utf8))) as? [String: [String]] : nil
+    let r = autoRouteForProxy(body, ids: { id in fake.map { $0[id] ?? [] } ?? (ENGINE_DEFS.first { $0.id == id }.map(modelIds) ?? []) })
+    if let d = try? JSONSerialization.data(withJSONObject: ["engine": r.eng, "model": r.model, "why": r.why]), let t = String(data: d, encoding: .utf8) { print(t) }
+    exit(0)
+}
+// Dry run: which of Switchboard's own engines the idle stop would stop now (or N seconds from now). Stops nothing.
+if let i = CommandLine.arguments.firstIndex(of: "--idle-check") {
+    let off = CommandLine.arguments.count > i + 1 ? Double(CommandLine.arguments[i + 1]) ?? 0 : 0
+    print(Owned.stopIdle(dryRun: true, atOffset: off)); exit(0)
 }
 if let i = CommandLine.arguments.firstIndex(of: "--undo-last") {
     _ = i; DispatchQueue.global().async { let r = PortTools.handle("undoLast", [:]) ?? [:]; print(r["text"] ?? ""); fflush(stdout); exit(0) }; RunLoop.main.run()

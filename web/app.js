@@ -12,7 +12,7 @@ const ENGINES=[
  {id:'spark',name:'Spark X2.5 4B',base:'http://127.0.0.1:8095/v1'},
  {id:'bonsai27b',name:'Bonsai 2 27B (big: ~9 GB memory)',base:'http://127.0.0.1:8096/v1'},
  {id:'lfm3text',name:'LFM3 1.7B (Liquid AI)',base:'http://127.0.0.1:8110/v1'}, // Oct 28: own llama.cpp copy; started only when picked; thinking off; long documents up to ~100K tokens
- {id:'lfm3vl',name:'LFM3-VL 2B (Liquid AI)',base:'http://127.0.0.1:8111/v1'}, // sees pictures; NOT used by Auto's picture routing yet (real-photo tests pending), manual pick only
+ {id:'lfm3vl',name:'LFM3-VL 2B (Liquid AI)',base:'http://127.0.0.1:8111/v1'}, // sees pictures; Auto's FIRST picture reader since Oct 28 (see visionRoute), Bonsai 4B is the backup
  {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
 const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
@@ -45,7 +45,7 @@ $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(
 const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body};
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
- if(eid==='lfm3text')return 114688;if(eid==='lfm3vl')return 32768; // LFM3: llama-server -c 114688 (text) / 16384 (VL), see ~/Models/lfm3/start.sh
+ if(eid==='lfm3text')return 114688;if(eid==='lfm3vl')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL), see ~/Models/lfm3/start.sh
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
 const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(S.sel&&S.sel.e==='lfm3vl'?12000:2400)).length)/3); // a picture counts as ~800 tokens (LFM3-VL: ~4,000 at full size), not its base64 size
 const OUT_RESERVE=4096,TOOL_SCHEMA=2500;
@@ -314,7 +314,7 @@ async function localCommand(text){
   else{act('toolCancelId','',{pendingId:r.pendingId});show('Cancelled. Nothing was changed.')}return 'handled'}
  return show(r.text||'Done.',r.files)}
 // ---- Picture gate (Oct 27): runs before a message with a picture goes out. Never leaves a dead end at a stopped Photo Reader. ----
-const PHOTO_DEAD='No model that can see pictures is available and Photo Reader is stopped. Pick a picture-capable model (Bonsai or Gemma 4) or start Photo Reader.';
+const PHOTO_DEAD='No model that can see pictures is available and Photo Reader is stopped. Pick a picture-capable model (LFM3-VL, Bonsai or Gemma 4) or start Photo Reader.';
 const photoUp=async()=>!!(await getJSON('http://127.0.0.1:8093/v1/models',2)); // read-only look; never starts Photo Reader
 async function pictureGate(cam){
  if(!hasPic()||S.busy||S.switching)return true; // busy: the normal send checks handle it
@@ -597,7 +597,8 @@ async function openSettings(){const b=$('sbody');$('settings').hidden=false;
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
   +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Photo Reader is stopped (only used as a last resort). Picture-capable models handle photos.')+'</div>'
   +'<h3>Voice</h3><div class="note">Click the mic button to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
-  +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>';
+  +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first, unless <b>Auto approve</b> is ON. Then file edits and other steps (copy, move, rename, new folder, adding a calendar event) run without asking, and each one is logged in the chat. Moving to the Trash always asks. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>'
+  +'<h3>Saving memory</h3><div class="note">Switchboard\'s own models (LFM3, Bonsai, Spark, Apple) stop by themselves after 15 minutes with no messages, and start again when you next use them. Osaurus, Ollama, LM Studio, Magnitude and your other apps are never stopped by this.</div>';
  b.innerHTML=h;
  $('sCopyAddr').onclick=async e=>{const b=e.currentTarget;if(await copyText('http://127.0.0.1:7777/v1')){b.innerHTML=IC('check',14)+' Copied';setTimeout(()=>{b.innerHTML=IC('copy',14)+' Copy'},1400)}};
  $('sAuto').onchange=e=>{S.auto=e.target.checked;if(S.chat){S.chat.auto=S.auto}if(S.auto)$('cur').textContent=AUTOCUR;render()};
