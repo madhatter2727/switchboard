@@ -158,7 +158,7 @@ enum DocReader {
 /// Everything is sent when it fits (about 90,000 characters, roughly 30,000 tokens, so answers stay quick);
 /// otherwise the pages that best match the question's words go first (rare words count more), then in page order.
 enum DocAsk {
-    static let budget = 90_000
+    static var budget: Int { Int(ProcessInfo.processInfo.environment["SB_DOC_BUDGET"] ?? "") ?? 90_000 }   // test override only
     static let stop: Set<String> = ["the","and","for","are","was","what","which","who","whom","how","why","when","where","does","did","this","that","these","those","with","from","into","about","there","their","they","them","have","has","had","been","were","will","would","could","should","can","not","but","any","all","its","our","your","you","tell","give","show","list","please","document","page","pages","say","says"]
     static func terms(_ q: String) -> [String] {
         Array(Set(q.lowercased().split { !($0.isLetter || $0.isNumber) }.map(String.init).filter { $0.count >= 3 && !stop.contains($0) }))

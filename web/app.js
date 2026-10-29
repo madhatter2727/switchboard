@@ -887,3 +887,6 @@ async function sendDoc(text){
     const am={role:'assistant',content:acc||'(no answer)',via,ts:Date.now(),docQ:true};ch.messages.push(am);saveChat(ch);addMsg('assistant',am.content,via,am);resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:'http://127.0.0.1:8110/v1/chat/completions',body:JSON.stringify(body)})})}
 const _sendDoc0=send;send=function(t){if(S.chat&&S.chat.doc&&!S.att.length&&!S.busy&&!S.switching)return sendDoc(t);return _sendDoc0(t)};
+// selftest docchip: attach a PDF (like the paperclip) and show its "Read pages" button. Reads nothing, sends nothing.
+const _stDoc=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='docchip')return _stDoc(m,e,x);await boot;S.chat=null;newChat();addAtt(await act('attachPath','',{path:x}));await sleep(800);
+ return JSON.stringify({chips:[...document.querySelectorAll('#atts .chip')].map(c=>c.textContent),readButton:!!document.querySelector('#atts .readpg')})};
