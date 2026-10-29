@@ -967,3 +967,10 @@ const _stNotesE=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='notes
  const r=await act('noteList','');out.stillThere=(r.notes||[]).length;
  $('nSearch').value='';N.cur=N.notes.find(n=>/garden/i.test(n.title||''));notesList();notesEdit();await sleep(300);
  return JSON.stringify(out)};
+// selftest notesask (test folder only): asks one question in the Notes tab (LFM3 on 8110 directly), then stops LFM3 if it was off.
+const _stNotesA=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='notesask')return _stNotesA(m,e,x);await boot;notesShow(true);await sleep(900);
+ const was=!!(await getJSON('http://127.0.0.1:8110/v1/models'));const t0=Date.now();
+ N.cur=N.notes.find(n=>/grocery/i.test(n.title||''))||N.notes[0];notesList();notesEdit();
+ $('nAsk').value=x||'What do I need to buy?';$('nAskF').requestSubmit();await sleep(300);for(let i=0;i<240&&N.asking;i++)await sleep(500);
+ const secs=(Date.now()-t0)/1000;if(!was)await act('stop','lfm3text');await sleep(300);
+ return JSON.stringify({answer:$('nAns').textContent,secs,lfm3WasOn:was})};
