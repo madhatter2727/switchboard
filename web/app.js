@@ -957,3 +957,13 @@ $('nAskF').onsubmit=async ev=>{ev.preventDefault();const q=$('nAsk').value.trim(
 const _stNotes=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='notes')return _stNotes(m,e,x);await boot;notesShow(true);await sleep(900);if(N.notes.length){N.cur=N.notes[N.notes.length>1?1:0];notesList();notesEdit()}
  if(x){$('nAsk').value=x}await sleep(500);
  const mic=await act('noteMic','');return JSON.stringify({notes:N.notes.length,titles:N.notes.map(n=>n.title),view:!$('notesView').hidden,mic:mic&&mic.status})};
+// selftest notesedit (test folder only): search, edit + save a title, and press Delete then Cancel (nothing is trashed).
+const _stNotesE=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='notesedit')return _stNotesE(m,e,x);await boot;notesShow(true);await sleep(900);const out={};
+ $('nSearch').value='tulip';notesList();out.searchTulip=[...document.querySelectorAll('#nList .nitem b')].map(b=>b.textContent);
+ $('nSearch').value='zebra';notesList();out.searchZebra=$('nList').textContent;$('nSearch').value='';notesList();
+ const g=N.notes.find(n=>/garden/i.test(n.title||''));N.cur=g;notesEdit();$('nTitle').value='Garden plans';$('nSave').click();await sleep(800);
+ out.afterSave=N.notes.map(n=>n.title);out.when=$('nWhen')&&$('nWhen').textContent;
+ $('nDel').click();await sleep(400);out.deleteAsks=!$('modal').hidden?$('mtext').textContent:'NO DIALOG';$('mno').click();await sleep(500);
+ const r=await act('noteList','');out.stillThere=(r.notes||[]).length;
+ $('nSearch').value='';N.cur=N.notes.find(n=>/garden/i.test(n.title||''));notesList();notesEdit();await sleep(300);
+ return JSON.stringify(out)};
