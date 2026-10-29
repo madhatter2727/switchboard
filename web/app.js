@@ -890,3 +890,70 @@ const _sendDoc0=send;send=function(t){if(S.chat&&S.chat.doc&&!S.att.length&&!S.b
 // selftest docchip: attach a PDF (like the paperclip) and show its "Read pages" button. Reads nothing, sends nothing.
 const _stDoc=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='docchip')return _stDoc(m,e,x);await boot;S.chat=null;newChat();addAtt(await act('attachPath','',{path:x}));await sleep(800);
  return JSON.stringify({chips:[...document.querySelectorAll('#atts .chip')].map(c=>c.textContent),readButton:!!document.querySelector('#atts .readpg')})};
+
+// ---------- Notes tab (Oct 29) ----------
+// Switchboard's OWN voice notes (the Bark Voice Notes app is separate and untouched). Record -> Stop -> Underdog Bark 3.0
+// Clean (Switchboard's own speech engine on port 8115, started when needed, stopped after 15 idle minutes) writes it
+// down -> saved note. List, search, edit, delete (to the Trash, always asks). "Ask about my notes" goes to LFM3 1.7B (8110).
+const N={notes:[],cur:null,rec:false,busy:false,timer:null};
+const ndate=t=>new Date((t||0)*1000).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+const nState=t=>{$('nState').textContent=t||''};
+function notesShow(on){document.body.classList.toggle('notes',on);$('notesView').hidden=!on;if(on)notesLoad()}
+$('notesBtn').onclick=()=>{if(S.busy)return;notesShow(!document.body.classList.contains('notes'))};
+const _newChatN=newChat;newChat=function(){notesShow(false);return _newChatN.apply(this,arguments)};
+const _openChatN=openChat;openChat=function(id){notesShow(false);return _openChatN(id)};
+async function notesLoad(keepId){const r=await act('noteList','');N.notes=(r&&r.notes)||[];
+ if(keepId)N.cur=N.notes.find(n=>n.id===keepId)||null;else if(N.cur)N.cur=N.notes.find(n=>n.id===N.cur.id)||null;
+ notesList();notesEdit()}
+function notesMatch(n,q){if(!q)return true;const h=((n.title||'')+' '+(n.text||'')).toLowerCase();return q.toLowerCase().split(/\s+/).filter(Boolean).every(w=>h.includes(w))}
+function notesList(){const box=$('nList');box.innerHTML='';const q=$('nSearch').value.trim();const ns=N.notes.filter(n=>notesMatch(n,q));
+ if(!N.notes.length){box.innerHTML='<div class="sm">No notes yet.</div>';return}
+ if(!ns.length){box.innerHTML='<div class="sm">No notes match "'+esc(q)+'".</div>';return}
+ for(const n of ns){const d=document.createElement('div');d.className='nitem'+(N.cur&&N.cur.id===n.id?' sel':'');
+  d.innerHTML='<b>'+esc(n.title||'Voice note')+'</b><span class="sm">'+esc(ndate(n.created))+' · '+esc((n.text||'').slice(0,80))+'</span>';
+  d.onclick=async()=>{await notesSaveIfChanged();N.cur=n;notesList();notesEdit()};box.appendChild(d)}}
+$('nSearch').oninput=()=>notesList();
+function notesEdit(){const e=$('nEdit');const n=N.cur;
+ if(!n){e.innerHTML='<div class="nempty">'+(N.notes.length?'Pick a note on the left, or press Record for a new one.':'Press Record and say what\'s on your mind. When you press Stop, it becomes a note here.')+'</div>';return}
+ e.innerHTML='<input id="nTitle" aria-label="Title"><div class="sm" id="nWhen"></div><textarea id="nText" aria-label="Note text"></textarea><div class="nrow"><button type="button" id="nSave">Save</button><button type="button" id="nOpen">Open file</button><button type="button" id="nFind">Show in Finder</button><span style="flex:1"></span><button type="button" class="ndel" id="nDel"><span class="bi" data-ic="trash" data-s="13"></span> Delete</button></div>';
+ $('nTitle').value=n.title||'';$('nText').value=n.text||'';
+ $('nWhen').textContent=ndate(n.created)+(n.updated&&n.updated-n.created>5?' · edited '+ndate(n.updated):'')+(n.audioSeconds?' · '+Math.round(n.audioSeconds)+' s recording':'');
+ e.querySelectorAll('.bi').forEach(x=>{x.innerHTML=IC(x.dataset.ic,+x.dataset.s||18)});
+ $('nSave').onclick=()=>notesSaveIfChanged(true);$('nTitle').onblur=()=>notesSaveIfChanged();$('nText').onblur=()=>notesSaveIfChanged();
+ $('nOpen').onclick=()=>act('openPath','',{path:n.md});$('nFind').onclick=()=>act('revealPath','',{path:n.md});
+ $('nDel').onclick=async()=>{if(!(await dialog('Delete the note "'+(n.title||'Voice note')+'"? It goes to the Trash (with its recording), so you can still get it back.')))return;
+  const r=await act('noteTrash','',{id:n.id});if(!r||!r.ok){nState('Could not move that note to the Trash.');return}N.cur=null;nState('Moved to the Trash.');notesLoad()}}
+async function notesSaveIfChanged(force){const n=N.cur;if(!n||!$('nTitle'))return;const t=$('nTitle').value.trim(),x=$('nText').value;
+ if(!force&&t===(n.title||'')&&x===(n.text||''))return;const r=await act('noteSave','',{id:n.id,title:t,text:x});
+ if(r&&r.ok){nState('Saved.');setTimeout(()=>{if($('nState').textContent==='Saved.')nState('')},2000);await notesLoad(r.id)}else nState((r&&r.err)||'Could not save.')}
+$('nRec').onclick=async()=>{if(N.busy)return;
+ if(!N.rec){await notesSaveIfChanged();const r=await act('noteRecStart','');if(!r||!r.ok){nState((r&&r.err)||'Could not start recording.');return}
+  N.rec=true;$('nRec').classList.add('on');$('nRecTxt').textContent='Stop';nState('Listening… press Stop when you\'re done.');
+  N.timer=setInterval(async()=>{const l=await act('noteRecLevel','');if(l&&l.recording){const s=Math.floor(l.secs);nState('Listening… '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'  (press Stop when you\'re done)')}},500);return}
+ clearInterval(N.timer);N.rec=false;N.busy=true;$('nRec').classList.remove('on');$('nRecTxt').textContent='Record';$('nRec').disabled=true;
+ const st=await act('noteRecStop','');if(!st||!st.ok){N.busy=false;$('nRec').disabled=false;nState('Recording failed.');return}
+ if(st.secs<0.7){N.busy=false;$('nRec').disabled=false;nState('That was too short to hear anything. Try again.');return}
+ nState('Writing it down with Underdog Bark (on this Mac)…');const t0=Date.now();
+ const r=await act('noteFromAudio','',{path:st.path});N.busy=false;$('nRec').disabled=false;
+ if(!r||!r.ok){nState((r&&r.err)||'Could not turn the recording into text. The recording is kept.');return}
+ nState(r.text?'Saved a new note ('+((Date.now()-t0)/1000).toFixed(1)+' s). You can fix the title or text below.':'Saved, but no words were heard. You can type the note yourself.');
+ $('nSearch').value='';await notesLoad(r.id)};
+$('nAskF').onsubmit=async ev=>{ev.preventDefault();const q=$('nAsk').value.trim();if(!q||N.asking)return;await notesSaveIfChanged();
+ const pr=await act('notePrompt','',{question:q});const a=$('nAns');a.hidden=false;if(!pr||!pr.ok){a.textContent=(pr&&pr.err)||'Could not read your notes.';return}
+ N.asking=true;$('nAskB').disabled=true;a.textContent='Starting LFM3…';
+ await act('stop','notes'); // free the speech engine's memory first
+ if(!(await ensureEngine('lfm3text',ALIAS.lfm3text))){N.asking=false;$('nAskB').disabled=false;a.textContent='LFM3 1.7B would not start, so I can\'t answer right now.';return}
+ a.textContent='Reading '+pr.how+'…';
+ const body={model:ALIAS.lfm3text,messages:[{role:'system',content:pr.system},{role:'user',content:q}],stream:true,temperature:0.2,max_tokens:1024,chat_template_kwargs:{enable_thinking:false}};
+ const via='LFM3 1.7B · '+pr.how;
+ await new Promise(resolve=>{const id=++SID;let acc='',err='';
+  pending[id]=ev=>{if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
+    try{const o=JSON.parse(j);const c=o.choices?.[0]?.delta?.content;if(c){acc+=c;a.textContent=acc}}catch{}}
+   else if(ev.type==='error')err=ev.text;
+   else if(ev.type==='done'){delete pending[id];a.textContent=acc||err||'(no answer)';const v=document.createElement('span');v.className='via';v.textContent=via;a.appendChild(v);resolve()}};
+  window.webkit.messageHandlers.stream.postMessage({id,url:'http://127.0.0.1:8110/v1/chat/completions',body:JSON.stringify(body)})});
+ N.asking=false;$('nAskB').disabled=false};
+// selftest notes: open the Notes tab and pick the newest note. Records nothing, sends nothing.
+const _stNotes=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='notes')return _stNotes(m,e,x);await boot;notesShow(true);await sleep(900);if(N.notes.length){N.cur=N.notes[N.notes.length>1?1:0];notesList();notesEdit()}
+ if(x){$('nAsk').value=x}await sleep(500);
+ const mic=await act('noteMic','');return JSON.stringify({notes:N.notes.length,titles:N.notes.map(n=>n.title),view:!$('notesView').hidden,mic:mic&&mic.status})};

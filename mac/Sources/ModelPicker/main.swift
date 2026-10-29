@@ -1,4 +1,5 @@
 import Cocoa
+import AVFoundation
 import ServiceManagement
 import WebKit
 import Speech
@@ -83,6 +84,16 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "docStatus": return DocReader.status()
         case "docStop": DocReader.stop(); return ["ok": true]
         case "docPrompt": return DocAsk.prompt(d["id"] as? String ?? "", question: d["question"] as? String ?? "")
+        case "noteRecStart": return NoteRecorder.shared.start()
+        case "noteRecLevel": return NoteRecorder.shared.level()
+        case "noteRecStop": return NoteRecorder.shared.stop()
+        case "noteFromAudio": return NoteSTT.noteFrom(d["path"] as? String ?? "")
+        case "noteList": return ["notes": NoteStore.all()]
+        case "noteMic":   // read-only: has macOS already allowed Switchboard to use the microphone? (asks nothing)
+            let st = AVCaptureDevice.authorizationStatus(for: .audio); return ["status": st == .authorized ? "allowed" : st == .notDetermined ? "not asked yet" : "denied"]
+        case "noteSave": return NoteStore.save(d)
+        case "noteTrash": return NoteStore.trash(d["id"] as? String ?? "")
+        case "notePrompt": return NoteAsk.prompt(d["question"] as? String ?? "")
         case "mem":   // read-only: Mac memory in use vs total, same maths as Activity Monitor's "Memory Used" (app + wired + compressed). Changes nothing.
             var vm = vm_statistics64(); var cnt = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
             let kr = withUnsafeMutablePointer(to: &vm) { $0.withMemoryRebound(to: integer_t.self, capacity: Int(cnt)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &cnt) } }
@@ -263,7 +274,7 @@ func switchboardWindowOpen() -> Bool {
     let me = "\(getpid())"
     return out.split(separator: "\n").contains { l in
         let f = l.split(separator: " "); guard let pid = f.first, String(pid) != me else { return false }
-        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") }
+        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") && !l.contains(" --note-") }
 }
 func askMyMacOpen() -> Bool { runCmd("/usr/bin/pgrep", ["-x", "AskMyMac"]).0 == 0 }
 
@@ -344,6 +355,32 @@ if let i = CommandLine.arguments.firstIndex(of: "--doc-ask"), CommandLine.argume
            let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
             print(((o["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any])?["content"] ?? "")
             print("timings: \(o["timings"] ?? "-")  total \(String(format: "%.1f", Date().timeIntervalSince(t0))) s")
+        } else { print("LFM3 request failed") }
+        if !wasUp { _ = engineAct("stop", "lfm3text") }
+    }
+    exit(0)
+}
+// Notes tests (engines called directly, never 7777). SB_NOTES_DIR / SB_NOTES_MD_DIR point at a test folder so her real notes stay untouched.
+// `Switchboard --note-from-audio FILE` = what happens after Stop (Bark on 8115 -> saved note); `--note-ask "q" [--send]` asks LFM3 on 8110.
+if let i = CommandLine.arguments.firstIndex(of: "--note-from-audio"), CommandLine.arguments.count > i + 1 {
+    let wasUp = engineUp(NoteSTT.def); let t0 = Date()
+    var r = NoteSTT.noteFrom(CommandLine.arguments[i + 1]); r["total"] = Date().timeIntervalSince(t0); r["engineWasUp"] = wasUp
+    if let d = try? JSONSerialization.data(withJSONObject: r, options: [.sortedKeys]), let s = String(data: d, encoding: .utf8) { print(s) }
+    if CommandLine.arguments.contains("--stop") { _ = engineAct("stop", "notes") }
+    exit(0)
+}
+if let i = CommandLine.arguments.firstIndex(of: "--note-ask"), CommandLine.arguments.count > i + 1 {
+    let a = CommandLine.arguments; let q = a[i + 1]; let pr = NoteAsk.prompt(q)
+    print("notes sent: \(pr["notes"] ?? pr["err"] ?? "-") (\(pr["how"] ?? "-"), \(pr["chars"] ?? 0) characters)"); fflush(stdout)
+    if a.contains("--send"), pr["ok"] as? Bool == true, let e = ENGINE_DEFS.first(where: { $0.id == "lfm3text" }) {
+        _ = engineAct("stop", "notes"); let wasUp = engineUp(e); let t0 = Date()
+        guard ensureEngineUp(e, seconds: 120) else { print("LFM3 did not start"); exit(1) }
+        let body: [String: Any] = ["model": "lfm3-1.7b", "messages": [["role": "system", "content": pr["system"] as? String ?? ""], ["role": "user", "content": q]],
+                                   "temperature": 0.2, "max_tokens": 1024, "stream": false, "chat_template_kwargs": ["enable_thinking": false]]
+        if let (c, d) = syncHTTP(e.base + "/chat/completions", method: "POST", body: try? JSONSerialization.data(withJSONObject: body), timeout: 600), c == 200,
+           let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
+            print(((o["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any])?["content"] ?? "")
+            print("total \(String(format: "%.1f", Date().timeIntervalSince(t0))) s (LFM3 was \(wasUp ? "already on" : "started"))")
         } else { print("LFM3 request failed") }
         if !wasUp { _ = engineAct("stop", "lfm3text") }
     }

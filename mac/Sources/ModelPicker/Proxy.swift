@@ -98,7 +98,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
         if path == "/v1/models" && method == "GET" {
             DispatchQueue.global().async {
                 var data: [[String: Any]] = [["id": "auto", "object": "model", "owned_by": "model-picker"]]
-                for e in ENGINE_DEFS where e.id != "ocr" { for m in modelIds(e) { data.append(["id": m, "object": "model", "owned_by": e.id]) } }
+                for e in ENGINE_DEFS where e.id != "ocr" && e.id != "notes" { for m in modelIds(e) { data.append(["id": m, "object": "model", "owned_by": e.id]) } }
                 self.respond(c, 200, (try? JSONSerialization.data(withJSONObject: ["object": "list", "data": data])) ?? Data()) }
             return
         }

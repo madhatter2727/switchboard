@@ -5,6 +5,7 @@
  <aside>
   <div class="brand"><span class="logo"></span><h1>Switchboard</h1></div>
   <button id="newChat"><span class="bi" data-ic="plus" data-s="16"></span><span>New chat</span></button>
+  <button id="notesBtn" type="button" title="Your voice notes: record, read, search and ask about them. Kept on this Mac."><span class="bi" data-ic="mic" data-s="16"></span><span>Notes</span></button>
   <div class="sec">Your chats</div>
   <div id="chats"></div>
   <button id="delAll" type="button" title="Move every saved chat to the Trash"><span class="bi" data-ic="trash" data-s="14"></span><span>Delete all chats</span></button>
@@ -15,6 +16,15 @@
  </aside>
  <main>
   <header><div class="cur"><span id="curChip" class="curchip"></span><div id="cur">No model picked yet</div></div><div id="status"></div><div class="hr"><label id="autoBox" title="Edits go through without asking. Deleting still asks."><input type="checkbox" id="autoAp"><span>Auto approve</span></label><label id="agentBox"><input type="checkbox" id="agent"><span>Agent mode</span></label><button id="gear" type="button" class="ib" title="Settings" aria-label="Settings"><span class="bi" data-ic="gear" data-s="20"></span></button></div></header><div id="agentNote"></div><div id="autoNote" hidden>Auto approve is ON. Edits go through without asking. Deleting still asks. Each auto-approved step is logged in the chat.</div>
+  <section id="notesView" hidden>
+   <div class="nhead"><div><h2>Notes</h2><div class="sm">Talk, and Switchboard writes it down. Notes stay on this Mac (separate from Bark Voice Notes).</div></div>
+    <button id="nRec" type="button"><span class="bi" data-ic="mic" data-s="18"></span><span id="nRecTxt">Record</span></button></div>
+   <div id="nState" class="sm"></div>
+   <div class="nbody"><div class="ncol"><div class="nsearch"><span class="bi" data-ic="search" data-s="15"></span><input id="nSearch" placeholder="Search notes"></div><div id="nList"></div></div>
+    <div id="nEdit"><div class="nempty">Press Record and say what's on your mind. When you press Stop, it becomes a note here.</div></div></div>
+   <form id="nAskF"><input id="nAsk" placeholder="Ask about my notes… (e.g. what do I need to buy?)"><button type="submit" id="nAskB">Ask</button></form>
+   <div id="nAns" hidden></div>
+  </section>
   <div id="chat"><div class="empty">Pick a model on the left, then say hi.</div></div>
   <form id="form"><div id="atts"></div><textarea id="input" rows="2" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>
    <span class="btns"><button id="clip" type="button" class="ib" title="Add files or pictures (you can also paste with Cmd+V or drag them in)" aria-label="Add files or pictures"><span class="bi" data-ic="clip" data-s="20"></span></button><button id="photo" type="button" class="ib" title="Ask about a picture (it goes to the best model that can see pictures)" aria-label="Ask about a picture"><span class="bi" data-ic="cam" data-s="20"></span></button><button id="mic" type="button" class="ib" title="Click to talk, click again to stop. Speech stays on this Mac." aria-label="Talk"><span class="bi" data-ic="mic" data-s="20"></span></button><button id="send" type="submit"><span class="bi" data-ic="send" data-s="16" data-sw="2"></span><span>Send</span></button><button id="stop" type="button" hidden>Stop</button></span></form>

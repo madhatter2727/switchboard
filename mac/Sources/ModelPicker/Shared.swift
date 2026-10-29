@@ -51,6 +51,7 @@ let ENGINE_DEFS = [
     EngineDef(id: "lfm3vl", name: "LFM3-VL 2B", port: 8111, path: "/v1"),
     EngineDef(id: "apple", name: "Apple (built-in)", port: 8100, path: "/v1"),
     EngineDef(id: "ocr", name: "LightOnOCR-3 (document reader)", port: 8114, path: "/v1"),   // Oct 29: reads PDF pages; started only while reading, never listed as a chat model
+    EngineDef(id: "notes", name: "Underdog Bark 3.0 Clean (Notes speech-to-text)", port: 8115, path: "/v1"),   // Oct 29: Notes tab; started when a recording needs text, never a chat model
 ]
 
 /// Blocking GET/POST helper (used off the main thread).
@@ -80,7 +81,7 @@ func stopBuiltin(_ id: String) { _ = runCmd("/bin/launchctl", ["remove", jobLabe
 /// Bonsai 27B is big (about 9 GB in memory on a 16 GB Mac): stop what the picker can safely stop first.
 func freeMemoryForBig() {
     stopBuiltin("spark"); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
-    _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
+    _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"]); _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
     if let (c, d) = syncHTTP("http://127.0.0.1:11434/api/ps", timeout: 2), c == 200,
        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let ms = j["models"] as? [[String: Any]] {
         for m in ms { if let n = m["name"] as? String { _ = syncHTTP("http://127.0.0.1:11434/api/generate", method: "POST", body: try? JSONSerialization.data(withJSONObject: ["model": n, "keep_alive": 0]), timeout: 10) } } }
@@ -148,6 +149,8 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
     case ("stop", "lfm3vl"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); Owned.forget(eng)
     case ("start", "ocr"): _ = runCmd("/bin/bash", [OCR_START], detach: true); Owned.noteStarted(eng)
     case ("stop", "ocr"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"]); Owned.forget(eng)
+    case ("start", "notes"): _ = runCmd("/bin/bash", [NOTES_START], detach: true); Owned.noteStarted(eng)
+    case ("stop", "notes"): _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"]); Owned.forget(eng)
     case ("stop", "bonsai4b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); Owned.forget(eng)
     case ("stop", "bonsai9b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"]); Owned.forget(eng)
     case ("start", "spark"), ("start", "bonsai27b"):
