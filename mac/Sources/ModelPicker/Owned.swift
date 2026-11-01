@@ -71,6 +71,7 @@ enum Owned {
                 case "ocr": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
                 case "notes": _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
+                case "little3d": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // Nov 1: our alias only
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
@@ -93,7 +94,7 @@ enum Owned {
 /// and start again on the next pick or message (the window and the 7777 helper both start an engine that is off).
 /// Only these. Never Osaurus, Ollama, LM Studio, Magnitude, Bark (8099), One Space (8080/8081), Photo Reader (8093).
 /// Only engines Switchboard itself started (listed under "started" in owned-engines.json) are ever stopped.
-let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "spark", "bonsai27b", "apple", "ocr", "notes", "search"]
+let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "little3d", "spark", "bonsai27b", "apple", "ocr", "notes", "search"]
 let IDLE_STOP_SECONDS: Double = 15 * 60
 extension Owned {
     static let activityQ = DispatchQueue(label: "owned.activity")   // keeps begin/end of one request in order
@@ -139,6 +140,7 @@ extension Owned {
                 case "ocr": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
                 case "notes": _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
+                case "little3d": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // Nov 1: our alias only
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "apple": stopAppleBrain()   // only Switchboard's own copy
                 default: continue }

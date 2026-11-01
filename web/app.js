@@ -13,13 +13,14 @@ const ENGINES=[
  {id:'bonsai27b',name:'Bonsai 2 27B (big: ~9 GB memory)',base:'http://127.0.0.1:8096/v1'},
  {id:'lfm3text',name:'LFM3 1.7B (Liquid AI)',base:'http://127.0.0.1:8110/v1'}, // Oct 28: own llama.cpp copy; started only when picked; thinking off; long documents up to ~100K tokens
  {id:'lfm3vl',name:'LFM3-VL 2B (Liquid AI)',base:'http://127.0.0.1:8111/v1'}, // sees pictures; Auto's FIRST picture reader since Oct 28 (see visionRoute), Bonsai 4B is the backup
+ {id:'little3d',name:'Qwen3.5 4B 3D Coder',base:'http://127.0.0.1:8117/v1'}, // Nov 1: 3D scenes as one HTML page; thinking off; one alias
  {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
 const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
-const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b'};
+const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
-const isAgent=m=>/raptor|spark|bonsai-2-(4b|9b|27b)|^gemma4:e2b|^gemma-4-e2b|^ornith|qwen2\.5-coder/i.test(m); // badge = passed >=4 of 5 in bench/ (gemma2:2b: no tool support)
+const isAgent=m=>!/3d-coder/i.test(m)&&/raptor|spark|bonsai-2-(4b|9b|27b)|^gemma4:e2b|^gemma-4-e2b|^ornith|qwen2\.5-coder/i.test(m); // badge = passed >=4 of 5 in bench/ (gemma2:2b: no tool support). Nov 1: 3d-coder is chat only
 const isEmbed=m=>/embed/i.test(m)||m==='foundation';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -42,15 +43,15 @@ function agentUI(){if(S.auto){$('agent').disabled=true;const L=S.chat&&S.chat.lo
  const ok=S.sel&&isAgent(S.sel.m);$('agent').disabled=!ok;$('agentBox').className=ok?'':'off';if(!ok)$('agent').checked=false;
  $('agentNote').textContent=!S.sel?'':ok?(($('agent').checked)?'Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.':''):'Agent mode needs an agent-capable model (like Raptor). This one is chat-only.'}
 $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(S.chat.messages.length)saveChat(S.chat)}agentUI()};
-const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body};
+const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body}; // Nov 1: little3d thinking off
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
- if(eid==='lfm3text')return 114688;if(eid==='lfm3vl')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL), see ~/Models/lfm3/start.sh
+ if(eid==='lfm3text')return 114688;if(eid==='lfm3vl'||eid==='little3d')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL); Nov 1: little3d --ctx-size 32768
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
 const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(S.sel&&S.sel.e==='lfm3vl'?12000:2400)).length)/3); // a picture counts as ~800 tokens (LFM3-VL: ~4,000 at full size), not its base64 size
 const OUT_RESERVE=4096,TOOL_SCHEMA=2500;
 function roomChars(eid,m,msgs){return Math.max(2000,(ctxFor(eid,m)-OUT_RESERVE-TOOL_SCHEMA-tok(msgs))*3)}
-function maxOut(eid,m,msgs){return Math.max(1024,Math.min(16384,ctxFor(eid,m)-TOOL_SCHEMA-tok(msgs)))}
+function maxOut(eid,m,msgs){return Math.max(1024,Math.min(eid==='little3d'?30000:16384,ctxFor(eid,m)-TOOL_SCHEMA-tok(msgs)))} // Nov 1: little3d up to 30000, still capped by context left
 // History never gets silently cut: if it is too big for the model, the oldest tool results (then oldest turns) are swapped for a plain note saying so.
 function fitHistory(api,eid,m,keepFrom){api=api.map(x=>({...x}));const lim=ctxFor(eid,m)-OUT_RESERVE-TOOL_SCHEMA;
  for(let i=1;i<keepFrom&&tok(api)>lim;i++){const x=api[i];if(x.role==='tool'&&x.content.length>400)x.content='[Earlier tool result ('+x.content.length+' characters) not re-sent: too big for this model together with the rest of the chat. Call the tool again if you need it.]'}
@@ -74,17 +75,18 @@ async function digest(text,label,question,eid,m,progress,depth=0){
 function lockLabel(L){return 'Auto picked '+L.name+' ('+L.why+') · locked for this chat'}
 // ---- Beauty M1: model look (icon colours + "good for" tags). Visual only: nothing here touches routing. ----
 const BRANDS=[[/apple/i,'apple','#8DB8F0'],[/bonsai/i,'bonsai','#86CFAE'],[/raptor/i,'raptor','#B9A3EE'],[/spark/i,'spark','#F6B98A'],
+ [/3d[- ]coder|little3d/i,'gem','#C5D4F8'], // Nov 1: diamond mark (the cube-like icon already in the set); before /qwen/ so this model does not take the pink one
  [/lfm3|liquid/i,'chip','#9CCBF0'],[/gemma/i,'gem','#F2D58A'],[/qwen/i,'qwen','#F0B0D2'],[/llama/i,'llama','#C9DC96'],[/ornith/i,'bird','#9ADBE0'],[/magnitude/i,'magnet','#E7C29A']];
 const BRAND_DEFAULT='#DDD3C0';
 function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2]};return{icon:'chip',c1:BRAND_DEFAULT}}
-const goodFor=m=>/apple/i.test(m)?'quick chat':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':/lfm3-1\.7b/i.test(m)?'long documents':'';
+const goodFor=m=>/apple/i.test(m)?'quick chat':/3d-coder/i.test(m)?'3D scenes':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':/lfm3-1\.7b/i.test(m)?'long documents':''; // Nov 1: 3d-coder before coder
 function render(){agentUI();
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
  const ax=document.createElement('div');ax.className='m autorow on'+(S.auto?' sel':'');ax.innerHTML='<span class="mi" style="--c1:#F29A8A">'+IC('auto',20)+'</span><span class="mt"><span class="mn">Auto (recommended)</span><span class="mtags"><span class="badge agent">default</span></span></span><span class="led" title="Ready"></span>';ax.onclick=()=>{if(S.busy)return;S.auto=true;if(S.chat){S.chat.auto=true;S.chat.lock=null;if(S.chat.messages.length)saveChat(S.chat)}$('cur').textContent=AUTOCUR;showChat();render()};ad.appendChild(ax);$('engines').appendChild(ad);
  // Big multi-model servers keep their own heading; engines that list exactly ONE model go together under "Other".
  const MULTI=new Set(['osaurus','ollama','lmstudio']);
- const single=ENGINES.filter(e=>!MULTI.has(e.id)&&(S.models[e.id]||[]).length===1),singleIds=new Set(single.map(e=>e.id));
+ const single=ENGINES.filter(e=>!MULTI.has(e.id)&&(S.models[e.id]||[]).length===1),singleIds=new Set(single.map(e=>e.id)); // Nov 1: little3d is one alias, so it joins Other with bonsai4b/lfm3text
  const modelRow=(e,m,up,showEng)=>{const x=document.createElement('div');x.className='m '+(up?'on':'off')+(!S.auto&&S.sel&&S.sel.e===e.id&&S.sel.m===m.id?' sel':'');x.dataset.eid=e.id;
   const br=brandOf(m.id+' '+e.id),gf=goodFor(m.id);
   x.innerHTML=`<span class="mi" style="--c1:${br.c1}">${IC(br.icon,20)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span>${showEng?`<span class="msub">${esc(e.name)}</span>`:''}<span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span><span class="led" title="${up?'Ready':'Off (starts when you pick it)'}"></span>`;
@@ -170,7 +172,7 @@ async function waitUp(e,sec=300){for(let i=0;i<sec;i++){const j=await getJSON(e.
 async function ensureEngine(eid,mid){
  const e=ENGINES.find(x=>x.id===eid);
  if(!(await getJSON(e.base+'/models'))){status('Starting '+e.name+'…');await act('start',eid);S.startedByUs.add(eid);
-   if(!(await waitUp(e,(eid==='lfm3vl'||eid==='lfm3text')?60:300))){status('');return false}}
+   if(!(await waitUp(e,eid==='little3d'?180:(eid==='lfm3vl'||eid==='lfm3text')?60:300))){status('');return false}} // Nov 1: little3d 180s
  if(eid==='magnitude'&&S.magLoaded!==mid){status('Loading model into Magnitude…');await act('load','magnitude',{model:mid});S.magLoaded=mid}
  status('');return true}
 async function pick(eid,mid,keepAuto){
@@ -210,7 +212,10 @@ function decorate(d,ts,raw){d.querySelectorAll(':scope>.mtime,:scope>.cpy').forE
  const tm=fmtMsgTime(ts);if(tm){const t=document.createElement('div');t.className='mtime';t.textContent=tm;t.title=new Date(ts).toLocaleString();d.appendChild(t)}
  const b=document.createElement('button');b.type='button';b.className='cpy';b.title='Copy';b.setAttribute('aria-label','Copy this message');b.innerHTML=IC('copy',15);
  b.onclick=async e=>{e.stopPropagation();if(await copyText(rawOf(d))){b.classList.add('done');b.innerHTML=IC('check',15);b.title='Copied';setTimeout(()=>{b.classList.remove('done');b.innerHTML=IC('copy',15);b.title='Copy'},1400)}};d.appendChild(b)}
+function stripThink(t){return String(t||'').replace(/<think>[\s\S]*?<\/think>\s*/gi,'')} // Nov 1: closed <think>…</think> was left in the reply before
+function htmlReply(t){t=stripThink(t);if(!t||/```/.test(t))return t;const s=t.trim(),i=s.search(/<!doctype html\b|<html(?:\s[^>]*)?>/i);if(i<0)return t;const lead=s.slice(0,i).trim(),body=s.slice(i);if(lead.length>240||/<[a-z!]/i.test(lead))return t;if((body.match(/<\/?[a-z!][^>]*>/gi)||[]).length<4||!/<\/html\s*>|<body[\s>]/i.test(body))return t;return (lead?lead+'\n\n':'')+'```html\n'+body.trim()+'\n```'} // Nov 1: bare HTML doc (one sentence first is ok) Plays like a ```html fence
 function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
+ if(cls==='assistant')text=htmlReply(text);
  if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
  if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.innerHTML=IC(a.kind==='image'?'img':'doc',14);c.append(' '+a.name);r.appendChild(c)});d.appendChild(r)}
  if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);
@@ -222,6 +227,7 @@ window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 // ---- Auto: simple keyword rules choose the model ----
 // Oct 28: single everyday words no longer trigger by themselves. 'app', 'game', 'note' and 'find' only count in a real request (e.g. "build an app", "make a snake game", "my notes", "find the PDF"); 'code' skips area/zip/promo codes.
 const CODE_RX=/(?<!\b(?:area|zip|postal|promo|country|dress|morse|discount|coupon|access|qr|bar|pin) )\b(?:code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|snake|regex|compile|error in|sql|api|refactor|algorithm|for loop|while loop|snippet|stack ?trace|unit test|typescript|bash)\b|\b(?:build|make|create|write|develop|code|program)\b[^.?!]{0,25}\b(?:app|game)\b|\b(?:html|web|browser|video|text|python|javascript)\s+(?:app|game)\b/i;
+const THREE_D_RX=/\b3[\s-]?d\b|\bthree\.?js\b/i; // Nov 1: 3d / 3-d / 3D scene / three.js / threejs / in 3D; plain "scene" does not match
 const FILE_RX=/\b(?:pages|keynote|textedit|docx|txt|markdown|notes app|my notes|the notes|take (?:a )?notes?|add (?:a )?notes?|save (?:a )?notes?|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function chatNote(t){const n=document.createElement('div');n.className='attnote';n.textContent=t;const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight}
 function haveModel(eid){return (S.models[eid]||[]).length>0}
@@ -245,6 +251,7 @@ function visionRoute(){
  return c.length?mk(c[0].e,c[0].m,c[0].m):null}
 function autoRoute(text){
  if(hasPic()){const v=visionRoute();if(v)return v} // no picture-capable model: fall through to the usual pick; Photo Reader describes the picture (autoSwitch adds a note)
+ if(THREE_D_RX.test(text)&&haveModel('little3d'))return {e:'little3d',m:ALIAS.little3d,name:'3D Coder',agent:false,why:'3D scene'}; // Nov 1: after pictures, before coding
  const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
  const R={e:'osaurus',m:raptor?raptor.id:'raptor-0.6-4b-jang_6m',name:'Raptor',agent:false};
  if(CODE_RX.test(text)){
@@ -266,6 +273,7 @@ function appleCheck(text){
  if(S.chat&&S.chat.appleFailed)return {ok:false,why:'Apple had an error in this chat'};
  if(S.att.length)return {ok:false,why:'attachment'};
  if(S.chat&&(S.chat.messages||[]).some(m=>(m.atts&&m.atts.length)||Array.isArray(m.content)||m.role==='tool'))return {ok:false,why:'chat has attachments or tool results'};
+ if(THREE_D_RX.test(text))return {ok:false,why:'3D scene'}; // Nov 1: same refusal as coding words, so Auto never sends 3D to Apple
  if(CODE_RX.test(text))return {ok:false,why:'coding'};
  if(FILE_RX.test(text)||ACTION_RX.test(text))return {ok:false,why:'files or app control'};
  if(REASON_RX.test(text))return {ok:false,why:'long reasoning'};
@@ -331,6 +339,7 @@ async function pictureGate(cam){
   chatNote((was?was+' can\'t see pictures, so ':'')+'switched to '+w.name+'.');return true}
  if(!v&&!(await photoUp())){addMsg('err',PHOTO_DEAD);return false}
  return true}
+const LITTLE3D_SYS='Use only the Three.js core ES module from https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js. Do not import addons or legacy examples/js paths; implement any camera controls directly inside the HTML. Reply with one complete, self-contained HTML file in a ```html code block, with lighting, gentle animation and simple mouse-drag orbit controls written by hand.'; // Nov 1
 async function send(text){
  if(!S.chat)newChat();
  if(!S.busy&&!S.switching&&!S.att.length){const lc=await localCommand(text);if(lc!==null)return lc}
@@ -360,7 +369,8 @@ async function send(text){
    const notes=await digest(text,'your message','Understand and answer the user\'s message; keep every instruction and question exactly',S.sel.e,S.sel.m,t=>out.firstChild.textContent=t);
    const edge=Math.min(3000,Math.floor(room*0.15));
    hist[hist.length-1]={role:'user',content:'[My message was '+text.length.toLocaleString()+' characters, more than you can hold at once, so the app read all of it in parts. Notes from every part, in order:]\n'+notes+'\n\n[Exact beginning:]\n'+text.slice(0,edge)+'\n\n[Exact ending:]\n'+text.slice(-edge)+(um.attText?'\n\n'+um.attText:'')}}
-  hist=fitHistory([{role:'system',content:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(1);
+  const l3=S.sel.e==='little3d'&&!ch.messages.some(m=>m.role==='system'); // Nov 1: prepend only when the chat has no system message of its own
+  hist=fitHistory([{role:'system',content:l3?LITTLE3D_SYS:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(l3?0:1);
   const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};
   thinkOff(S.sel.e,body);
   pending[id]=ev=>{
@@ -374,7 +384,7 @@ async function send(text){
      if(errored&&S.auto&&S.sel&&S.sel.e==='lfm3vl'&&ch.lock&&ch.lock.e==='lfm3vl'&&!ch.lfmFailed&&!gotAny&&(um.atts||[]).every(x=>x.kind==='image'&&S.imgCache[x.path])){ // LFM3-VL errored: redo this turn once on Bonsai, with the same pictures put back
        S.att=(um.atts||[]).map(x=>({...x,dataURL:S.imgCache[x.path]}));renderAtts();ch.lfmFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
        status('LFM3-VL had a problem, trying Bonsai…');resolve(send(text));return}
-     if(!errored){if(!gotAny)out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};ch.messages.push(mo);if(/```/.test(acc)){out.textContent='';richText(out,acc,mo)}else out.textContent=acc;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch)}}
+     if(!errored){acc=stripThink(acc);if(!gotAny||!acc.trim())out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};ch.messages.push(mo);const shown=htmlReply(acc);if(/```/.test(shown)){out.textContent='';richText(out,shown,mo)}else out.textContent=shown;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
@@ -811,6 +821,8 @@ const _stRoute=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='route'
   {name:'file command',text:'Open my Downloads folder and find the PDF from yesterday'},
   {name:'app command',text:'Make a new Pages document called Ideas'},
   {name:'coding ask',text:'Write a python script that renames photos'},
+  {name:'3d scene',text:'make a 3D scene of a lighthouse on a cliff at night'},
+  {name:'plain scene word',text:'describe the opening scene of Hamlet'},
   {name:'long reasoning',text:'Compare the pros and cons of renting vs buying, step by step'},
   {name:'Apple-locked chat turns into coding',text:'Can you debug this javascript function?',lock:L},
   {name:'Apple-locked chat still short',text:'Thanks, and one more fun fact?',lock:L}];
@@ -1042,3 +1054,10 @@ const _stSearch=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='searc
  let ans='';if(ask){const was=!!(await getJSON('http://127.0.0.1:8110/v1/models'));$('sAsk').value=ask;$('sAskF').requestSubmit();await sleep(300);for(let i=0;i<240&&SR.asking;i++)await sleep(500);ans=$('sAns').textContent;if(!was)await act('stop','lfm3text')}
  await sleep(400);$('searchView').scrollTop=0;
  return JSON.stringify({state:st,folders:[...document.querySelectorAll('.sfold')].map(d=>d.textContent),results:SR.results.map(r=>r.name),searchSecs:secs,answer:ans})};
+// selftest scene3d (Nov 1): one real Auto request (e.g. a 3D scene), then press Play on the reply's page (saves it to Switchboard Creations and opens it).
+const _st3d=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='scene3d')return _st3d(m,e,x);await boot;await sleep(1500);
+ S.auto=true;S.chat=null;newChat();const t0=Date.now();await send(x||'make a 3D scene of a lighthouse on a cliff at night');const secs=(Date.now()-t0)/1000;
+ const last=[...document.querySelectorAll('#chat .msg.assistant')].pop();const via=last?(last.querySelector('.via')||{}).textContent||'':'';
+ const pb=last&&last.querySelector('.playbtn');let saved='';if(pb){pb.click();for(let i=0;i<40&&!saved;i++){await sleep(250);saved=$('status').textContent}}
+ const mo=S.chat&&S.chat.messages.filter(z=>z.role==='assistant').pop();
+ return JSON.stringify({secs,lock:S.chat&&S.chat.lock,via,hasPlay:!!pb,status:saved,savedPath:mo&&mo.saved?Object.values(mo.saved)[0]:'',chars:mo?String(mo.content).length:0})};
