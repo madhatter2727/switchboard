@@ -219,6 +219,7 @@ function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))
  if(cls==='assistant'&&/```/.test(text||''))richText(d,text,mo);else d.textContent=text;
  if(mo&&mo.atts&&mo.atts.length){const r=document.createElement('div');r.className='attrow';mo.atts.forEach(a=>{const c=document.createElement('span');c.className='chip';c.innerHTML=IC(a.kind==='image'?'img':'doc',14);c.append(' '+a.name);r.appendChild(c)});d.appendChild(r)}
  if(mo&&mo.webFiles)mo.webFiles.forEach(p=>d.appendChild(playRow(p)));tagVia(d,via);
+ if(cls==='assistant'&&isL3(mo))l3Attach(d,mo,false); // Nov 1: Fix it on 3D results from history
  if(cls==='user'||cls==='assistant'){let ts=mo&&mo.ts;if(!ts&&!S.hist){ts=Date.now();if(mo)mo.ts=ts}if(text||mo)decorate(d,ts,mo&&typeof mo.content==='string'?mo.content:text)}
  c.appendChild(d);c.scrollTop=c.scrollHeight;return d}
 let SID=0;const pending={};
@@ -384,7 +385,7 @@ async function send(text){
      if(errored&&S.auto&&S.sel&&S.sel.e==='lfm3vl'&&ch.lock&&ch.lock.e==='lfm3vl'&&!ch.lfmFailed&&!gotAny&&(um.atts||[]).every(x=>x.kind==='image'&&S.imgCache[x.path])){ // LFM3-VL errored: redo this turn once on Bonsai, with the same pictures put back
        S.att=(um.atts||[]).map(x=>({...x,dataURL:S.imgCache[x.path]}));renderAtts();ch.lfmFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
        status('LFM3-VL had a problem, trying Bonsai…');resolve(send(text));return}
-     if(!errored){acc=stripThink(acc);if(!gotAny||!acc.trim())out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};ch.messages.push(mo);const shown=htmlReply(acc);if(/```/.test(shown)){out.textContent='';richText(out,shown,mo)}else out.textContent=shown;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch)}}
+     if(!errored){acc=stripThink(acc);if(!gotAny||!acc.trim())out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};if(S.sel&&S.sel.e==='little3d')mo.l3=true;ch.messages.push(mo);const shown=htmlReply(acc);if(/```/.test(shown)){out.textContent='';richText(out,shown,mo)}else out.textContent=shown;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch);if(mo.l3)setTimeout(()=>l3Attach(out,mo,true),0)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
@@ -1061,3 +1062,74 @@ const _st3d=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='scene3d')
  const pb=last&&last.querySelector('.playbtn');let saved='';if(pb){pb.click();for(let i=0;i<40&&!saved;i++){await sleep(250);saved=$('status').textContent}}
  const mo=S.chat&&S.chat.messages.filter(z=>z.role==='assistant').pop();
  return JSON.stringify({secs,lock:S.chat&&S.chat.lock,via,hasPlay:!!pb,status:saved,savedPath:mo&&mo.saved?Object.values(mo.saved)[0]:'',chars:mo?String(mo.content).length:0})};
+// ---- 3D scenes: in-chat preview check + auto-fix + Fix it (Nov 1). Same flow as Little 3D Scene Maker (6d25f8e): a scene that throws
+// a JS error is sent back to the 3D Coder with the error and the code, up to 2 tries; a manual Fix it button sits on every 3D result. ----
+const L3_WATCH="<script>(function(){var sent=0;function send(m,l,c){if(sent++<3)parent.postMessage({sb3dError:String(m).slice(0,200),line:l|0,column:c|0},'*');}"+
+ "addEventListener('error',function(e){send(e.message||'Unknown error',e.lineno,e.colno);});"+
+ "addEventListener('unhandledrejection',function(e){send((e.reason&&e.reason.message)||e.reason,0,0);});})();<\/script>"; // one line, no newline: error line numbers match the code
+const L3_TRIES=2,L3_WAIT=4500;
+function l3Watch(html){const m=html.match(/<head[^>]*>/i);return m?html.replace(m[0],m[0]+L3_WATCH):L3_WATCH+html}
+function isL3(mo){return !!mo&&mo.role==='assistant'&&(mo.l3||/\b3D Coder\b/.test(mo.via||''))}
+function l3Code(mo){const m=htmlReply(String(mo.content||'')).match(/```html[^\n]*\n([\s\S]*?)(?:```|$)/i);return m?m[1]:null}
+function l3Around(code,line){if(!line)return 'unknown';const L=code.split('\n');if(line<1||line>L.length)return 'unknown';const out=[];for(let i=Math.max(1,line-3);i<=Math.min(L.length,line+3);i++)out.push(i+'|'+L[i-1]);return out.join('\n')}
+function l3FixMsg(code,err){return 'This Three.js scene crashes in the browser with this error:\n'+err.message+' (line '+(err.line|0)+', column '+(err.column|0)+')\n\nThe broken line and the lines around it:\n'+l3Around(code,err.line|0)+
+ '\n\nFix the bug. Reply with SEARCH/REPLACE edits only, in this exact format, one or more blocks:\n<<<<<<< SEARCH\n<exact lines copied from the code>\n=======\n<replacement lines>\n>>>>>>> REPLACE\n\nKeep each SEARCH short (a few lines) and copied exactly. Do not rewrite the whole file.\n\nHere is the full code:\n```html\n'+code+'\n```'}
+function l3Replace(code,search,repl){if(!search)return null;const at=code.indexOf(search);if(at>=0)return code.slice(0,at)+repl+code.slice(at+search.length);
+ const want=search.split('\n'),L=code.split('\n'),n=want.length;if(!n||n>L.length)return null;
+ for(let i=0;i<=L.length-n;i++){let ok=true;for(let j=0;j<n;j++)if(L[i+j].trim()!==want[j].trim()){ok=false;break}if(ok)return L.slice(0,i).concat(repl.split('\n'),L.slice(i+n)).join('\n')}return null}
+function l3Apply(code,reply){const t=stripThink(reply).replace(/\r\n/g,'\n');const re=/<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE/g;let next=code,n=0,m;
+ while((m=re.exec(t))){const h=l3Replace(next,m[1],m[2]);if(h!=null){next=h;n++}}
+ if(!n){const f=htmlReply(t).match(/```html[^\n]*\n([\s\S]*?)(?:```|$)/i);if(f&&/<\/html>|<body[\s>]/i.test(f[1])&&f[1].length>200)return{code:f[1],how:'full'}}
+ return n?{code:next,how:n+' edit'+(n===1?'':'s')}:null}
+const L3_FRAMES=new Map();
+window.addEventListener('message',ev=>{const d=ev.data;if(!d||d.sb3dError==null)return;const f=L3_FRAMES.get(ev.source);if(f&&!f.err)f.err={message:String(d.sb3dError),line:d.line|0,column:d.column|0}});
+function l3Fmt(ms){const s=Math.round(ms/1000);return s<60?s+' s':Math.floor(s/60)+' min '+(s%60)+' s'}
+// Loads the scene into the in-chat preview and waits for it to settle. Resolves to the first error, or null.
+function l3Check(ui,code){return new Promise(res=>{document.querySelectorAll('#chat .p3d iframe').forEach(x=>{if(x!==ui.frame){L3_FRAMES.delete(x.contentWindow);x.remove()}});
+ document.querySelectorAll('#chat .p3d').forEach(p=>{if(!p.querySelector('iframe'))p.hidden=true});
+ if(ui.frame){L3_FRAMES.delete(ui.frame.contentWindow);ui.frame.remove()}
+ const fr=document.createElement('iframe');fr.setAttribute('sandbox','allow-scripts');fr.title='3D scene preview';ui.box.hidden=false;ui.box.appendChild(fr);ui.frame=fr;
+ const st={err:null};L3_FRAMES.set(fr.contentWindow,st);let done=false;const end=()=>{if(done)return;done=true;res(st.err)};
+ fr.onload=()=>setTimeout(end,L3_WAIT);setTimeout(end,L3_WAIT+15000);fr.srcdoc=l3Watch(code)})}
+function l3Status(ui,t,bad){ui.st.textContent=t;ui.st.classList.toggle('bad',!!bad)}
+async function l3FixOnce(ui,code,err,n,cap){const t0=Date.now();l3Status(ui,'Fixing a bug, try '+n+' of '+cap+'… ('+err.message+')');
+ const tick=setInterval(()=>l3Status(ui,'Fixing a bug, try '+n+' of '+cap+'… '+l3Fmt(Date.now()-t0)),1000);
+ try{if(!(await ensureEngine('little3d',ALIAS.little3d)))throw new Error('the 3D model would not start');S.stopAgent=false;
+  const reply=await llm('little3d',ALIAS.little3d,[{role:'system',content:LITTLE3D_SYS},{role:'user',content:l3FixMsg(code,err)}],16000);return l3Apply(code,reply)}
+ finally{clearInterval(tick)}}
+function l3Swap(ui,mo,oldCode,newCode){const c=String(mo.content||'');mo.content=c.includes(oldCode)?c.replace(oldCode,()=>newCode):'```html\n'+newCode+'\n```';mo.saved={};mo.fixes=(mo.fixes||0)+1;
+ const old=ui.d.querySelector('.code');const nb=codeBlock('html',newCode,mo,0);if(old)old.replaceWith(nb);if(S.chat&&S.chat.messages.includes(mo))saveChat(S.chat)}
+// auto: check, then fix up to 2 tries. Manual (Fix it): check, then 1 try (or say there's no error).
+async function l3Run(ui,mo,auto){if(ui.busy)return ui.last;ui.busy=true;ui.fix.disabled=true;const t0=Date.now();const wasBusy=S.busy;S.busy=true;$('send').disabled=true;
+ const r={auto,tries:0,fixed:false,firstError:null,lastError:null,how:[],ms:0};
+ try{let code=l3Code(mo);if(!code){l3Status(ui,'No scene code found in this reply.',true);return r}
+  l3Status(ui,'Checking the scene…');let err=await l3Check(ui,code);r.firstError=err&&err.message;
+  if(!err){l3Status(ui,auto?'Scene runs with no errors.':'No errors found in the preview.');return r}
+  const cap=auto?L3_TRIES:1;
+  while(err&&r.tries<cap){r.tries++;let out=null;try{out=await l3FixOnce(ui,code,err,r.tries,cap)}catch(e){l3Status(ui,'Could not fix: '+e.message,true);r.lastError=e.message;return r}
+   if(!out){r.how.push('no usable edits');continue}
+   r.how.push(out.how);l3Swap(ui,mo,code,out.code);code=out.code;l3Status(ui,'Checking the fixed scene…');err=await l3Check(ui,code)}
+  r.lastError=err&&err.message;r.fixed=!err;
+  if(!err)l3Status(ui,'Fixed after '+r.tries+(r.tries===1?' try':' tries')+' · '+l3Fmt(Date.now()-t0));
+  else l3Status(ui,'Still broken after '+r.tries+(r.tries===1?' fix':' fixes')+': '+err.message+'. Press Fix it to try again, or ask for a fresh scene.',true);
+  return r}
+ finally{r.ms=Date.now()-t0;ui.busy=false;ui.fix.disabled=false;S.busy=wasBusy;$('send').disabled=false;ui.last=r}}
+function l3Attach(d,mo,auto){if(!isL3(mo)||!l3Code(mo))return null;d.querySelectorAll(':scope>.r3d,:scope>.p3d').forEach(x=>x.remove());
+ const box=document.createElement('div');box.className='p3d';box.hidden=true;
+ const row=document.createElement('div');row.className='r3d';const fix=document.createElement('button');fix.type='button';fix.className='fix3d';fix.textContent='Fix it';fix.title='Run the scene here and, if it shows an error, ask the 3D model to fix it';
+ const st=document.createElement('span');st.className='sub';row.append(fix,st);
+ const ui={d,box,row,fix,st,frame:null,busy:false,last:null};d._l3=ui;
+ const at=d.querySelector(':scope>.via');if(at){d.insertBefore(box,at);d.insertBefore(row,at)}else d.append(box,row);
+ fix.onclick=()=>l3Run(ui,mo,false);
+ if(auto)ui.p=l3Run(ui,mo,true);return ui}
+// selftest fix3d: real Auto 3D request (auto-check runs), then a forced bug in that scene to prove auto-fix, then Play.
+const _stf3=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='fix3d')return _stf3(m,e,x);await boot;await sleep(1500);const out={};
+ S.auto=true;S.chat=null;newChat();let t0=Date.now();await send(x||'make a 3D scene of a lighthouse on a cliff at night');out.genSecs=(Date.now()-t0)/1000;await sleep(200);
+ const d=[...document.querySelectorAll('#chat .msg.assistant')].pop();const ui=d&&d._l3;out.via=d?(d.querySelector('.via')||{}).textContent:'';out.hasFixBtn=!!(ui&&ui.fix);
+ if(!ui)return JSON.stringify(out);const r1=await ui.p;out.firstRun=r1;out.statusAfterFirst=ui.st.textContent;
+ const mo=S.chat.messages.filter(z=>z.role==='assistant').pop();let code=l3Code(mo);
+ const bug=code.includes('new THREE.Mesh(')?['new THREE.Mesh(','new THREE.Meshh(']:['new THREE.','new THREE.Nope_'];out.forcedBug=bug[1];
+ const broken=code.replace(bug[0],bug[1]);l3Swap(ui,mo,code,broken);mo.fixes=0;
+ t0=Date.now();const r2=await l3Run(ui,mo,true);out.forced=r2;out.forcedSecs=(Date.now()-t0)/1000;out.statusAfterForced=ui.st.textContent;out.bugGone=!l3Code(mo).includes(bug[1]);
+ await sleep(1500);const pb=d.querySelector('.playbtn');let s='';if(pb){pb.click();for(let i=0;i<40&&!/Saved as|Could not/.test(s);i++){await sleep(250);s=$('status').textContent}}out.play=s;
+ d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};

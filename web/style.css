@@ -314,3 +314,9 @@ body.search main>header,body.search #agentNote,body.search #autoNote,body.search
 #sAns .via{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
 .nhead .nrow{flex-wrap:nowrap}
 #searchView .nrow button{white-space:nowrap}
+/* Nov 1: 3D scene preview + Fix it */
+.p3d{margin:10px 0 4px;border:2px solid var(--line);border-radius:14px;overflow:hidden;background:#0b1020;height:300px}
+.p3d iframe{display:block;width:100%;height:100%;border:0}
+.r3d{display:flex;gap:10px;align-items:center;margin:4px 0 6px;font-size:13px}
+.r3d .fix3d{padding:3px 14px;font-size:12px;border-radius:9px}
+.r3d .sub.bad{color:#B4442E}
