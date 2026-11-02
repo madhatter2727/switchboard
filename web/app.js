@@ -20,7 +20,8 @@ const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,st
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
-const isAgent=m=>!/3d-coder/i.test(m)&&/raptor|spark|bonsai-2-(4b|9b|27b)|^gemma4:e2b|^gemma-4-e2b|^ornith|qwen2\.5-coder/i.test(m); // badge = passed >=4 of 5 in bench/ (gemma2:2b: no tool support). Nov 1: 3d-coder is chat only
+const MANUAL_ONLY_RX=/^qwen3\.5-9b-mlx-4bit$/i; // Nov 2 (Tara): Osaurus Qwen3.5 9B, picked by hand only; sees pictures and can use the file/folder tools; never chosen by Auto
+const isAgent=m=>!/3d-coder/i.test(m)&&(MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)|^gemma4:e2b|^gemma-4-e2b|^ornith|qwen2\.5-coder/i.test(m)); // badge = passed >=4 of 5 in bench/ (gemma2:2b: no tool support). Nov 1: 3d-coder is chat only
 const isEmbed=m=>/embed/i.test(m)||m==='foundation';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -44,7 +45,7 @@ function agentUI(){if(S.auto){$('agent').disabled=true;const L=S.chat&&S.chat.lo
  $('agentNote').textContent=!S.sel?'':ok?(($('agent').checked)?'Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.':''):'Agent mode needs an agent-capable model (like Raptor). This one is chat-only.'}
 $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(S.chat.messages.length)saveChat(S.chat)}agentUI()};
 const L3_THINK_BUDGET=10000; // Nov 1: thinking capped so ~20K tokens stay for the page (a 30K think-only run wrote no page)
-const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid)){const th=eid==='little3d'&&!!S.think3d&&body.stream===true;body.chat_template_kwargs={enable_thinking:th};if(th)body.thinking_budget_tokens=L3_THINK_BUDGET}if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body}; // Nov 1: little3d thinking off
+const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid)){const th=eid==='little3d'&&!!S.think3d&&body.stream===true;body.chat_template_kwargs={enable_thinking:th};if(th)body.thinking_budget_tokens=L3_THINK_BUDGET}if(/raptor/i.test(body.model||''))body.reasoning_effort='none';if(MANUAL_ONLY_RX.test(body.model||''))body.chat_template_kwargs={enable_thinking:false};return body}; // Nov 1: little3d thinking off
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
  if(eid==='lfm3text')return 114688;if(eid==='lfm3vl'||eid==='little3d')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL); Nov 1: little3d --ctx-size 32768
@@ -253,7 +254,7 @@ function visionRoute(){
  if(haveModel('bonsai9b'))return mk('bonsai9b',ALIAS.bonsai9b,'Bonsai 9B');
  const size=id=>{const x=/(\d+(?:\.\d+)?)b/i.exec(id);return x?parseFloat(x[1]):0};
  const c=[];ENGINES.forEach(e=>{if(ALIAS[e.id])return; // Bonsai handled above; Spark/Apple/27B do not see pictures
-  (S.models[e.id]||[]).forEach(m=>{if(isVision(m.id))c.push({e:e.id,m:m.id,g4:/gemma-?4/i.test(m.id)?1:0,up:S.up[e.id]?1:0,sz:size(m.id)})})});
+  (S.models[e.id]||[]).forEach(m=>{if(isVision(m.id)&&!MANUAL_ONLY_RX.test(m.id))c.push({e:e.id,m:m.id,g4:/gemma-?4/i.test(m.id)?1:0,up:S.up[e.id]?1:0,sz:size(m.id)})})});
  c.sort((a,b)=>b.g4-a.g4||b.up-a.up||b.sz-a.sz);
  return c.length?mk(c[0].e,c[0].m,c[0].m):null}
 function autoRoute(text){
@@ -720,7 +721,7 @@ window.__selftest=async(mode,eid,mid)=>{if(mode!=='show')return _st9(mode,eid,mi
 
 // ---- M3 (Oct 21): attachments. Paste (Cmd+V), drag and drop, or 📎. Pictures go to models that can see; documents are read in full. ----
 S.att=[];
-const isVision=m=>/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl|lfm3-vl|bonsai-2-(4b|9b)/i.test(m||''); // Bonsai 2 4B/9B see pictures since Oct 21 (mmproj added in start.sh)
+const isVision=m=>MANUAL_ONLY_RX.test(m||'')||/gemma4|gemma-4|gemma3|llava|-vl\b|vision|minicpm-v|moondream|qwen2\.5vl|qwen3-vl|lfm3-vl|bonsai-2-(4b|9b)/i.test(m||''); // Bonsai 2 4B/9B see pictures since Oct 21 (mmproj added in start.sh)
 const apiText=m=>m.attText?(m.content+'\n\n'+m.attText):m.content;
 function kb(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB'}
 function renderAtts(){const b=$('atts');b.innerHTML='';
@@ -1196,3 +1197,7 @@ const _ste2=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='l3e2e')re
  const ui=d&&d._l3;if(!ui){out.noL3=true;out.reply=(d&&d.textContent||'').slice(0,300);return JSON.stringify(out)}
  out.check=await ui.p;out.status=ui.st.textContent;out.totalSecs=Math.round((Date.now()-t0)/1000);
  const mo=S.chat.messages.filter(z=>z.role==='assistant').pop();out.code=l3Code(mo);out.chatId=S.chat.id;d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};
+// selftest agentask (Nov 2): e = engine@model, x = a request; Agent mode on, one real send, returns the tool steps.
+const _stag=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='agentask')return _stag(m,e,x);await boot;await sleep(1500);const out={};const [eid,mid]=e.split('@');
+ S.chat=null;newChat();await pick(eid,mid);out.agentAllowed=!$('agent').disabled;$('agent').checked=true;agentUI();const t=Date.now();out.reply=String(await send(x)).slice(0,600);out.ms=Date.now()-t;
+ out.model=S.sel&&S.sel.m;out.lastBody=S.lastBody||'';out.steps=S.chat.messages.filter(z=>z.role==='step').map(z=>z.text+' -> '+String(z.result).slice(0,160));return JSON.stringify(out,null,1)};
