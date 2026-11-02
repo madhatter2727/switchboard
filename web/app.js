@@ -43,7 +43,8 @@ function agentUI(){if(S.auto){$('agent').disabled=true;const L=S.chat&&S.chat.lo
  const ok=S.sel&&isAgent(S.sel.m);$('agent').disabled=!ok;$('agentBox').className=ok?'':'off';if(!ok)$('agent').checked=false;
  $('agentNote').textContent=!S.sel?'':ok?(($('agent').checked)?'Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.':''):'Agent mode needs an agent-capable model (like Raptor). This one is chat-only.'}
 $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(S.chat.messages.length)saveChat(S.chat)}agentUI()};
-const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid))body.chat_template_kwargs={enable_thinking:false};if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body}; // Nov 1: little3d thinking off
+const L3_THINK_BUDGET=10000; // Nov 1: thinking capped so ~20K tokens stay for the page (a 30K think-only run wrote no page)
+const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid)){const th=eid==='little3d'&&!!S.think3d&&body.stream===true;body.chat_template_kwargs={enable_thinking:th};if(th)body.thinking_budget_tokens=L3_THINK_BUDGET}if(/raptor/i.test(body.model||''))body.reasoning_effort='none';return body}; // Nov 1: little3d thinking off
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
  if(eid==='lfm3text')return 114688;if(eid==='lfm3vl'||eid==='little3d')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL); Nov 1: little3d --ctx-size 32768
@@ -212,7 +213,7 @@ function decorate(d,ts,raw){d.querySelectorAll(':scope>.mtime,:scope>.cpy').forE
  const tm=fmtMsgTime(ts);if(tm){const t=document.createElement('div');t.className='mtime';t.textContent=tm;t.title=new Date(ts).toLocaleString();d.appendChild(t)}
  const b=document.createElement('button');b.type='button';b.className='cpy';b.title='Copy';b.setAttribute('aria-label','Copy this message');b.innerHTML=IC('copy',15);
  b.onclick=async e=>{e.stopPropagation();if(await copyText(rawOf(d))){b.classList.add('done');b.innerHTML=IC('check',15);b.title='Copied';setTimeout(()=>{b.classList.remove('done');b.innerHTML=IC('copy',15);b.title='Copy'},1400)}};d.appendChild(b)}
-function stripThink(t){return String(t||'').replace(/<think>[\s\S]*?<\/think>\s*/gi,'')} // Nov 1: closed <think>…</think> was left in the reply before
+function stripThink(t){t=String(t||'').replace(/<think>[\s\S]*?<\/think>\s*/gi,'');const k=t.toLowerCase().lastIndexOf('</think>');return k>=0?t.slice(k+8).replace(/^\s+/,''):t} // Nov 1: closed <think>…</think> was left in the reply before
 function htmlReply(t){t=stripThink(t);if(!t||/```/.test(t))return t;const s=t.trim(),i=s.search(/<!doctype html\b|<html(?:\s[^>]*)?>/i);if(i<0)return t;const lead=s.slice(0,i).trim(),body=s.slice(i);if(lead.length>240||/<[a-z!]/i.test(lead))return t;if((body.match(/<\/?[a-z!][^>]*>/gi)||[]).length<4||!/<\/html\s*>|<body[\s>]/i.test(body))return t;return (lead?lead+'\n\n':'')+'```html\n'+body.trim()+'\n```'} // Nov 1: bare HTML doc (one sentence first is ok) Plays like a ```html fence
 function addMsg(cls,text,via,mo){const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';const d=document.createElement('div');d.className='msg '+cls;
  if(cls==='assistant')text=htmlReply(text);
@@ -363,7 +364,7 @@ async function send(text){
  saveChat(ch);const ub=addMsg('user',text,undefined,um);showPreNote();
  const out=addMsg('assistant','');out.innerHTML='<span class="think">Thinking…</span>';
  return new Promise(async resolve=>{try{
-  const id=++SID;let acc='',gotAny=false,errored=false;S.cur=id;
+  const id=++SID;let acc='',gotAny=false,errored=false,thinkN=0;const t0s=Date.now();S.cur=id;
   await loadImgs(ch.messages);let hist=ch.messages.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,content:imgMsg(m,apiText(m))}));
   const room=roomChars(S.sel.e,S.sel.m,[]);
   if(text.length>room*0.7){out.innerHTML='<span class="think">Your message is long ('+text.length.toLocaleString()+' characters). Reading it in parts…</span>';S.stopAgent=false;
@@ -373,10 +374,10 @@ async function send(text){
   const l3=S.sel.e==='little3d'&&!ch.messages.some(m=>m.role==='system'); // Nov 1: prepend only when the chat has no system message of its own
   hist=fitHistory([{role:'system',content:l3?LITTLE3D_SYS:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(l3?0:1);
   const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};
-  thinkOff(S.sel.e,body);
+  thinkOff(S.sel.e,body);S.lastBody=JSON.stringify(body);const l3think=!!(body.chat_template_kwargs&&body.chat_template_kwargs.enable_thinking);
   pending[id]=ev=>{
    if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
-     try{const o=JSON.parse(j);const dl=o.choices?.[0]?.delta||{};if(dl.content){acc+=dl.content;gotAny=true;if(!S.raf)S.raf=requestAnimationFrame(()=>{S.raf=0;if(pending[id]){out.textContent=acc;$('chat').scrollTop=1e9}})}}catch{}}
+     try{const o=JSON.parse(j);const dl=o.choices?.[0]?.delta||{};if(dl.reasoning_content&&!acc){thinkN+=dl.reasoning_content.length;l3Thinking(out,t0s,thinkN)}if(dl.content){acc+=dl.content;gotAny=true;if(!S.raf)S.raf=requestAnimationFrame(()=>{S.raf=0;if(pending[id]){if(/<think>/i.test(acc)&&!/<\/think>/i.test(acc)){l3Thinking(out,t0s,acc.length);return}out.textContent=stripThink(acc);$('chat').scrollTop=1e9}})}}catch{}}
    else if(ev.type==='error'){errored=true;out.className='msg err';out.textContent=ev.text}
    else if(ev.type==='done'){delete pending[id];
      if(errored&&S.auto&&S.sel&&S.sel.e==='apple'&&ch.lock&&ch.lock.e==='apple'&&!ch.appleFailed&&!gotAny){ // Apple errored: redo this turn once on the usual model
@@ -385,7 +386,7 @@ async function send(text){
      if(errored&&S.auto&&S.sel&&S.sel.e==='lfm3vl'&&ch.lock&&ch.lock.e==='lfm3vl'&&!ch.lfmFailed&&!gotAny&&(um.atts||[]).every(x=>x.kind==='image'&&S.imgCache[x.path])){ // LFM3-VL errored: redo this turn once on Bonsai, with the same pictures put back
        S.att=(um.atts||[]).map(x=>({...x,dataURL:S.imgCache[x.path]}));renderAtts();ch.lfmFailed=true;ch.lock=null;const k=ch.messages.lastIndexOf(um);if(k>=0)ch.messages.splice(k,1);ub.remove();out.remove();S.busy=false;$('send').hidden=false;$('stop').hidden=true;
        status('LFM3-VL had a problem, trying Bonsai…');resolve(send(text));return}
-     if(!errored){acc=stripThink(acc);if(!gotAny||!acc.trim())out.textContent='(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};if(S.sel&&S.sel.e==='little3d')mo.l3=true;ch.messages.push(mo);const shown=htmlReply(acc);if(/```/.test(shown)){out.textContent='';richText(out,shown,mo)}else out.textContent=shown;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch);if(mo.l3)setTimeout(()=>l3Attach(out,mo,true),0)}}
+     if(!errored){acc=stripThink(acc);if(S.sel&&S.sel.e==='little3d')via=(via?via+' · ':'')+(l3think?'Think harder':'Quick mode')+' · '+l3Fmt(Date.now()-t0s);if(!gotAny||!acc.trim())out.textContent=l3think?'The 3D Coder thought for '+l3Fmt(Date.now()-t0s)+' but ran out of room before writing the scene. Try again, or turn Think harder off for a quick scene.':'(no answer came back)';else{const mo={role:'assistant',content:acc,via:via||undefined,ts:Date.now()};if(S.sel&&S.sel.e==='little3d')mo.l3=true;ch.messages.push(mo);const shown=htmlReply(acc);if(/```/.test(shown)){out.textContent='';richText(out,shown,mo)}else out.textContent=shown;tagVia(out,via);decorate(out,mo.ts,acc);saveChat(ch);if(mo.l3)setTimeout(()=>l3Attach(out,mo,true),0)}}
      S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve(acc)}};
   window.webkit.messageHandlers.stream.postMessage({id,url:e.base+'/chat/completions',body:JSON.stringify(body)});}catch(err){out.className='msg err';out.textContent='Could not finish reading your long message: '+err.message;S.busy=false;$('send').hidden=false;$('stop').hidden=true;resolve('')}
  })}
@@ -1111,7 +1112,7 @@ async function l3Run(ui,mo,auto){if(ui.busy)return ui.last;ui.busy=true;ui.fix.d
    r.how.push(out.how);l3Swap(ui,mo,code,out.code);code=out.code;l3Status(ui,'Checking the fixed scene…');err=await l3Check(ui,code)}
   r.lastError=err&&err.message;r.fixed=!err;
   if(!err)l3Status(ui,'Fixed after '+r.tries+(r.tries===1?' try':' tries')+' · '+l3Fmt(Date.now()-t0));
-  else l3Status(ui,'Still broken after '+r.tries+(r.tries===1?' fix':' fixes')+': '+err.message+'. Press Fix it to try again, or ask for a fresh scene.',true);
+  else l3Status(ui,'Still broken after '+r.tries+(r.tries===1?' fix':' fixes')+': '+err.message.replace(/\.+$/,'')+'. Press Fix it to try again, or ask for a fresh scene.',true);
   return r}
  finally{r.ms=Date.now()-t0;ui.busy=false;ui.fix.disabled=false;S.busy=wasBusy;$('send').disabled=false;ui.last=r}}
 function l3Attach(d,mo,auto){if(!isL3(mo)||!l3Code(mo))return null;d.querySelectorAll(':scope>.r3d,:scope>.p3d').forEach(x=>x.remove());
@@ -1133,3 +1134,25 @@ const _stf3=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='fix3d')re
  t0=Date.now();const r2=await l3Run(ui,mo,true);out.forced=r2;out.forcedSecs=(Date.now()-t0)/1000;out.statusAfterForced=ui.st.textContent;out.bugGone=!l3Code(mo).includes(bug[1]);
  await sleep(1500);const pb=d.querySelector('.playbtn');let s='';if(pb){pb.click();for(let i=0;i<40&&!/Saved as|Could not/.test(s);i++){await sleep(250);s=$('status').textContent}}out.play=s;
  d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};
+
+// ---- 3D Coder: Think harder toggle (Nov 1). OFF = quick (default). ON = thinking for 3D Coder chat replies only; remembered. ----
+function l3Thinking(out,t0,n){out.innerHTML='<span class="think">Thinking harder… '+l3Fmt(Date.now()-t0)+(n?' · '+Math.round(n/1000)+'k characters of notes':'')+'</span>'}
+function thinkUI(){const b=$('thinkBox');if(!b)return;const L=S.chat&&S.chat.lock;
+ const show=(S.sel&&S.sel.e==='little3d'&&(!S.auto||(L&&L.e==='little3d')))||(S.auto&&(L?L.e==='little3d':THREE_D_RX.test($('input').value||'')));
+ b.hidden=!show;const on=!!S.think3d;$('think3d').checked=on;b.classList.toggle('on',on);b.querySelector('span').textContent=on?'Think harder ON (slower, ~20 min)':'Think harder (slower, ~20 min)'}
+(()=>{const hr=document.querySelector('header .hr');if(!hr)return;const l=document.createElement('label');l.id='thinkBox';l.hidden=true;l.title='3D Coder only. OFF = quick mode (about 3 min). ON = the model thinks first (up to 10,000 tokens), about 20 min on this Air. Fixes stay quick.';
+ l.innerHTML='<input type="checkbox" id="think3d"><span></span>';hr.insertBefore(l,hr.firstChild);
+ $('think3d').onchange=()=>{S.think3d=$('think3d').checked;act('prefsSet','',{key:'think3d',value:S.think3d});thinkUI()};
+ $('input').addEventListener('input',thinkUI);setInterval(thinkUI,1000);
+ (async()=>{try{const p=await act('prefsGet','',{key:'think3d'});S.think3d=p&&p.value===true}catch{}thinkUI()})()})();
+// selftest think3d: e = on|off, x = request (or 'body' to only build the request body, no model call)
+const _stt3=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='think3d')return _stt3(m,e,x);await boot;await sleep(1500);const out={};
+ S.auto=true;S.chat=null;newChat();$('input').value='make a 3D scene of a lighthouse';thinkUI();await sleep(100);out.toggleShownWhileTyping3D=!$('thinkBox').hidden;
+ $('input').value='hello there';thinkUI();out.toggleShownForPlainChat=!$('thinkBox').hidden;$('input').value='make a 3D scene of a lighthouse';
+ $('think3d').checked=(e==='on');$('think3d').onchange();await sleep(300);out.saved=(await act('prefsGet','',{key:'think3d'})).value;
+ const mk=st=>thinkOff('little3d',{stream:st,max_tokens:maxOut('little3d',ALIAS.little3d,[{role:'user',content:'x'}])});out.chatBody=mk(true);out.fixBody=mk(false);
+ if(x==='body'){thinkUI();await sleep(300);return JSON.stringify(out)}
+ $('input').value='';const t0=Date.now();await send(x);out.secs=(Date.now()-t0)/1000;await sleep(200);
+ const d=[...document.querySelectorAll('#chat .msg.assistant')].pop();out.via=d?(d.querySelector('.via')||{}).textContent:'';out.sentBody=(S.lastBody||'').replace(/"messages":\[[\s\S]*?\],"stream"/,'"messages":[…],"stream"');
+ const mo=S.chat.messages.filter(z=>z.role==='assistant').pop();out.chars=mo?mo.content.length:0;out.hasThinkLeft=mo?/<\/?think>/i.test(mo.content):null;out.startsHtml=mo?/^\s*(```html|<!doctype|<html)/i.test(mo.content):null;
+ if(d&&d._l3&&d._l3.p){out.check=await d._l3.p;out.l3status=d._l3.st.textContent}d&&d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};

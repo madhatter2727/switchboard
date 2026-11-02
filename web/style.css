@@ -320,3 +320,8 @@ body.search main>header,body.search #agentNote,body.search #autoNote,body.search
 .r3d{display:flex;gap:10px;align-items:center;margin:4px 0 6px;font-size:13px}
 .r3d .fix3d{padding:3px 14px;font-size:12px;border-radius:9px}
 .r3d .sub.bad{color:#B4442E}
+/* Nov 1: Think harder (3D Coder) */
+#thinkBox{display:flex;align-items:center;gap:8px;font:800 13px var(--font);cursor:pointer;border:2px solid var(--line);border-radius:20px;padding:3px 12px 3px 8px;background:var(--bg);color:var(--ink)}
+#thinkBox[hidden]{display:none}
+#thinkBox.on{background:#C5D4F8;color:#3A3F5C;box-shadow:2px 2px 0 var(--shadow)}
+.r3d .fix3d{white-space:nowrap;flex:none}
