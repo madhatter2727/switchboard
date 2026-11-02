@@ -33,7 +33,7 @@ async function refresh(){
     // Magnitude: remember its list while it runs so the models still show (and can be picked) when it is off. Saved only when the list changes.
     if(e.id==='magnitude'){const k=ids.join('|');if(k&&S.magSaved!==k){S.magSaved=k;act('list','magnitude')}}}
   else{S.up[e.id]=false;if(e.id==='magnitude')S.magLoaded=null; // Magnitude stopped: whatever was loaded is gone, so load again on the next pick
-   const r=await act('list',e.id);S.models[e.id]=(r.lines||[]).map(m=>({id:m,label:m}))}
+   const r=await act('list',e.id);S.models[e.id]=(Array.isArray(r&&r.lines)?r.lines:[]).map(m=>({id:m,label:m}))} // Nov 2: an engine with no models came back as a non-array and stopped the whole refresh
  }));
  S.proxy=!!(await getJSON('http://127.0.0.1:7777/v1/models',2));
  render()}
@@ -229,7 +229,9 @@ window.__stream=ev=>{const p=pending[ev.id];if(p)p(ev)};
 // ---- Auto: simple keyword rules choose the model ----
 // Oct 28: single everyday words no longer trigger by themselves. 'app', 'game', 'note' and 'find' only count in a real request (e.g. "build an app", "make a snake game", "my notes", "find the PDF"); 'code' skips area/zip/promo codes.
 const CODE_RX=/(?<!\b(?:area|zip|postal|promo|country|dress|morse|discount|coupon|access|qr|bar|pin) )\b(?:code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|snake|regex|compile|error in|sql|api|refactor|algorithm|for loop|while loop|snippet|stack ?trace|unit test|typescript|bash)\b|\b(?:build|make|create|write|develop|code|program)\b[^.?!]{0,25}\b(?:app|game)\b|\b(?:html|web|browser|video|text|python|javascript)\s+(?:app|game)\b/i;
-const THREE_D_RX=/\b3[\s-]?d\b|\bthree\.?js\b/i; // Nov 1: 3d / 3-d / 3D scene / three.js / threejs / in 3D; plain "scene" does not match
+const THREE_D_WORD_RX=/\b3[\s-]?d\b|\bthree\.?js\b|\bwebgl\b/i; // Nov 1: 3d / 3-d / 3D scene / three.js / threejs / in 3D
+const SCENE_ASK_RX=/\b(?:make|build|create|render|generate|model|draw|design)\b[^.?!\n]{0,40}\b(?:scenes?|diorama|landscape)\b/i,STORY_RX=/\b(?:story|stories|novel|screenplay|script|play|movie|film|book|chapter|dialogue|poem|essay|opening scene|crime scene)\b/i;
+const THREE_D_RX={test:t=>{t=String(t||'');return THREE_D_WORD_RX.test(t)||(SCENE_ASK_RX.test(t)&&!STORY_RX.test(t))}}; // Nov 2: also "make a scene of an island…" (Scene Maker style), never "describe the opening scene of Hamlet"
 const FILE_RX=/\b(?:pages|keynote|textedit|docx|txt|markdown|notes app|my notes|the notes|take (?:a )?notes?|add (?:a )?notes?|save (?:a )?notes?|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b/i;
 function chatNote(t){const n=document.createElement('div');n.className='attnote';n.textContent=t;const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight}
 function haveModel(eid){return (S.models[eid]||[]).length>0}
@@ -341,7 +343,11 @@ async function pictureGate(cam){
   chatNote((was?was+' can\'t see pictures, so ':'')+'switched to '+w.name+'.');return true}
  if(!v&&!(await photoUp())){addMsg('err',PHOTO_DEAD);return false}
  return true}
-const LITTLE3D_SYS='Use only the Three.js core ES module from https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js. Do not import addons or legacy examples/js paths; implement any camera controls directly inside the HTML. Reply with one complete, self-contained HTML file in a ```html code block, with lighting, gentle animation and simple mouse-drag orbit controls written by hand.'; // Nov 1
+// Nov 2: the 3D Coder gets exactly what Little 3D Scene Maker sends (that app builds the same prompts fine): its system prompt, its user
+// wrapper around the first request of a chat, and its sampling (temperature 0.7, top_p 0.95, top_k 20, repeat_penalty 1.0).
+const LITTLE3D_SYS='Use only the Three.js core ES module from\nhttps://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js.\nDo not import addons or legacy examples/js paths;\nimplement any camera controls directly inside the HTML.';
+function l3UserMsg(d){return 'Please create one self-contained HTML file with Three.js from cdnjs showing '+d+'\n\nMake it look good, with lighting, gentle animation, and simple mouse-drag orbit controls written by hand.'}
+const L3_SAMPLING={temperature:0.7,top_p:0.95,top_k:20,repeat_penalty:1.0};
 async function send(text){
  if(!S.chat)newChat();
  if(!S.busy&&!S.switching&&!S.att.length){const lc=await localCommand(text);if(lc!==null)return lc}
@@ -373,7 +379,8 @@ async function send(text){
    hist[hist.length-1]={role:'user',content:'[My message was '+text.length.toLocaleString()+' characters, more than you can hold at once, so the app read all of it in parts. Notes from every part, in order:]\n'+notes+'\n\n[Exact beginning:]\n'+text.slice(0,edge)+'\n\n[Exact ending:]\n'+text.slice(-edge)+(um.attText?'\n\n'+um.attText:'')}}
   const l3=S.sel.e==='little3d'&&!ch.messages.some(m=>m.role==='system'); // Nov 1: prepend only when the chat has no system message of its own
   hist=fitHistory([{role:'system',content:l3?LITTLE3D_SYS:'You are a helpful assistant.'},...hist],S.sel.e,S.sel.m,hist.length).slice(l3?0:1);
-  const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};
+  if(S.sel.e==='little3d'&&ch.messages.filter(m=>m.role==='user').length===1){const k=hist.length-1;if(hist[k]&&hist[k].role==='user'&&typeof hist[k].content==='string')hist[k]={role:'user',content:l3UserMsg(hist[k].content)}} // Nov 2: first request wrapped like Scene Maker; follow-ups go as typed
+  const body={model:up(S.sel.e,S.sel.m),messages:hist,stream:true,temperature:0.7,max_tokens:maxOut(S.sel.e,S.sel.m,hist)};if(S.sel.e==='little3d')Object.assign(body,L3_SAMPLING);
   thinkOff(S.sel.e,body);S.lastBody=JSON.stringify(body);const l3think=!!(body.chat_template_kwargs&&body.chat_template_kwargs.enable_thinking);
   pending[id]=ev=>{
    if(ev.type==='line'){const l=ev.text.trim();if(!l.startsWith('data:'))return;const j=l.slice(5).trim();if(j==='[DONE]')return;
@@ -1065,16 +1072,32 @@ const _st3d=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='scene3d')
  return JSON.stringify({secs,lock:S.chat&&S.chat.lock,via,hasPlay:!!pb,status:saved,savedPath:mo&&mo.saved?Object.values(mo.saved)[0]:'',chars:mo?String(mo.content).length:0})};
 // ---- 3D scenes: in-chat preview check + auto-fix + Fix it (Nov 1). Same flow as Little 3D Scene Maker (6d25f8e): a scene that throws
 // a JS error is sent back to the 3D Coder with the error and the code, up to 2 tries; a manual Fix it button sits on every 3D result. ----
-const L3_WATCH="<script>(function(){var sent=0;function send(m,l,c){if(sent++<3)parent.postMessage({sb3dError:String(m).slice(0,200),line:l|0,column:c|0},'*');}"+
- "addEventListener('error',function(e){send(e.message||'Unknown error',e.lineno,e.colno);});"+
- "addEventListener('unhandledrejection',function(e){send((e.reason&&e.reason.message)||e.reason,0,0);});})();<\/script>"; // one line, no newline: error line numbers match the code
+const L3_WATCH="<script>(function(){var sent=0;function send(m,l,c){if(sent++<3)parent.postMessage({sb3dError:String(m).slice(0,400),line:l|0,column:c|0},'*');}"+
+ "addEventListener('error',function(e){var l=e.lineno,c=e.colno,m=e.message||'Unknown error',h=location.href;if(e.filename&&e.filename!==h){l=0;c=0;var st=String((e.error&&e.error.stack)||'').split('\\n');for(var i=0;i<st.length;i++){var k=st[i].lastIndexOf(h+':');if(k>=0){var q=st[i].slice(k+h.length+1).split(':');l=parseInt(q[0],10)||0;c=parseInt(q[1],10)||0;break;}}m+=' (thrown inside three.js, called from the scene code'+(l?' at line '+l:'')+')';}send(m,l,c);});"+ // Nov 2: an error thrown inside the three.js file reported that file's line (e.g. line 6), so fixes looked at the wrong lines; use the scene's own line from the stack
+ "addEventListener('unhandledrejection',function(e){send((e.reason&&e.reason.message)||e.reason,0,0);});"+
+ "var ce=console.error;console.error=function(){try{var m=Array.prototype.map.call(arguments,String).join(' ');if(/Shader Error|THREE\\.WebGLProgram/.test(m)){var x=(m.match(/ERROR:[^\\n]*/)||[''])[0],y=(m.match(/\\n>\\s*\\d+:[^\\n]*/)||[''])[0].replace(/^\\s*>\\s*\\d+:\\s*/,'');send('A WebGL shader did not compile, so part of the scene is blank: '+(x||m.slice(0,160))+(y?' in the shader line: '+y.trim():''),0,0);}}catch(z){}return ce.apply(console,arguments);};})();<\/script>"; // one line, no newline: error line numbers match the code. Nov 2: shader compile errors (blank scene, no JS error) count too
 const L3_TRIES=2,L3_WAIT=4500;
 function l3Watch(html){const m=html.match(/<head[^>]*>/i);return m?html.replace(m[0],m[0]+L3_WATCH):L3_WATCH+html}
 function isL3(mo){return !!mo&&mo.role==='assistant'&&(mo.l3||/\b3D Coder\b/.test(mo.via||''))}
-function l3Code(mo){const m=htmlReply(String(mo.content||'')).match(/```html[^\n]*\n([\s\S]*?)(?:```|$)/i);return m?m[1]:null}
+function l3Code(mo){const t=htmlReply(String(mo.content||''));const m=t.match(/```html[^\n]*\n([\s\S]*?)(?:```|$)/i);if(m)return m[1];return l3Extract(t)||null}
+function l3Extract(text){const f=[...text.matchAll(/```(?:html)?\s*([\s\S]*?)```/gi)];if(f.length){const last=f[f.length-1][1].trim();if(/<!DOCTYPE|<html/i.test(last))return last}
+ const a=text.search(/<!DOCTYPE|<html/i);if(a>=0){const b=text.toLowerCase().lastIndexOf('</html>');if(b>=a)return text.slice(a,b+7)}return ''} // Nov 2: same as Scene Maker's extractHtml
 function l3Around(code,line){if(!line)return 'unknown';const L=code.split('\n');if(line<1||line>L.length)return 'unknown';const out=[];for(let i=Math.max(1,line-3);i<=Math.min(L.length,line+3);i++)out.push(i+'|'+L[i-1]);return out.join('\n')}
-function l3FixMsg(code,err){return 'This Three.js scene crashes in the browser with this error:\n'+err.message+' (line '+(err.line|0)+', column '+(err.column|0)+')\n\nThe broken line and the lines around it:\n'+l3Around(code,err.line|0)+
+// Nov 2: a 4B model fixes name errors much better when it sees where the name is declared, not only the line that crashed.
+function l3Hint(code,err){const msg=String(err.message||'');let k,name,kind;
+ if((k=/Cannot access '([\w$]+)' before initiali[sz]ation/i.exec(msg)))[name,kind]=[k[1],'tdz'];
+ else if((k=/Cannot declare a (?:const|let|class) variable twice: '([\w$]+)'|Identifier '([\w$]+)' has already been declared/i.exec(msg)))[name,kind]=[k[1]||k[2],'dup'];
+ else if((k=/Can't find variable: ([\w$]+)|([\w$]+) is not defined/i.exec(msg)))[name,kind]=[k[1]||k[2],'undef'];
+ if(!name)return '';const L=code.split('\n'),esc=name.replace(/\$/g,'\\$'),decl=new RegExp('\\b(?:const|let|var|function|class)\\s+'+esc+'\\b|[{,]\\s*'+esc+'\\s*[,}]\\s*=?'),use=new RegExp('(?:^|[^\\w$.])'+esc+'(?![\\w$])');
+ const d=[],u=[];L.forEach((l,i)=>{if(decl.test(l))d.push(i+1);else if(use.test(l))u.push(i+1)});
+ const show=ns=>ns.slice(0,8).map(n=>n+'|'+L[n-1]).join('\n');
+ const why=kind==='tdz'?'`'+name+'` is used before its const/let line runs'+(/^(window|document|location|console|performance|screen|navigator)$/.test(name)?' (the code also declares its own `'+name+'`, which hides the browser\'s built-in one; rename that declaration and its uses, e.g. to `'+name+'Mesh`)':'; move the declaration above the first use, or rename it')+'.'
+  :kind==='dup'?'`'+name+'` is declared more than once in the same scope. Delete the extra declaration or rename it and its own uses. Do not add another declaration.'
+  :'`'+name+'` is used but not declared where it is visible. Declare it before the code that uses it (or use the variable that already holds it).';
+ return '\n\nWhat the error means: '+why+'\n\nLines that declare `'+name+'`:\n'+(d.length?show(d):'(none)')+(u.length?'\n\nLines that use `'+name+'`:\n'+show(u):'')}
+function l3FixMsg(code,err){return 'This Three.js scene crashes in the browser with this error:\n'+err.message+' (line '+(err.line|0)+', column '+(err.column|0)+')\n\nThe broken line and the lines around it:\n'+l3Around(code,l3Line(code,err))+l3Hint(code,err)+
  '\n\nFix the bug. Reply with SEARCH/REPLACE edits only, in this exact format, one or more blocks:\n<<<<<<< SEARCH\n<exact lines copied from the code>\n=======\n<replacement lines>\n>>>>>>> REPLACE\n\nKeep each SEARCH short (a few lines) and copied exactly. Do not rewrite the whole file.\n\nHere is the full code:\n```html\n'+code+'\n```'}
+function l3Line(code,err){let n=err.line|0;if(n)return n;const k=/shader line: (.+)$/.exec(err.message||'');if(k){const i=code.split('\n').findIndex(l=>l.includes(k[1].trim()));if(i>=0)n=i+1}return n} // Nov 2: shader errors carry no JS line; find the shader line in the page
 function l3Replace(code,search,repl){if(!search)return null;const at=code.indexOf(search);if(at>=0)return code.slice(0,at)+repl+code.slice(at+search.length);
  const want=search.split('\n'),L=code.split('\n'),n=want.length;if(!n||n>L.length)return null;
  for(let i=0;i<=L.length-n;i++){let ok=true;for(let j=0;j<n;j++)if(L[i+j].trim()!==want[j].trim()){ok=false;break}if(ok)return L.slice(0,i).concat(repl.split('\n'),L.slice(i+n)).join('\n')}return null}
@@ -1092,11 +1115,15 @@ function l3Check(ui,code){return new Promise(res=>{document.querySelectorAll('#c
  const fr=document.createElement('iframe');fr.setAttribute('sandbox','allow-scripts');fr.title='3D scene preview';ui.box.hidden=false;ui.box.appendChild(fr);ui.frame=fr;
  const st={err:null};L3_FRAMES.set(fr.contentWindow,st);let done=false;const end=()=>{if(done)return;done=true;res(st.err)};
  fr.onload=()=>setTimeout(end,L3_WAIT);setTimeout(end,L3_WAIT+15000);fr.srcdoc=l3Watch(code)})}
+// Nov 2: fixes use Scene Maker's request (quick mode, its sampling) instead of the generic temperature-0.2 helper.
+async function l3Ask(messages){const e=ENGINES.find(x=>x.id==='little3d');const body=thinkOff('little3d',{model:up('little3d',ALIAS.little3d),messages,stream:false,...L3_SAMPLING,max_tokens:maxOut('little3d',ALIAS.little3d,messages)});
+ const r=await netC({url:e.base+'/chat/completions',method:'POST',timeout:1800,body:JSON.stringify(body)});if(r.error==='cancelled'||S.stopAgent)throw new Error('stopped');if(r.status!==200)throw new Error('model error '+(r.status||'no connection'));
+ const msg=JSON.parse(r.body).choices[0].message||{};return String(msg.content||msg.reasoning_content||'').trim()}
 function l3Status(ui,t,bad){ui.st.textContent=t;ui.st.classList.toggle('bad',!!bad)}
 async function l3FixOnce(ui,code,err,n,cap){const t0=Date.now();l3Status(ui,'Fixing a bug, try '+n+' of '+cap+'… ('+err.message+')');
  const tick=setInterval(()=>l3Status(ui,'Fixing a bug, try '+n+' of '+cap+'… '+l3Fmt(Date.now()-t0)),1000);
  try{if(!(await ensureEngine('little3d',ALIAS.little3d)))throw new Error('the 3D model would not start');S.stopAgent=false;
-  const reply=await llm('little3d',ALIAS.little3d,[{role:'system',content:LITTLE3D_SYS},{role:'user',content:l3FixMsg(code,err)}],16000);return l3Apply(code,reply)}
+  const reply=await l3Ask([{role:'system',content:LITTLE3D_SYS},{role:'user',content:l3FixMsg(code,err)}]);return l3Apply(code,reply)}
  finally{clearInterval(tick)}}
 function l3Swap(ui,mo,oldCode,newCode){const c=String(mo.content||'');mo.content=c.includes(oldCode)?c.replace(oldCode,()=>newCode):'```html\n'+newCode+'\n```';mo.saved={};mo.fixes=(mo.fixes||0)+1;
  const old=ui.d.querySelector('.code');const nb=codeBlock('html',newCode,mo,0);if(old)old.replaceWith(nb);if(S.chat&&S.chat.messages.includes(mo))saveChat(S.chat)}
@@ -1156,3 +1183,13 @@ const _stt3=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='think3d')
  const d=[...document.querySelectorAll('#chat .msg.assistant')].pop();out.via=d?(d.querySelector('.via')||{}).textContent:'';out.sentBody=(S.lastBody||'').replace(/"messages":\[[\s\S]*?\],"stream"/,'"messages":[…],"stream"');
  const mo=S.chat.messages.filter(z=>z.role==='assistant').pop();out.chars=mo?mo.content.length:0;out.hasThinkLeft=mo?/<\/?think>/i.test(mo.content):null;out.startsHtml=mo?/^\s*(```html|<!doctype|<html)/i.test(mo.content):null;
  if(d&&d._l3&&d._l3.p){out.check=await d._l3.p;out.l3status=d._l3.st.textContent}d&&d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};
+// selftest l3e2e (Nov 2): e = auto | manual (3D Coder picked by hand), x = the request. One real send, then waits for the in-chat check and auto-fix.
+const _ste2=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='l3e2e')return _ste2(m,e,x);await boot;await sleep(1500);const out={mode:e,prompt:x};
+ if(/-quick$/.test(e)){S.think3d=false;e=e.replace(/-quick$/,'')} // memory only; the saved switch stays as she left it
+ S.chat=null;if(e==='manual'){newChat();await pick('little3d',ALIAS.little3d)}else{S.auto=true;newChat()}
+ const t0=Date.now();await send(x);out.genSecs=Math.round((Date.now()-t0)/1000);await sleep(300);
+ out.picked=S.sel&&S.sel.e;out.auto=S.auto;out.lock=S.chat&&S.chat.lock;try{const b=JSON.parse(S.lastBody||'{}');out.sent={sys:(b.messages[0]||{}).content,user:(b.messages[b.messages.length-1]||{}).content,temperature:b.temperature,top_p:b.top_p,top_k:b.top_k,repeat_penalty:b.repeat_penalty,max_tokens:b.max_tokens,kw:b.chat_template_kwargs}}catch{}
+ const d=[...document.querySelectorAll('#chat .msg.assistant')].pop();out.via=d?(d.querySelector('.via')||{}).textContent:'';
+ const ui=d&&d._l3;if(!ui){out.noL3=true;out.reply=(d&&d.textContent||'').slice(0,300);return JSON.stringify(out)}
+ out.check=await ui.p;out.status=ui.st.textContent;out.totalSecs=Math.round((Date.now()-t0)/1000);
+ const mo=S.chat.messages.filter(z=>z.role==='assistant').pop();out.code=l3Code(mo);out.chatId=S.chat.id;d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};
