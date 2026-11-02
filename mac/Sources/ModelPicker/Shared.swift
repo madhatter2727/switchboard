@@ -85,7 +85,7 @@ func stopBuiltin(_ id: String) { _ = runCmd("/bin/launchctl", ["remove", jobLabe
 func freeMemoryForBig() {
     stopBuiltin("spark"); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
     _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"]); _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
-    _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // Nov 1: our little3d copy only; never a bare --port 8117
+    stopLittle3d()   // Nov 1: our little3d copy only; never a bare --port 8117
     if let (c, d) = syncHTTP("http://127.0.0.1:11434/api/ps", timeout: 2), c == 200,
        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let ms = j["models"] as? [[String: Any]] {
         for m in ms { if let n = m["name"] as? String { _ = syncHTTP("http://127.0.0.1:11434/api/generate", method: "POST", body: try? JSONSerialization.data(withJSONObject: ["model": n, "keep_alive": 0]), timeout: 10) } } }
@@ -154,7 +154,7 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
     case ("stop", "lfm3vl"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); Owned.forget(eng)
     case ("start", "little3d"):   // Nov 1: start our copy only when 8117 is down; an already-up server is not ours
         if let e = ENGINE_DEFS.first(where: { $0.id == eng }), !engineUp(e) { _ = runCmd("/bin/bash", [LITTLE3D_START], detach: true); Owned.noteStarted(eng) }
-    case ("stop", "little3d"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"]); Owned.forget(eng)   // Nov 1: marker alias; never the Scene Maker process
+    case ("stop", "little3d"): stopLittle3d(); Owned.forget(eng)   // Nov 1: marker alias; never the Scene Maker process
     case ("start", "ocr"): _ = runCmd("/bin/bash", [OCR_START], detach: true); Owned.noteStarted(eng)
     case ("stop", "ocr"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"]); Owned.forget(eng)
     case ("start", "notes"): _ = runCmd("/bin/bash", [NOTES_START], detach: true); Owned.noteStarted(eng)

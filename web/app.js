@@ -169,11 +169,14 @@ function openChat(id){if(S.busy)return;const c=S.chats.find(x=>x.id===id);if(!c)
  showChat()}
 function writeState(){if(S.sel)act('state','',{json:JSON.stringify(S.sel)})}
 
+function l3LoadNote(){const n=document.createElement('div');n.className='attnote';n.textContent='Loading 3D Coder… (it was off to save memory; this takes about a minute)';const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight;return n} // Nov 2
 async function waitUp(e,sec=300){for(let i=0;i<sec;i++){const j=await getJSON(e.base+'/models',2);if(j&&j.data)return true;await new Promise(r=>setTimeout(r,1000))}return false}
 async function ensureEngine(eid,mid){
  const e=ENGINES.find(x=>x.id===eid);
- if(!(await getJSON(e.base+'/models'))){status('Starting '+e.name+'…');await act('start',eid);S.startedByUs.add(eid);
-   if(!(await waitUp(e,eid==='little3d'?180:(eid==='lfm3vl'||eid==='lfm3text')?60:300))){status('');return false}} // Nov 1: little3d 180s
+ if(!(await getJSON(e.base+'/models'))){const l3=eid==='little3d',t0=Date.now();status(l3?'Loading 3D Coder…':'Starting '+e.name+'…');const note=l3?l3LoadNote():null;await act('start',eid);S.startedByUs.add(eid);
+   const ok=await waitUp(e,l3?180:(eid==='lfm3vl'||eid==='lfm3text')?60:300);S.lastColdStart={eid,ok,secs:Math.round((Date.now()-t0)/1000)};
+   if(note)note.textContent=ok?'3D Coder loaded in '+S.lastColdStart.secs+' s.':'The 3D Coder did not start within 3 minutes.';
+   if(!ok){status('');return false}} // Nov 1: little3d 180s. Nov 2: on demand; 'Loading 3D Coder…' shown in the chat while it starts
  if(eid==='magnitude'&&S.magLoaded!==mid){status('Loading model into Magnitude…');await act('load','magnitude',{model:mid});S.magLoaded=mid}
  status('');return true}
 async function pick(eid,mid,keepAuto){
@@ -1187,7 +1190,7 @@ const _stt3=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='think3d')
 const _ste2=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='l3e2e')return _ste2(m,e,x);await boot;await sleep(1500);const out={mode:e,prompt:x};
  if(/-quick$/.test(e)){S.think3d=false;e=e.replace(/-quick$/,'')} // memory only; the saved switch stays as she left it
  S.chat=null;if(e==='manual'){newChat();await pick('little3d',ALIAS.little3d)}else{S.auto=true;newChat()}
- const t0=Date.now();await send(x);out.genSecs=Math.round((Date.now()-t0)/1000);await sleep(300);
+ const t0=Date.now();await send(x);out.genSecs=Math.round((Date.now()-t0)/1000);out.coldStart=S.lastColdStart||null;await sleep(300);
  out.picked=S.sel&&S.sel.e;out.auto=S.auto;out.lock=S.chat&&S.chat.lock;try{const b=JSON.parse(S.lastBody||'{}');out.sent={sys:(b.messages[0]||{}).content,user:(b.messages[b.messages.length-1]||{}).content,temperature:b.temperature,top_p:b.top_p,top_k:b.top_k,repeat_penalty:b.repeat_penalty,max_tokens:b.max_tokens,kw:b.chat_template_kwargs}}catch{}
  const d=[...document.querySelectorAll('#chat .msg.assistant')].pop();out.via=d?(d.querySelector('.via')||{}).textContent:'';
  const ui=d&&d._l3;if(!ui){out.noL3=true;out.reply=(d&&d.textContent||'').slice(0,300);return JSON.stringify(out)}

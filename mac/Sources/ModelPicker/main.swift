@@ -265,6 +265,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if CommandLine.arguments.contains("--selftest") { return .terminateNow }
         let others = otherClientsOpen(excludingSelf: true)
         launchLog("Switchboard quitting; Ask My Mac or another Switchboard open: \(others)")
+        // Nov 2: the 3D Coder is Switchboard-only (Ask My Mac never uses it), so it stops on quit even while Ask My Mac is open.
+        if !switchboardWindowOpen() && Owned.startedIds().contains("little3d") { stopLittle3d(); Owned.forget("little3d") }
         if others || Owned.isEmpty { return .terminateNow }
         window?.orderOut(nil)
         DispatchQueue.global().async {

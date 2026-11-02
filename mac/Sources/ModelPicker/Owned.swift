@@ -71,7 +71,7 @@ enum Owned {
                 case "ocr": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
                 case "notes": _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
-                case "little3d": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // Nov 1: our alias only
+                case "little3d": stopLittle3d()   // Nov 2: pid file + alias marker; never the Scene Maker process
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
@@ -96,6 +96,24 @@ enum Owned {
 /// Only engines Switchboard itself started (listed under "started" in owned-engines.json) are ever stopped.
 let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "little3d", "spark", "bonsai27b", "apple", "ocr", "notes", "search"]
 let IDLE_STOP_SECONDS: Double = 15 * 60
+/// Nov 2: the 3D Coder (8117, about 3.2 GB) stops after 10 min. For a test, a number of seconds (30 or more) in
+/// Model Picker/little3d-idle-seconds overrides it; that file normally holds 600.
+let LITTLE3D_IDLE_FILE = SUPPORT + "/little3d-idle-seconds"
+func idleSeconds(_ id: String) -> Double {
+    guard id == "little3d" else { return IDLE_STOP_SECONDS }
+    if let t = try? String(contentsOfFile: LITTLE3D_IDLE_FILE, encoding: .utf8), let v = Double(t.trimmingCharacters(in: .whitespacesAndNewlines)), v >= 30 { return v }
+    return 10 * 60
+}
+/// Nov 2: stop Switchboard's own 3D Coder copy. Uses the pid file the start script writes, and only kills that pid if its
+/// command line carries the --alias switchboard-little3d marker (so a Scene Maker server on 8117 is never stopped).
+let LITTLE3D_PID = SUPPORT + "/little3d.pid"
+func stopLittle3d() {
+    if let t = try? String(contentsOfFile: LITTLE3D_PID, encoding: .utf8), let pid = Int32(t.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 {
+        let cmd = runCmd("/bin/ps", ["-o", "command=", "-p", "\(pid)"]).1
+        if cmd.contains("--alias switchboard-little3d") { kill(pid, SIGTERM); launchLog("little3d: stopped pid \(pid) (ours)") }
+    }
+    _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // marker only, in case the pid file is stale
+}
 extension Owned {
     static let activityQ = DispatchQueue(label: "owned.activity")   // keeps begin/end of one request in order
     /// A chat request to one of Switchboard's own engines begins or ends: remember the time (and that it is mid-answer).
@@ -129,7 +147,7 @@ extension Owned {
                 if let e = ENGINE_DEFS.first(where: { $0.id == id }), NEVER_TOUCH_PORTS.contains(e.port) { continue }
                 if busy.contains(where: { $0.key.hasPrefix(id + "|") && now - $0.value < 45 * 60 }) { continue }   // mid-answer
                 let last = max(lu[id] ?? 0, (info["at"] as? Double) ?? 0)
-                guard now - last >= IDLE_STOP_SECONDS else { continue }
+                guard now - last >= idleSeconds(id) else { continue }
                 done.append(id)
                 if dryRun { continue }
                 switch id {
@@ -140,7 +158,7 @@ extension Owned {
                 case "ocr": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"])
                 case "notes": _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
-                case "little3d": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // Nov 1: our alias only
+                case "little3d": stopLittle3d()   // Nov 2: pid file + alias marker; never the Scene Maker process
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "apple": stopAppleBrain()   // only Switchboard's own copy
                 default: continue }
@@ -148,7 +166,7 @@ extension Owned {
             }
             if !dryRun { j["started"] = s }
         }
-        if !dryRun && !done.isEmpty { launchLog("owned: stopped [\(done.joined(separator: ", "))] after 15 min with no requests") }
+        if !dryRun && !done.isEmpty { launchLog("owned: stopped [\(done.joined(separator: ", "))] after their idle time with no requests (3D Coder 10 min, others 15 min)") }
         return done
     }
 }
