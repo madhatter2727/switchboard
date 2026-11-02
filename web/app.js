@@ -20,21 +20,26 @@ const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,st
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
+// Nov 2 (Tara, 4:51 PM ET): a lean model list. These are hidden from the list only: their files stay on disk, the 7777 helper still serves them
+// (Ask My Mac uses Spark), and Switchboard no longer checks hidden engines. Undo: take a name out of these two lines and reinstall.
+const HIDDEN_ENGINES=new Set(['lmstudio','magnitude','ollama','spark','bonsai27b']);
+const HIDDEN_MODELS=/^(?:qwen3\.5-9b-heretic-mlx-mxfp4|spark-x2\.5-4b-mlx-4bit|bonsai-2-27b-jang-crack-1\.75bit|qwen2\.5-1\.5b-instruct-4bit|bark_mlx_fp16)$/i;
 const MANUAL_ONLY_RX=/^qwen3\.5-9b-mlx-4bit$/i; // Nov 2 (Tara): Osaurus Qwen3.5 9B, picked by hand only; sees pictures and can use the file/folder tools; never chosen by Auto
-const isAgent=m=>!/3d-coder/i.test(m)&&(MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)|^gemma4:e2b|^gemma-4-e2b|^ornith|qwen2\.5-coder/i.test(m)); // badge = passed >=4 of 5 in bench/ (gemma2:2b: no tool support). Nov 1: 3d-coder is chat only
+const isAgent=m=>!/3d-coder/i.test(m)&&(MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)/i.test(m)); // badge = passed >=4 of 5 in bench/. Nov 1: 3d-coder is chat only. Nov 2: the Ollama/Magnitude models were removed from disk, so their names are gone here
 const isEmbed=m=>/embed/i.test(m)||m==='foundation';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 async function getJSON(url,t=2){const r=await nativeNet({url,timeout:t});if(r.status!==200)return null;try{return JSON.parse(r.body)}catch{return null}}
 async function refresh(){
  await Promise.all(ENGINES.map(async e=>{
+  if(HIDDEN_ENGINES.has(e.id)){S.up[e.id]=false;S.models[e.id]=[];return} // Nov 2: hidden engines are not checked or listed
   const j=await getJSON(e.base+'/models');
-  if(j&&j.data){S.up[e.id]=true;let ids=j.data.map(m=>m.id).filter(m=>!isEmbed(m));
+  if(j&&j.data){S.up[e.id]=true;let ids=j.data.map(m=>m.id).filter(m=>!isEmbed(m)&&!HIDDEN_MODELS.test(m));
     if(ALIAS[e.id])ids=[ALIAS[e.id]];S.models[e.id]=ids.map(m=>({id:m,label:m}));
     // Magnitude: remember its list while it runs so the models still show (and can be picked) when it is off. Saved only when the list changes.
     if(e.id==='magnitude'){const k=ids.join('|');if(k&&S.magSaved!==k){S.magSaved=k;act('list','magnitude')}}}
   else{S.up[e.id]=false;if(e.id==='magnitude')S.magLoaded=null; // Magnitude stopped: whatever was loaded is gone, so load again on the next pick
-   const r=await act('list',e.id);S.models[e.id]=(Array.isArray(r&&r.lines)?r.lines:[]).map(m=>({id:m,label:m}))} // Nov 2: an engine with no models came back as a non-array and stopped the whole refresh
+   const r=await act('list',e.id);S.models[e.id]=(Array.isArray(r&&r.lines)?r.lines:[]).filter(m=>!HIDDEN_MODELS.test(m)).map(m=>({id:m,label:m}))} // Nov 2: an engine with no models came back as a non-array and stopped the whole refresh
  }));
  S.proxy=!!(await getJSON('http://127.0.0.1:7777/v1/models',2));
  render()}
@@ -47,7 +52,7 @@ $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(
 const L3_THINK_BUDGET=10000; // Nov 1: thinking capped so ~20K tokens stay for the page (a 30K think-only run wrote no page)
 const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid)){const th=eid==='little3d'&&!!S.think3d&&body.stream===true;body.chat_template_kwargs={enable_thinking:th};if(th)body.thinking_budget_tokens=L3_THINK_BUDGET}if(/raptor/i.test(body.model||''))body.reasoning_effort='none';if(MANUAL_ONLY_RX.test(body.model||''))body.chat_template_kwargs={enable_thinking:false};return body}; // Nov 1: little3d thinking off
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
-function ctxFor(eid,m){m=m||'';if(eid==='ollama')return /gemma2/i.test(m)?8192:65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
+function ctxFor(eid,m){m=m||'';if(eid==='ollama')return 65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
  if(eid==='lfm3text')return 114688;if(eid==='lfm3vl'||eid==='little3d')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL); Nov 1: little3d --ctx-size 32768
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
 const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(S.sel&&S.sel.e==='lfm3vl'?12000:2400)).length)/3); // a picture counts as ~800 tokens (LFM3-VL: ~4,000 at full size), not its base64 size
@@ -94,7 +99,7 @@ function render(){agentUI();
   x.innerHTML=`<span class="mi" style="--c1:${br.c1}">${IC(br.icon,20)}</span><span class="mt"><span class="mn" title="${esc(m.label)}">${esc(m.label)}</span>${showEng?`<span class="msub">${esc(e.name)}</span>`:''}<span class="mtags">${gf?`<span class="badge use">${gf}</span>`:''}${isVision(m.id)?'<span class="badge see" title="Can see pictures you paste or attach">sees pictures</span>':''}<span class="badge ${isAgent(m.id)?'agent':'chat'}">${isAgent(m.id)?'agent-capable':'chat'}</span></span></span><span class="led" title="${up?'Ready':'Off (starts when you pick it)'}"></span>`;
   x.onclick=()=>pick(e.id,m.id);return x};
  for(const e of ENGINES){
-  if(singleIds.has(e.id))continue;
+  if(singleIds.has(e.id)||HIDDEN_ENGINES.has(e.id))continue;
   const d=document.createElement('div');d.className='eng';d.dataset.eid=e.id;const up=S.up[e.id];const ms=S.models[e.id]||[];
   const col=S.collapsed.has(e.id);const inUse=!S.auto&&S.sel&&S.sel.e===e.id;if(col)d.classList.add('collapsed');
   d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${IC(col?'chevR':'chevD',14,2.6)}</button><span class="dot ${up?'on':''}"></span>${e.name}${col?`<span class="cnt">${ms.length} model${ms.length===1?'':'s'}</span>`:''}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
@@ -242,8 +247,7 @@ function haveModel(eid){return (S.models[eid]||[]).length>0}
 // ---- Picture routing (Oct 27): with a picture attached Auto picks the BEST model that can see pictures, on any engine. ----
 // Ranking, best first (only models that are installed/listed; an engine that is off still lists what it has, and Switchboard starts it on pick):
 //   1 LFM3-VL 2B (Oct 28: first picture reader; fast, photos go at up to ~2048 px / ~4,000 picture tokens; skipped for the session if it fails to start or errors)
-//   2 Bonsai 2 4B (backup; faster than 9B, same score in the m4 photo test)  3 Bonsai 2 9B  4 a Gemma 4 model on any engine  5 any other picture-capable model on any engine.
-// Inside tier 4 or 5: a model whose engine is already running wins over one that must be started, then the bigger one wins.
+//   2 Bonsai 2 4B (backup; faster than 9B, same score in the m4 photo test)  3 Bonsai 2 9B. (Nov 2: steps 4-5, Gemma 4 / any other picture model, removed.)
 // Photo Reader is only the last resort (no picture-capable model at all): see autoSwitch.
 const hasPic=()=>S.att.some(a=>a.kind==='image');
 const lfmOK=()=>!S.lfmDown&&!(S.chat&&S.chat.lfmFailed); // LFM3-VL is tried first; after one failure it is skipped (this session / this chat) and Bonsai takes over
@@ -252,19 +256,14 @@ function visionRoute(){
  if(lfmOK()&&haveModel('lfm3vl'))return mk('lfm3vl',ALIAS.lfm3vl,'LFM3-VL 2B');
  if(haveModel('bonsai4b'))return mk('bonsai4b',ALIAS.bonsai4b,'Bonsai 4B');
  if(haveModel('bonsai9b'))return mk('bonsai9b',ALIAS.bonsai9b,'Bonsai 9B');
- const size=id=>{const x=/(\d+(?:\.\d+)?)b/i.exec(id);return x?parseFloat(x[1]):0};
- const c=[];ENGINES.forEach(e=>{if(ALIAS[e.id])return; // Bonsai handled above; Spark/Apple/27B do not see pictures
-  (S.models[e.id]||[]).forEach(m=>{if(isVision(m.id)&&!MANUAL_ONLY_RX.test(m.id))c.push({e:e.id,m:m.id,g4:/gemma-?4/i.test(m.id)?1:0,up:S.up[e.id]?1:0,sz:size(m.id)})})});
- c.sort((a,b)=>b.g4-a.g4||b.up-a.up||b.sz-a.sz);
- return c.length?mk(c[0].e,c[0].m,c[0].m):null}
+ return null} // Nov 2: the old "a Gemma 4 model / any other picture model" steps never fired (LFM3-VL and Bonsai are always installed) and were removed
 function autoRoute(text){
  if(hasPic()){const v=visionRoute();if(v)return v} // no picture-capable model: fall through to the usual pick; Photo Reader describes the picture (autoSwitch adds a note)
  if(THREE_D_RX.test(text)&&haveModel('little3d'))return {e:'little3d',m:ALIAS.little3d,name:'3D Coder',agent:false,why:'3D scene'}; // Nov 1: after pictures, before coding
  const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
  const R={e:'osaurus',m:raptor?raptor.id:'raptor-0.6-4b-jang_6m',name:'Raptor',agent:false};
  if(CODE_RX.test(text)){
-  if(haveModel('bonsai9b'))return {e:'bonsai9b',m:ALIAS.bonsai9b,name:'Bonsai 9B',agent:false,why:'coding'};
-  if(haveModel('spark'))return {e:'spark',m:ALIAS.spark,name:'Spark',agent:false,why:'coding'};
+  if(haveModel('bonsai9b'))return {e:'bonsai9b',m:ALIAS.bonsai9b,name:'Bonsai 9B',agent:false,why:'coding'}; // Nov 2: the Spark backup step is gone (Spark is hidden)
   return {...R,why:'coding (no coder installed)'}}
  if(FILE_RX.test(text))return {...R,agent:true,why:'files or calendar'};
  if(haveModel('bonsai4b'))return {e:'bonsai4b',m:ALIAS.bonsai4b,name:'Bonsai 4B',agent:false,why:'quick chat'};
@@ -1198,6 +1197,11 @@ const _ste2=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='l3e2e')re
  out.check=await ui.p;out.status=ui.st.textContent;out.totalSecs=Math.round((Date.now()-t0)/1000);
  const mo=S.chat.messages.filter(z=>z.role==='assistant').pop();out.code=l3Code(mo);out.chatId=S.chat.id;d.scrollIntoView({block:'end'});await sleep(800);return JSON.stringify(out)};
 // selftest agentask (Nov 2): e = engine@model, x = a request; Agent mode on, one real send, returns the tool steps.
+// Nov 2: --selftest sidebar (what the model list shows) and --selftest autoask x "message" (a real Auto send; reports Auto's pick)
+const _stsb=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='sidebar'&&m!=='autoask')return _stsb(m,e,x);await boot;await sleep(2500);
+ if(m==='sidebar'){await refresh();S.collapsed.clear();render();return JSON.stringify({groups:[...document.querySelectorAll('#engines .eng')].map(g=>({head:(g.querySelector('.eh')||{}).textContent,models:[...g.querySelectorAll('.m .mn')].map(n=>n.textContent)}))},null,1)}
+ S.chat=null;S.auto=true;newChat();const t=Date.now();const reply=String(await send(x)).slice(0,400);const L=S.chat&&S.chat.lock;
+ return JSON.stringify({prompt:x,picked:L&&L.name,engine:L&&L.e,model:L&&L.m,why:L&&L.why,agent:!!(L&&L.agent),ms:Date.now()-t,reply,steps:S.chat.messages.filter(z=>z.role==='step').map(z=>z.text+' -> '+String(z.result).slice(0,120))},null,1)};
 const _stag=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='agentask')return _stag(m,e,x);await boot;await sleep(1500);const out={};const [eid,mid]=e.split('@');
  S.chat=null;newChat();await pick(eid,mid);out.agentAllowed=!$('agent').disabled;$('agent').checked=true;agentUI();const t=Date.now();out.reply=String(await send(x)).slice(0,600);out.ms=Date.now()-t;
  out.model=S.sel&&S.sel.m;out.lastBody=S.lastBody||'';out.steps=S.chat.messages.filter(z=>z.role==='step').map(z=>z.text+' -> '+String(z.result).slice(0,160));return JSON.stringify(out,null,1)};

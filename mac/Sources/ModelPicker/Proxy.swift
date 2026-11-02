@@ -167,7 +167,7 @@ final class Proxy: NSObject, URLSessionDataDelegate {
 /// applied to the last user message. Differences: Apple (built-in) is never picked here (other apps send long system
 /// prompts and tools; Apple holds ~4,000 tokens), and a request that carries tools goes to an agent-capable model.
 /// Order: picture -> LFM3-VL > Bonsai 4B > Bonsai 9B (with tools: Bonsai 4B > 9B first, LFM3-VL has no tools);
-/// coding -> Bonsai 9B > Spark > Raptor; files/calendar words or tools -> Raptor (Osaurus); else Bonsai 4B > Raptor.
+/// coding -> Bonsai 9B > Raptor (Nov 2: Spark step removed; it never fired); files/calendar words or tools -> Raptor (Osaurus); else Bonsai 4B > Raptor.
 let PROXY_CODE_RX = try! NSRegularExpression(pattern: #"(?<!\b(?:area|zip|postal|promo|country|dress|morse|discount|coupon|access|qr|bar|pin) )\b(?:code|coding|script|bug|debug|html|css|javascript|js|python|swift|function|program|snake|regex|compile|error in|sql|api|refactor|algorithm|for loop|while loop|snippet|stack ?trace|unit test|typescript|bash)\b|\b(?:build|make|create|write|develop|code|program)\b[^.?!]{0,25}\b(?:app|game)\b|\b(?:html|web|browser|video|text|python|javascript)\s+(?:app|game)\b"#, options: [.caseInsensitive])
 let PROXY_FILE_RX = try! NSRegularExpression(pattern: #"\b(?:pages|keynote|textedit|docx|txt|markdown|notes app|my notes|the notes|take (?:a )?notes?|add (?:a )?notes?|save (?:a )?notes?|file|files|folder|folders|directory|calendar|schedule|meeting|meetings|event|events|move|rename|search|downloads|desktop|documents|screenshot|screenshots|pdf|doc|docs|document|documents|open)\b"#, options: [.caseInsensitive])
 func autoRouteForProxy(_ j: [String: Any], ids: (String) -> [String]) -> (eng: String, model: String, why: String) {
@@ -188,7 +188,6 @@ func autoRouteForProxy(_ j: [String: Any], ids: (String) -> [String]) -> (eng: S
     }
     if PROXY_CODE_RX.firstMatch(in: last, range: rng) != nil {
         if have("bonsai9b") { return ("bonsai9b", "bonsai-2-9b", "coding") }
-        if have("spark") { return ("spark", "spark-x2.5-4b-mlx", "coding") }
         return ("osaurus", raptor, "coding (no coder installed)")
     }
     if PROXY_FILE_RX.firstMatch(in: last, range: rng) != nil { return ("osaurus", raptor, "files or calendar") }

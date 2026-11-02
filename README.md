@@ -22,10 +22,11 @@ Switchboard is a Mac app for chatting with AI models that run **on your own comp
 | LFM3 1.7B (Liquid AI, long documents, manual pick) | Switchboard server (`~/Models/lfm3/start.sh text`), port 8110 | No |
 | Bonsai 2 4B (Auto's usual quick-chat pick, picture backup) | Switchboard server, port 8097 | Yes |
 | Bonsai 2 9B | Switchboard server, port 8098 | Yes |
-| Spark | Switchboard server, port 8095 | No |
-| Raptor 0.6 4B, Bonsai 2 27B | Osaurus (port 1337) | No |
-| gemma4:e2b, gemma2:2b, ornith, qwen2.5-coder | Ollama (port 11434) | gemma4:e2b only |
+| Qwen3.5 4B 3D Coder (Auto's 3D pick) | shared with Little 3D Scene Maker, port 8117, started on demand | No |
+| Raptor 0.6 4B (Auto's files/calendar pick), Qwen3.5 9B (hand pick only) | Osaurus (port 1337) | Qwen 9B yes |
 | Apple (built-in), `apple-builtin` | Apple Brain helper, port 8100 ([apple-brain](https://github.com/madhatter2727/apple-brain)). Started only when you or Auto pick it, stopped when Switchboard quits. Auto uses it only for plain, short chat: no attachments, files, app control, coding or long reasoning, and the chat plus reply under ~2,500 tokens. If it won't start or errors, Auto falls back once to its usual pick. Chat only. | No |
+
+Hidden from the list since Nov 2 (files kept, easy to undo in `web/app.js` `HIDDEN_ENGINES` / `HIDDEN_MODELS`): Spark, Bonsai 2 27B, Heretic 9B, the Osaurus duplicates and non-chat entries, and the LM Studio, Magnitude and Ollama engines. The 7777 helper still serves them (Ask My Mac uses Spark).
 
 ## How it fits together
 

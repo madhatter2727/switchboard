@@ -10,7 +10,7 @@ launchctl bootout gui/$(id -u)/$LABEL >/dev/null 2>&1 || true
 osascript -e 'tell application id "com.tara.modelpicker" to quit' >/dev/null 2>&1 || true; sleep 1; pkill -f "Applications/(Model Picker|Switchboard).app/Contents/MacOS/" >/dev/null 2>&1 || true
 rm -rf "$APP/Contents/Resources/web"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/web"
 rm -f "$APP/Contents/MacOS/ModelPicker"; cp "$BIN" "$APP/Contents/MacOS/Switchboard"
-cp -R ../web/* "$APP/Contents/Resources/web/"
+rsync -a --exclude "*.bak*" ../web/ "$APP/Contents/Resources/web/"   # Nov 2: never ship backup copies inside the app
 P="$APP/Contents/Info.plist"; cp Resources/Info.plist "$P"
 pb(){ /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$P"; }
 cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"; pb CFBundleIconFile AppIcon   # app icon (source: AppIcon-1024.png)
