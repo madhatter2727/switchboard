@@ -103,6 +103,14 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "searchStatus": var s = SearchIndexer.status(); s["sinceLast"] = Date().timeIntervalSince(SearchIndexer.lastRun); return s
         case "searchStop": SearchIndexer.stop(); return ["ok": true]
         case "searchQuery": return SearchIndex.search(d["query"] as? String ?? "")
+        // Code mode (Nov 9): hand-pick only, never Auto. See Port/CodeMode.swift.
+        case "codeConfig": return CodeMode.config()
+        case "codePick": guard let p = DispatchQueue.main.sync(execute: { CodeMode.pickFolder() }) else { return ["ok": false, "cancelled": true] }; return CodeMode.inspect(p)
+        case "codeInspect": return CodeMode.inspect(d["path"] as? String ?? "")
+        case "codeStart": return CodeRunner.start(d)
+        case "codeStatus": return CodeRunner.status(d["from"] as? Int ?? 0)
+        case "codeStop": return CodeRunner.stop()
+        case "codeUndo": return CodeRunner.undo(d)
         case "searchAsk": return SearchIndex.askPrompt(d["query"] as? String ?? "", question: d["question"] as? String ?? "", paths: d["paths"] as? [String] ?? [])
         case "mem":   // read-only: Mac memory in use vs total, same maths as Activity Monitor's "Memory Used" (app + wired + compressed). Changes nothing.
             var vm = vm_statistics64(); var cnt = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
@@ -263,6 +271,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     /// still open (it shares them through 7777). Crash / force-quit is covered by the 7777 helper's watcher.
     func applicationShouldTerminate(_ s: NSApplication) -> NSApplication.TerminateReply {
         if CommandLine.arguments.contains("--selftest") { return .terminateNow }
+        CodeRunner.stopForQuit()   // Code mode: a running change is undone, never left half-done
         let others = otherClientsOpen(excludingSelf: true)
         launchLog("Switchboard quitting; Ask My Mac or another Switchboard open: \(others)")
         // Nov 2: the 3D Coder is Switchboard-only (Ask My Mac never uses it), so it stops on quit even while Ask My Mac is open.
@@ -286,7 +295,7 @@ func switchboardWindowOpen() -> Bool {
     let me = "\(getpid())"
     return out.split(separator: "\n").contains { l in
         let f = l.split(separator: " "); guard let pid = f.first, String(pid) != me else { return false }
-        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") && !l.contains(" --note-") && !l.contains(" --search") }
+        return !l.contains(" --proxy") && !l.contains(" --tool ") && !l.contains(" --preroute") && !l.contains(" --undo-last") && !l.contains(" --transcribe") && !l.contains(" --doc-") && !l.contains(" --route-auto") && !l.contains(" --idle-check") && !l.contains(" --note-") && !l.contains(" --search") && !l.contains(" --code-") }
 }
 func askMyMacOpen() -> Bool { runCmd("/usr/bin/pgrep", ["-x", "AskMyMac"]).0 == 0 }
 
@@ -430,6 +439,21 @@ if let i = CommandLine.arguments.firstIndex(of: "--search-ask"), CommandLine.arg
     }
     if a.contains("--stop") { _ = engineAct("stop", "search") }; exit(0)
 }
+// Code mode tests (no window): `--code-run PROJECT "ASK" [--dry] [--check CMD] [--model M]`, `--code-undo`.
+// SB_CODE_MODEL_URL points at a fake model and SB_CODE_HARNESS / SB_CODE_DIR at test copies, so no real model or project is touched.
+if let i = CommandLine.arguments.firstIndex(of: "--code-run"), CommandLine.arguments.count > i + 2 {
+    let a = CommandLine.arguments; func opt(_ f: String) -> String? { a.firstIndex(of: f).flatMap { a.count > $0 + 1 ? a[$0 + 1] : nil } }
+    let r = CodeRunner.start(["project": a[i + 1], "ask": a[i + 2], "dry": a.contains("--dry"), "check": opt("--check") ?? "", "model": opt("--model") ?? ""])
+    guard r["ok"] as? Bool == true else { print(r); exit(1) }
+    if let s = opt("--stop-after"), let t = Double(s) { DispatchQueue.global().asyncAfter(deadline: .now() + t) { print("[test] pressing Stop"); _ = CodeRunner.stop() } }
+    var n = 0
+    while true { let s = CodeRunner.status(n); for l in s["lines"] as? [String] ?? [] { print("  | " + l) }; n = s["next"] as? Int ?? n; fflush(stdout)
+        if !["starting", "running"].contains(s["state"] as? String ?? "") { var o = s; o["lines"] = nil; o["diff"] = (o["diff"] as? String).map { String($0.prefix(600)) }
+            if let d = try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys]), let t = String(data: d, encoding: .utf8) { print("RESULT " + t) }; break }
+        usleep(300_000) }
+    exit(0)
+}
+if CommandLine.arguments.contains("--code-undo") { print(CodeRunner.undo([:])); exit(0) }
 if let i = CommandLine.arguments.firstIndex(of: "--undo-last") {
     _ = i; DispatchQueue.global().async { let r = PortTools.handle("undoLast", [:]) ?? [:]; print(r["text"] ?? ""); fflush(stdout); exit(0) }; RunLoop.main.run()
 }

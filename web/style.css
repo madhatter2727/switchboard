@@ -325,3 +325,36 @@ body.search main>header,body.search #agentNote,body.search #autoNote,body.search
 #thinkBox[hidden]{display:none}
 #thinkBox.on{background:#C5D4F8;color:#3A3F5C;box-shadow:2px 2px 0 var(--shadow)}
 .r3d .fix3d{white-space:nowrap;flex:none}
+/* ---------- Code mode (Nov 9): hand-pick only, never Auto ---------- */
+#codeBtn{width:100%;margin-top:8px;padding:8px;border-radius:14px;font-size:14.5px;background:var(--card)}
+body.code #codeBtn{background:var(--mint);color:#3A3F5C}
+body.code main>header,body.code #agentNote,body.code #autoNote,body.code #chat,body.code #form{display:none!important}
+#codeView{flex:1;display:flex;flex-direction:column;min-height:0;padding:18px 28px 18px;gap:10px;overflow:auto}
+#codeView[hidden]{display:none}
+.ccard{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:10px 14px;box-shadow:2px 2px 0 var(--shadow);display:flex;flex-direction:column;gap:8px}
+.crow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.clbl{font:800 13px var(--font);color:var(--muted);min-width:52px}
+.cproj{flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cproj b{color:var(--ink);font-size:14.5px}
+.crow button{display:flex;align-items:center;gap:6px;padding:4px 14px;font-size:13px;border-radius:10px;white-space:nowrap}
+#cModel,#cCheck{font:inherit;font-size:13.5px;border:2px solid var(--line);border-radius:10px;padding:3px 8px;background:var(--field);color:var(--ink)}
+#cCheck{flex:1;min-width:140px}
+#cProjNote.bad{color:#B4442E}
+.cform{display:flex;gap:8px;align-items:flex-end;background:var(--field);border:2px solid var(--line);border-radius:18px;padding:8px 8px 8px 14px;box-shadow:2px 2px 0 var(--shadow)}
+#cAsk{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15.5px;color:var(--ink);resize:vertical;min-height:44px}
+.cbtns{display:flex;gap:8px;align-items:center}
+.cdry{font-size:12.5px;color:var(--muted);display:flex;gap:4px;align-items:center;white-space:nowrap}
+#cGo{background:var(--mint);color:#3A3F5C;padding:6px 18px;border-radius:14px;display:flex;align-items:center;gap:6px}
+#cStop{background:var(--coral);color:#3A3F5C;padding:6px 16px;border-radius:14px}
+#cGo:disabled{opacity:.5}
+#cLogBox summary{cursor:pointer;font:800 13px var(--font);color:var(--muted)}
+#cLog{margin:6px 0 0;max-height:34vh;overflow:auto;background:#141826;color:#d8dee9;border-radius:12px;padding:10px 12px;font:12px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+#cResult{border:2px solid var(--line);border-radius:16px;padding:12px 16px;box-shadow:2px 2px 0 var(--shadow);background:var(--card);display:flex;flex-direction:column;gap:6px}
+#cResult.pass{background:#DFF3E4;color:#2B3050}#cResult.fail,#cResult.error{background:#F8E1DC;color:#2B3050}#cResult.stopped,#cResult.undone{background:var(--hover)}
+#cResult .big{font:800 18px var(--font);color:#3A3F5C}
+#cResult code{font:12.5px ui-monospace,Menlo,monospace;background:rgba(0,0,0,.06);border-radius:6px;padding:1px 6px}
+#cResult ul{margin:0;padding-left:20px;font-size:13.5px}
+#cResult .nrow button{padding:4px 14px;font-size:13px;border-radius:10px}
+#cResult pre{max-height:30vh;overflow:auto;background:#141826;color:#d8dee9;border-radius:10px;padding:8px 10px;font:11.5px/1.4 ui-monospace,Menlo,monospace;white-space:pre}
+#cResult .warn{font-size:12.5px;color:var(--muted)}
+#cResult summary{cursor:pointer;font:800 13px var(--font);color:inherit;opacity:.8}#cResult .warn{color:inherit;opacity:.75}

@@ -7,6 +7,7 @@
   <button id="newChat"><span class="bi" data-ic="plus" data-s="16"></span><span>New chat</span></button>
   <button id="notesBtn" type="button" title="Your voice notes: record, read, search and ask about them. Kept on this Mac."><span class="bi" data-ic="mic" data-s="16"></span><span>Notes</span></button>
 <button id="searchBtn" type="button" title="Search the folders you pick, by meaning and exact words. Files stay where they are."><span class="bi" data-ic="search" data-s="16"></span><span>Search my files</span></button>
+  <button id="codeBtn" type="button" title="Change a project in plain English. Works on a separate branch with an Undo. Runs on this Mac."><span class="bi" data-ic="code" data-s="16"></span><span>Code</span></button>
   <div class="sec">Your chats</div>
   <div id="chats"></div>
   <button id="delAll" type="button" title="Move every saved chat to the Trash"><span class="bi" data-ic="trash" data-s="14"></span><span>Delete all chats</span></button>
@@ -36,6 +37,19 @@
    <form id="sAskF" hidden><input id="sAsk" placeholder="Ask about these results… (e.g. when is the renewal due?)"><button type="submit" id="sAskB">Ask</button></form>
    <div id="sAns" hidden></div>
   </section>
+  <section id="codeView" hidden>
+   <div class="nhead"><div><h2>Code</h2><div class="sm">Pick a project and say what to change. A model on this Mac makes the edit on a separate branch, checks the project still works, and gives you an Undo. Your main version is never touched.</div></div></div>
+   <div class="ccard">
+    <div class="crow"><span class="clbl">Project</span><span id="cProj" class="cproj sm">No project picked yet</span><button id="cPick" type="button"><span class="bi" data-ic="plus" data-s="15"></span> Choose folder</button></div>
+    <div id="cProjNote" class="sm"></div>
+    <div class="crow"><span class="clbl">Model</span><select id="cModel"></select><span class="clbl">Check</span><input id="cCheck" placeholder="e.g. npm run build (optional)" title="A command that must succeed after the edit (it proves the project still builds). Leave empty to skip."></div>
+   </div>
+   <form id="cForm" class="cform"><textarea id="cAsk" rows="2" placeholder="What should change? (e.g. make the points number bright green)"></textarea>
+    <span class="cbtns"><label class="cdry" title="Shows which files the model would read. No model, no changes."><input type="checkbox" id="cDry"> Preview only</label><button id="cGo" type="submit"><span class="bi" data-ic="play" data-s="15"></span> Go</button><button id="cStop" type="button" hidden>Stop</button></span></form>
+   <div id="cState" class="sm"></div>
+   <div id="cResult" hidden></div>
+   <details id="cLogBox" hidden open><summary>Live log</summary><pre id="cLog"></pre></details>
+  </section>
   <div id="chat"><div class="empty">Pick a model on the left, then say hi.</div></div>
   <form id="form"><div id="atts"></div><textarea id="input" rows="2" placeholder="Ask anything… (Enter to send, Shift+Enter for a new line)"></textarea>
    <span class="btns"><button id="clip" type="button" class="ib" title="Add files or pictures (you can also paste with Cmd+V or drag them in)" aria-label="Add files or pictures"><span class="bi" data-ic="clip" data-s="20"></span></button><button id="photo" type="button" class="ib" title="Ask about a picture (it goes to the best model that can see pictures)" aria-label="Ask about a picture"><span class="bi" data-ic="cam" data-s="20"></span></button><button id="mic" type="button" class="ib" title="Click to talk, click again to stop. Speech stays on this Mac." aria-label="Talk"><span class="bi" data-ic="mic" data-s="20"></span></button><button id="send" type="submit"><span class="bi" data-ic="send" data-s="16" data-sw="2"></span><span>Send</span></button><button id="stop" type="button" hidden>Stop</button></span></form>
@@ -46,4 +60,4 @@
 <div id="modal" hidden><div class="box"><div id="mtext"></div><input id="minput" hidden><div class="mb"><button id="mno">Cancel</button><button id="myes">OK</button></div></div></div>
 <script src="icons.js"></script>
 <script>document.querySelectorAll('.bi').forEach(e=>{e.innerHTML=IC(e.dataset.ic,+e.dataset.s||18,+e.dataset.sw||2.2)});document.querySelector('.brand .logo').innerHTML=LOGO(34);</script>
-<script src="app.js"></script></body></html>
+<script src="app.js"></script><script src="code.js"></script></body></html>

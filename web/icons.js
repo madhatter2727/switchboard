@@ -6,6 +6,7 @@ const ICONS={
  raptor:'<path d="M4 18c4 0 5-4 7-7s5-3 9-3c-1 3-3 4-5 5 1 2 0 4-2 5-3 1-6 0-9 0z"/>',
  gem:'<path d="M12 3l7 6-7 12L5 9z"/><path d="M5 9h14"/>',
  qwen:'<path d="M9 7l-5 5 5 5M15 7l5 5-5 5M13.5 5l-3 14"/>',
+ code:'<path d="M9 7l-5 5 5 5M15 7l5 5-5 5M13.5 5l-3 14"/>',
  spark:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
  llama:'<path d="M8 21v-9l-1-3 1-5 2 4 1 0M8 12c2-2 5-2 7 0v9M15 12l2-1"/>',
  bird:'<path d="M5 19c1-6 4-10 10-10l4-3-1 5c0 5-4 9-9 9zM15 9.5h.01"/>',
