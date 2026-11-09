@@ -13,6 +13,7 @@ Switchboard is a Mac app for chatting with AI models that run **on your own comp
 - **Playable results.** When a chat builds a game or web page, it's saved as a real file and gets a green ▶ Play button.
 - **Saves memory.** An engine app (Osaurus, Ollama, LM Studio) opens only when the chosen model needs it, at most once. When you quit Switchboard, and Ask My Mac isn't open, the models it started shut down. Closing the window keeps it in the menu bar; Quit stops the models.
 - **Delete all chats** clears your history in one click.
+- **Code** (hand pick only, never Auto). Pick a project folder, type a change in plain English, press Go. A local model makes the edit on a new `harness/<time>` branch, the check (e.g. `npm run build`) must pass, and you get the result (branch, files changed, the exact change) with an **Undo** button. Stop undoes a half-done run. See "Code mode" below.
 
 ## The models
 
@@ -48,3 +49,17 @@ This needs the Swift command-line tools. Model files aren't stored in this repo;
 ## Privacy
 
 Everything runs locally. No keys, chats, photos or model files are kept in this repo.
+
+## Code mode
+
+The **Code** button runs the local coding harness ([harness-game-kit](https://github.com/madhatter2727/harness-game-kit), `harness/project.js`, "real projects" mode) on the folder you pick:
+
+```
+node harness/project.js --project FOLDER --ask "CHANGE" --model-url http://127.0.0.1:1337/v1 --model MODEL --max-tokens 8192 [--check "npm run build"]
+```
+
+- **Model.** One setting: `CodeMode.defaultModel` in `mac/Sources/ModelPicker/Port/CodeMode.swift` (now `ornith-1.5-9b-mlx-4bit`; TwIL-8B is `twil-8b-mlx-4bit`). The Model menu on the Code screen overrides it (saved as `codeModel` in `ui-prefs.json`). It runs on Osaurus (port 1337), which is started only when you press Go.
+- **Harness folder.** `~/Projects/harness-game-kit` (override: `codeHarness` in `ui-prefs.json`). It needs the Nov 9 harness or newer (project mode).
+- **Safety.** The project must be a git repo with nothing uncommitted. The harness never commits to your branch and never pushes. If the change fails or you press Stop, nothing is kept. Undo switches back to the branch you started on and deletes the `harness/...` branch. Passing only proves the project still builds, so read the change.
+- **Preview only** shows which files the model would read, with no model call and no changes.
+- **Tests (no real model, no real project).** `test-sandbox/code-mode/mock-ui.py` runs the screen in headless Chromium with a mocked bridge. `test-sandbox/code-mode/fake-e2e.sh` runs the real Swift runner and the real harness against a fake model (port 18931) on a throwaway repo in `~/Scratch/code-mode-test`. CLI: `ModelPicker --code-run FOLDER "CHANGE" [--dry] [--check CMD] [--model M] [--stop-after SECS]`, `--code-undo`. Test env: `SB_CODE_HARNESS`, `SB_CODE_MODEL_URL`, `SB_CODE_DIR`.
