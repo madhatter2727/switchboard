@@ -7,6 +7,10 @@ import AppKit
 /// The harness edits on a new harness/<time> branch (never main, never pushes), runs the check, keeps the change only if it
 /// passes, and undoes everything if it fails or is stopped. Undo here = back to her branch + delete the harness branch.
 ///
+/// Nov 9 (later): three jobs. "small" = project.js as above. "big" = harness/build.js --dir REPO --idea A on an existing git repo
+/// (the model plans small steps; each step is one project.js run, on a harness/build-<time> branch). "new" = build.js on a new
+/// empty folder ~/Projects/<name> (starter page + git). build.js exits 0 = all steps done, 1 = stopped partway (done steps kept,
+/// rerun carries on), 130 = stopped by hand, 2 = refused. Its plan is saved in the harness's runs/plans/ (read here, never written).
 /// THE one setting to switch models: CodeMode.defaultModel below (or the Model menu in the Code screen, saved as "codeModel").
 /// Test-only env: SB_CODE_HARNESS (harness folder), SB_CODE_MODEL_URL (e.g. a fake model), SB_CODE_DIR (where the last result is kept).
 enum CodeMode {
@@ -21,6 +25,7 @@ enum CodeMode {
         let f = SUPPORT + "/ui-prefs.json"
         return ((try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: f)))) as? [String: Any])?[k]
     }
+    static var projectsRoot: String { env["SB_CODE_PROJECTS"] ?? (home + "/Projects") }   // where New project makes its folder
     static var model: String { (pref("codeModel") as? String).flatMap { $0.isEmpty ? nil : $0 } ?? defaultModel }
     static var harness: String { env["SB_CODE_HARNESS"] ?? (pref("codeHarness") as? String) ?? (home + "/Projects/harness-game-kit") }
     static var node: String? {
@@ -51,9 +56,29 @@ enum CodeMode {
         return r
     }
 
+    /// New project: ~/Projects/<name>. Refuses a folder that already exists with files in it (unless resuming our own partway build).
+    static func inspectNew(_ raw: String, resume: Bool = false) -> [String: Any] {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return ["ok": false, "err": "Type a name for the new project."] }
+        let okChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " -_."))
+        guard name.count <= 60, name.unicodeScalars.allSatisfy({ okChars.contains($0) }), !name.hasPrefix("."), !name.contains("..") else {
+            return ["ok": false, "err": "Use letters, numbers, spaces, - or _ for the name (no slashes)."] }
+        let path = projectsRoot + "/" + name
+        var r: [String: Any] = ["ok": true, "path": path, "name": name, "display": path.replacingOccurrences(of: home, with: "~")]
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: path, isDirectory: &isDir) {
+            let items = ((try? FileManager.default.contentsOfDirectory(atPath: path)) ?? []).filter { $0 != ".DS_Store" }
+            if !isDir.boolValue || !items.isEmpty {
+                if resume && isDir.boolValue && git(path, ["rev-parse", "--show-toplevel"]).0 == 0 { r["exists"] = true; return r }
+                r["ok"] = false; r["err"] = "\(r["display"]!) already exists and isn't empty. Pick another name."; return r }
+            r["exists"] = true
+        }
+        return r
+    }
+
     static func config() -> [String: Any] {
         ["model": model, "defaultModel": defaultModel, "models": models.map { ["id": $0.id, "name": $0.name] }, "modelURL": modelURL,
-         "harness": harness, "harnessOK": FileManager.default.fileExists(atPath: harness + "/harness/project.js"), "node": node ?? "",
+         "harness": harness, "projectsRoot": projectsRoot.replacingOccurrences(of: home, with: "~"), "buildOK": FileManager.default.fileExists(atPath: harness + "/harness/build.js"), "harnessOK": FileManager.default.fileExists(atPath: harness + "/harness/project.js"), "node": node ?? "",
          "last": CodeRunner.lastSaved() ?? NSNull()]
     }
 
@@ -70,6 +95,9 @@ final class CodeJob {
     var lines: [String] = []
     var project = "", ask = "", model = "", check = "", startBranch = "", branch = "", commit = ""
     var files: [String] = [], diff = "", tries = 0, err = "", dry = false, undone = false
+    var kind = "small"                 // small, big, new
+    var steps: [[String: String]] = [] // the build plan: text + status (todo, done, failed, running)
+    var step = 0, total = 0, doneN = 0, byHand = false, exitCode: Int32 = -1, splitting = false
     var t0 = Date(), secs = 0.0
     var proc: Process?
     var partial = ""
@@ -83,17 +111,21 @@ enum CodeRunner {
 
     static func start(_ d: [String: Any]) -> [String: Any] {
         if running { return ["ok": false, "err": "A change is already running. Stop it first."] }
-        let info = CodeMode.inspect(d["project"] as? String ?? "")
+        let kind = ["small", "big", "new"].contains(d["kind"] as? String ?? "") ? d["kind"] as! String : "small"
+        let resume = d["resume"] as? Bool ?? false
+        let info = kind == "new" ? CodeMode.inspectNew(d["name"] as? String ?? "", resume: resume) : CodeMode.inspect(d["project"] as? String ?? "")
         guard info["ok"] as? Bool == true, let project = info["path"] as? String else { return ["ok": false, "err": info["err"] ?? "Pick a project folder first."] }
         let ask = (d["ask"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !ask.isEmpty else { return ["ok": false, "err": "Type the change you want first."] }
-        let dry = d["dry"] as? Bool ?? false
-        if !dry && info["clean"] as? Bool != true { return ["ok": false, "err": "This project has changes that aren't saved in git yet. Commit or stash them first, so nothing of yours gets mixed in."] }
+        guard !ask.isEmpty else { return ["ok": false, "err": kind == "small" ? "Type the change you want first." : kind == "big" ? "Describe the big change first." : "Describe what to build first."] }
+        let dry = kind == "small" && (d["dry"] as? Bool ?? false)
+        if kind == "new" && info["exists"] as? Bool == true && !resume { /* an existing EMPTY folder is fine */ }
+        if kind != "new" && !dry && info["clean"] as? Bool != true { return ["ok": false, "err": "This project has changes that aren't saved in git yet. Commit or stash them first, so nothing of yours gets mixed in."] }
         guard let node = CodeMode.node else { return ["ok": false, "err": "Node isn't installed, and the harness needs it."] }
         let kit = CodeMode.harness
         guard FileManager.default.fileExists(atPath: kit + "/harness/project.js") else { return ["ok": false, "err": "The coding harness isn't at \(kit)."] }
-        let j = CodeJob(); j.project = project; j.ask = ask; j.dry = dry; j.model = (d["model"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? CodeMode.model
-        j.check = (d["check"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines); j.startBranch = info["branch"] as? String ?? ""
+        if kind != "small" && !FileManager.default.fileExists(atPath: kit + "/harness/build.js") { return ["ok": false, "err": "This harness is too old for Big change / New project (no harness/build.js). Update it first."] }
+        let j = CodeJob(); j.kind = kind; j.project = project; j.ask = ask; j.dry = dry; j.model = (d["model"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? CodeMode.model
+        j.check = (d["check"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines); j.startBranch = kind == "new" ? "" : info["branch"] as? String ?? ""
         with { job = j }
         DispatchQueue.global().async { run(j, node: node, kit: kit) }
         return ["ok": true]
@@ -110,9 +142,15 @@ enum CodeRunner {
                 guard ensureEngineUp(e, seconds: 180) else { with { j.state = "error"; j.err = "Osaurus (the model app) didn't start." }; finish(j); return }
             }
         }
-        var args = [kit + "/harness/project.js", "--project", j.project, "--ask", j.ask]
-        if j.dry { args.append("--show-context") } else { args += ["--model-url", url, "--model", j.model, "--max-tokens", "\(CodeMode.maxTokens)"] }
-        if !j.check.isEmpty { args += ["--check", j.check] }
+        var args: [String]
+        if j.kind == "small" {
+            args = [kit + "/harness/project.js", "--project", j.project, "--ask", j.ask]
+            if j.dry { args.append("--show-context") } else { args += ["--model-url", url, "--model", j.model, "--max-tokens", "\(CodeMode.maxTokens)"] }
+            if !j.check.isEmpty { args += ["--check", j.check] }
+        } else {   // big change / new project: build.js plans small steps and runs project.js for each (it picks its own checks)
+            args = [kit + "/harness/build.js", "--dir", j.project, "--idea", j.ask, "--model-url", url, "--model", j.model, "--max-tokens", "\(CodeMode.maxTokens)"]
+            j.check = ""
+        }
         let p = Process(); p.executableURL = URL(fileURLWithPath: node); p.arguments = args; p.currentDirectoryURL = URL(fileURLWithPath: kit)
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = (node as NSString).deletingLastPathComponent + ":/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -123,16 +161,21 @@ enum CodeRunner {
             with {
                 let all = j.partial + s; var parts = all.components(separatedBy: "\n"); j.partial = parts.removeLast()
                 j.lines += parts; if j.lines.count > 3000 { j.lines.removeFirst(j.lines.count - 3000) }
+                if j.kind != "small" { for l in parts { parseBuild(j, l) } }
             }
         }
-        add(j, j.dry ? "Preview: showing what the model would read. Nothing is changed." : "Model: \(j.model)\(j.check.isEmpty ? "" : " · check: \(j.check)")")
+        add(j, j.dry ? "Preview: showing what the model would read. Nothing is changed." : j.kind == "small" ? "Model: \(j.model)\(j.check.isEmpty ? "" : " · check: \(j.check)")"
+            : "\(j.kind == "new" ? "New project" : "Big change") · model: \(j.model) · folder: \(j.project)")
         do { try p.run() } catch { with { j.state = "error"; j.err = "Couldn't start the harness: \(error.localizedDescription)" }; finish(j); return }
         with { j.proc = p; if j.state == "starting" { j.state = "running" } }
         p.waitUntilExit()
         pipe.fileHandleForReading.readabilityHandler = nil
         let rest = pipe.fileHandleForReading.readDataToEndOfFile()
-        with { let s = j.partial + (String(data: rest, encoding: .utf8) ?? ""); j.partial = ""; j.lines += s.components(separatedBy: "\n").filter { !$0.isEmpty } }
+        with { let s = j.partial + (String(data: rest, encoding: .utf8) ?? ""); j.partial = ""; let ls = s.components(separatedBy: "\n").filter { !$0.isEmpty }
+            j.lines += ls; if j.kind != "small" { for l in ls { parseBuild(j, l) } } }
         let code = p.terminationStatus
+        with { j.exitCode = code }
+        if j.kind != "small" { finishBuild(j, code); finish(j); return }
         let out = with { j.lines }
         // Result: the harness prints "Log: runs/....json"; read it for the branch/commit. Fall back to the printed lines.
         var res: [String: Any] = [:]
@@ -171,16 +214,86 @@ enum CodeRunner {
             let f = max(0, min(from, j.lines.count))
             return ["state": j.state, "lines": Array(j.lines[f...]), "next": j.lines.count, "project": j.project, "name": (j.project as NSString).lastPathComponent,
                     "ask": j.ask, "model": j.model, "check": j.check, "startBranch": j.startBranch, "branch": j.branch, "commit": j.commit, "files": j.files,
-                    "diff": j.diff, "tries": j.tries, "err": j.err, "dry": j.dry, "undone": j.undone,
+                    "diff": j.diff, "tries": j.tries, "err": j.err, "dry": j.dry, "undone": j.undone, "kind": j.kind, "steps": j.steps, "step": j.step,
+                    "total": j.total, "doneN": j.doneN, "exitCode": Int(j.exitCode), "byHand": j.byHand, "splitting": j.splitting,
                     "secs": ["starting", "running"].contains(j.state) ? Date().timeIntervalSince(j.t0) : j.secs]
         }
     }
-    static func status(_ from: Int) -> [String: Any] { guard let j = with({ job }) else { return ["state": "none"] }; return snapshot(j, from: from) }
+    static func status(_ from: Int) -> [String: Any] {
+        guard let j = with({ job }) else { return ["state": "none"] }
+        if j.kind != "small" && running { readPlan(j) }
+        return snapshot(j, from: from)
+    }
+
+    // ---- Big change / New project (harness/build.js) ----
+    /// build.js saves its plan as runs/plans/<folder>-<last 10 of base64url(path)>.json in the harness folder. Read only.
+    static func planFile(_ root: String) -> String {
+        let b = Data(root.utf8).base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+        return CodeMode.harness + "/runs/plans/" + (root as NSString).lastPathComponent + "-" + String(b.suffix(10)) + ".json"
+    }
+    static func readPlan(_ j: CodeJob) {
+        guard let d = try? Data(contentsOf: URL(fileURLWithPath: planFile(j.project))), let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+              o["idea"] as? String == j.ask, let st = o["steps"] as? [[String: Any]] else { return }
+        with {
+            j.steps = st.enumerated().map { i, s in
+                let raw = s["status"] as? String ?? "todo"
+                return ["text": s["text"] as? String ?? "", "status": raw == "todo" && i + 1 == j.step && ["starting", "running"].contains(j.state) ? "running" : raw] }
+            j.total = j.steps.count; j.doneN = j.steps.filter { $0["status"] == "done" }.count
+            if j.kind == "big", let b = o["branch"] as? String, b.hasPrefix("harness/") { j.branch = b; if let base = o["base"] as? String { j.startBranch = base } }
+        }
+    }
+    /// Called with the lock held, once per printed line.
+    static func parseBuild(_ j: CodeJob, _ l: String) {
+        let t = l.trimmingCharacters(in: .whitespaces)
+        if t == "Plan:" { j.steps = []; return }
+        if let m = t.range(of: #"^\d+\. \[( |x)\] "#, options: .regularExpression), j.step == 0 {
+            j.steps.append(["text": String(t[m.upperBound...]), "status": t[m].contains("[x]") ? "done" : "todo"]); j.total = j.steps.count
+            j.doneN = j.steps.filter { $0["status"] == "done" }.count; return }
+        if t.hasPrefix("=== Step "), let r = t.range(of: #"^=== Step (\d+) of (\d+): "#, options: .regularExpression) {
+            let nums = t[r].split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+            if nums.count == 2 {
+                // a split step makes the plan longer; the plan file (read on each status) fills in the new step texts
+                if nums[1] == j.steps.count { for i in j.steps.indices where j.steps[i]["status"] == "running" { j.steps[i]["status"] = "done" }
+                    if nums[0] - 1 < j.steps.count { j.steps[nums[0] - 1]["status"] = "running" } }
+                j.step = nums[0]; j.total = nums[1]; j.splitting = false
+                j.doneN = j.steps.filter { $0["status"] == "done" }.count
+            }
+            return }
+        if t.contains("was too hard in one go") { j.splitting = true; return }
+        if let r = t.range(of: #"^(\d+) of (\d+) steps done"#, options: .regularExpression) {
+            let nums = t[r].split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+            if nums.count == 2 { j.doneN = nums[0]; j.total = nums[1] }
+            if let b = t.range(of: #"\(branch [^)]+\)"#, options: .regularExpression) {
+                let br = String(t[b].dropFirst(8).dropLast()); if j.kind == "big" && br.hasPrefix("harness/") { j.branch = br } }
+            return }
+        if t.hasPrefix("Your "), let r = t.range(of: " branch is unchanged") { j.startBranch = String(t[t.index(t.startIndex, offsetBy: 5)..<r.lowerBound]) }
+    }
+    static func finishBuild(_ j: CodeJob, _ code: Int32) {
+        readPlan(j)   // the plan file is renamed when all steps are done, so this may keep the parsed list
+        let out = with { j.lines }
+        with {
+            if code == 0 { j.state = "done"; for i in j.steps.indices { j.steps[i]["status"] = "done" }; j.doneN = j.steps.count; j.total = j.steps.count }
+            else if j.byHand || code == 130 { j.state = "stopped" }
+            else if code == 2 { j.state = "error"; j.err = out.last(where: { $0.hasPrefix("build:") || $0.hasPrefix("project mode:") }).map { $0.replacingOccurrences(of: "build: ", with: "") } ?? (out.last ?? "The harness refused to run.") }
+            else { j.state = "partway" }
+            for i in j.steps.indices where j.steps[i]["status"] == "running" { j.steps[i]["status"] = j.state == "done" ? "done" : "todo" }
+        }
+        // what changed: big = base..branch; new = everything since the starter page commit
+        var from = "", to = "HEAD"
+        if j.kind == "big", !j.startBranch.isEmpty, !j.branch.isEmpty { from = j.startBranch; to = j.branch }
+        if j.kind == "new" { from = CodeMode.git(j.project, ["rev-list", "--max-parents=0", "HEAD"]).1.split(separator: "\n").first.map(String.init) ?? "" }
+        if !from.isEmpty, j.state != "error" {
+            let names = CodeMode.git(j.project, ["diff", "--name-only", from, to]).1
+            let diff = CodeMode.git(j.project, ["diff", "--stat", "--patch", from, to]).1
+            let commits = CodeMode.git(j.project, ["rev-list", "--count", from + ".." + to]).1
+            with { j.files = names.split(separator: "\n").map(String.init).filter { !$0.isEmpty }; j.diff = String(diff.prefix(30000)); j.tries = Int(commits) ?? 0 }
+        }
+    }
 
     /// Stop = Ctrl-C for the harness: it undoes its edits, goes back to her branch and deletes its half-done branch.
     static func stop() -> [String: Any] {
         guard let j = with({ job }), let p = with({ j.proc }), p.isRunning else { return ["ok": false] }
-        with { j.state = "stopped" }; add(j, "Stopping… (undoing any half-done edit)")
+        with { j.state = "stopped"; j.byHand = true }; add(j, j.kind == "small" ? "Stopping… (undoing any half-done edit)" : "Stopping… (the step in progress is undone; finished steps are kept)")
         p.interrupt()
         DispatchQueue.global().asyncAfter(deadline: .now() + 90) { if p.isRunning { p.terminate() } }   // a running check finishes first; never hang
         return ["ok": true]

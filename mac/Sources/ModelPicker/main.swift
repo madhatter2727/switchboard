@@ -107,6 +107,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "codeConfig": return CodeMode.config()
         case "codePick": guard let p = DispatchQueue.main.sync(execute: { CodeMode.pickFolder() }) else { return ["ok": false, "cancelled": true] }; return CodeMode.inspect(p)
         case "codeInspect": return CodeMode.inspect(d["path"] as? String ?? "")
+        case "codeInspectNew": return CodeMode.inspectNew(d["name"] as? String ?? "")
         case "codeStart": return CodeRunner.start(d)
         case "codeStatus": return CodeRunner.status(d["from"] as? Int ?? 0)
         case "codeStop": return CodeRunner.stop()
@@ -443,12 +444,14 @@ if let i = CommandLine.arguments.firstIndex(of: "--search-ask"), CommandLine.arg
 // SB_CODE_MODEL_URL points at a fake model and SB_CODE_HARNESS / SB_CODE_DIR at test copies, so no real model or project is touched.
 if let i = CommandLine.arguments.firstIndex(of: "--code-run"), CommandLine.arguments.count > i + 2 {
     let a = CommandLine.arguments; func opt(_ f: String) -> String? { a.firstIndex(of: f).flatMap { a.count > $0 + 1 ? a[$0 + 1] : nil } }
-    let r = CodeRunner.start(["project": a[i + 1], "ask": a[i + 2], "dry": a.contains("--dry"), "check": opt("--check") ?? "", "model": opt("--model") ?? ""])
+    // --kind big|new (for new, PROJECT is the name: it goes in SB_CODE_PROJECTS or ~/Projects), --resume = "run again to continue"
+    let r = CodeRunner.start(["project": a[i + 1], "name": a[i + 1], "ask": a[i + 2], "dry": a.contains("--dry"), "check": opt("--check") ?? "", "model": opt("--model") ?? "",
+                              "kind": opt("--kind") ?? "small", "resume": a.contains("--resume")])
     guard r["ok"] as? Bool == true else { print(r); exit(1) }
     if let s = opt("--stop-after"), let t = Double(s) { DispatchQueue.global().asyncAfter(deadline: .now() + t) { print("[test] pressing Stop"); _ = CodeRunner.stop() } }
     var n = 0
     while true { let s = CodeRunner.status(n); for l in s["lines"] as? [String] ?? [] { print("  | " + l) }; n = s["next"] as? Int ?? n; fflush(stdout)
-        if !["starting", "running"].contains(s["state"] as? String ?? "") { var o = s; o["lines"] = nil; o["diff"] = (o["diff"] as? String).map { String($0.prefix(600)) }
+        if !["starting", "running"].contains(s["state"] as? String ?? "") { var o = s; o["lines"] = nil; o["diff"] = (o["diff"] as? String).map { String($0.prefix(a.contains("--full") ? 30000 : 600)) }
             if let d = try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys]), let t = String(data: d, encoding: .utf8) { print("RESULT " + t) }; break }
         usleep(300_000) }
     exit(0)
