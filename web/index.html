@@ -38,15 +38,18 @@
    <div id="sAns" hidden></div>
   </section>
   <section id="codeView" hidden>
-   <div class="nhead"><div><h2>Code</h2><div class="sm">Pick a project and say what to change. A model on this Mac makes the edit on a separate branch, checks the project still works, and gives you an Undo. Your main version is never touched.</div></div></div>
+   <div class="nhead"><div><h2>Code</h2><div class="sm" id="cIntro">Pick a project and say what to change. A model on this Mac makes the edit on a separate branch, checks the project still works, and gives you an Undo. Your main version is never touched.</div></div></div>
    <div class="ccard">
-    <div class="crow"><span class="clbl">Project</span><span id="cProj" class="cproj sm">No project picked yet</span><button id="cPick" type="button"><span class="bi" data-ic="plus" data-s="15"></span> Choose folder</button></div>
+    <div class="crow cjobs" role="tablist" aria-label="What kind of job"><span class="clbl">Job</span><button type="button" class="cjob on" data-job="small" title="One small edit, like a color, a number or a label">Small change</button><button type="button" class="cjob" data-job="big" title="A bigger change to an existing project, split into small steps on a separate branch">Big change</button><button type="button" class="cjob" data-job="new" title="Start a brand-new project from an idea, built step by step">New project</button></div>
+    <div class="crow" id="cNewRow" hidden><span class="clbl">Name</span><input id="cName" placeholder="e.g. space-shooter" maxlength="60" autocomplete="off"><span id="cNewPath" class="sm"></span></div>
+    <div class="crow" id="cProjRow"><span class="clbl">Project</span><span id="cProj" class="cproj sm">No project picked yet</span><button id="cPick" type="button"><span class="bi" data-ic="plus" data-s="15"></span> Choose folder</button></div>
     <div id="cProjNote" class="sm"></div>
-    <div class="crow"><span class="clbl">Model</span><select id="cModel"></select><span class="clbl">Check</span><input id="cCheck" placeholder="e.g. npm run build (optional)" title="A command that must succeed after the edit (it proves the project still builds). Leave empty to skip."></div>
+    <div class="crow"><span class="clbl">Model</span><select id="cModel"></select><span id="cCheckWrap" class="crow"><span class="clbl">Check</span><input id="cCheck" placeholder="e.g. npm run build (optional)" title="A command that must succeed after the edit (it proves the project still builds). Leave empty to skip."></span></div>
    </div>
    <form id="cForm" class="cform"><textarea id="cAsk" rows="2" placeholder="What should change? (e.g. make the points number bright green)"></textarea>
-    <span class="cbtns"><label class="cdry" title="Shows which files the model would read. No model, no changes."><input type="checkbox" id="cDry"> Preview only</label><button id="cGo" type="submit"><span class="bi" data-ic="play" data-s="15"></span> Go</button><button id="cStop" type="button" hidden>Stop</button></span></form>
+    <span class="cbtns"><label class="cdry" id="cDryWrap" title="Shows which files the model would read. No model, no changes."><input type="checkbox" id="cDry"> Preview only</label><button id="cGo" type="submit"><span class="bi" data-ic="play" data-s="15"></span> <span id="cGoTxt">Go</span></button><button id="cStop" type="button" hidden>Stop</button></span></form>
    <div id="cState" class="sm"></div>
+   <div id="cSteps" hidden></div>
    <div id="cResult" hidden></div>
    <details id="cLogBox" hidden open><summary>Live log</summary><pre id="cLog"></pre></details>
   </section>
