@@ -8,9 +8,10 @@ Switchboard is a Mac app for chatting with AI models that run **on your own comp
 - **Auto.** It picks the best model for the chat once and keeps it for the whole chat. Pictures go to a model that can see.
 - **Pictures and files.** You can paste a picture (Cmd+V), drag files in, or click 📎. PDFs, Word files and text files are read all the way to the end, never cut off.
 - **Vision.** LFM3-VL 2B is the first picture reader (Auto, the camera button and the paperclip), then Bonsai 2 4B, Bonsai 2 9B, Gemma 4 and any other picture model. If LFM3-VL won't start or errors, Bonsai takes over. Photo Reader (port 8093) is only the last resort, for when nothing else can see.
-- **Saves memory while idle.** Switchboard's own model servers (LFM3, Bonsai, Spark, Apple) stop by themselves after 15 minutes with no messages and start again on the next one. Osaurus, Ollama, LM Studio, Magnitude and other apps are never stopped by this.
+- **Saves memory while idle.** Switchboard's own model servers (LFM3, Bonsai, Spark, Apple, and the Read aloud voice) stop by themselves after 15 minutes with no messages and start again on the next one. Osaurus, Ollama, LM Studio, Magnitude and other apps are never stopped by this.
 - **Hands on your Mac.** Tool-capable models can find, open, copy, move, rename and trash files, and create or edit documents. Anything that changes a file asks for your Approve first, and Undo reverses the last action.
 - **Playable results.** When a chat builds a game or web page, it's saved as a real file and gets a green ▶ Play button.
+- **Read aloud.** Each assistant reply has a Read aloud button. It speaks the reply with the Kokoro voice on this Mac (Heart by default; Michael is the male option in Settings), skips code blocks, and starts playing quickly even on long replies. The voice helper starts on the first click and stops after 15 minutes idle.
 - **Saves memory.** An engine app (Osaurus, Ollama, LM Studio) opens only when the chosen model needs it, at most once. When you quit Switchboard, and Ask My Mac isn't open, the models it started shut down. Closing the window keeps it in the menu bar; Quit stops the models.
 - **Delete all chats** clears your history in one click.
 

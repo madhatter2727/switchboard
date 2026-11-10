@@ -107,12 +107,15 @@ aside #refresh{margin-bottom:12px}
 .ch:hover .when,.ch.sel .when{color:var(--muted)}
 .ch:hover .when{display:none}
 /* message time + copy */
-.msg.user,.msg.assistant{padding-right:44px}
+.msg.user{padding-right:44px}
+.msg.assistant{padding-right:74px}
 .msg .mtime{margin-top:7px;font:700 11px var(--font);color:var(--muted);opacity:.85;text-align:right}
 .msg.user .mtime{color:var(--userink);opacity:.7}
-.cpy{position:absolute;top:7px;right:8px;width:28px;height:28px;padding:0;border-radius:9px;opacity:0;box-shadow:none;background:var(--card);border-width:2px;color:var(--ink);transition:opacity .12s}
-.msg:hover .cpy,.cpy:focus-visible,.cpy.done{opacity:1}
-.cpy:hover{transform:none;box-shadow:1px 1px 0 var(--shadow);background:var(--hover)}.cpy.done{background:var(--mint);color:#3A3F5C}
+.cpy,.raloud{position:absolute;top:7px;width:28px;height:28px;padding:0;border-radius:9px;opacity:0;box-shadow:none;background:var(--card);border-width:2px;color:var(--ink);transition:opacity .12s}
+.cpy{right:8px}
+.raloud{right:38px}
+.msg:hover .cpy,.cpy:focus-visible,.cpy.done,.msg:hover .raloud,.raloud:focus-visible,.raloud.on{opacity:1}
+.cpy:hover,.raloud:hover{transform:none;box-shadow:1px 1px 0 var(--shadow);background:var(--hover)}.cpy.done,.raloud.on{background:var(--mint);color:#3A3F5C}
 .msg.user .cpy{background:#fff;color:#3A3F5C}
 .addr{font:600 12.5px var(--mono);background:var(--soft);padding:3px 8px;border-radius:8px}
 .smallcopy{padding:3px 10px;font-size:12.5px;border-radius:10px}

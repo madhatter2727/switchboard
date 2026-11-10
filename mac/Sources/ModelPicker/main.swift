@@ -79,6 +79,23 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "copy":   // puts plain text on the Mac clipboard (the Copy buttons use this; WKWebView's own clipboard can be blocked)
             if let t = d["text"] as? String, t.count < 2_000_000 { DispatchQueue.main.sync { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(t, forType: .string) }; return ["ok": true, "copied": true] }
             return ["ok": false]
+        case "kokoroSpeak":   // Nov 10: ask the 8123 helper to speak one chunk; returns a base64 WAV (binary would break the text net bridge)
+            let text = d["text"] as? String ?? ""
+            let voice = d["voice"] as? String ?? "af_heart"
+            guard !text.isEmpty, text.count <= 800 else { return ["ok": false, "error": "Text is empty or too long."] }
+            Owned.noteActivity(engine: "kokoro", token: "speak", begin: true)
+            let payload: [String: Any] = ["text": text, "voice": voice]
+            let body = try? JSONSerialization.data(withJSONObject: payload)
+            var result: [String: Any] = ["ok": false, "error": "The voice helper did not answer."]
+            if let (c, data) = syncHTTP("http://127.0.0.1:8123/speak", method: "POST", body: body, timeout: 90) {
+                if c == 200, data.count > 44, data.starts(with: Data("RIFF".utf8)) {
+                    result = ["ok": true, "bytes": data.count, "wav": data.base64EncodedString()]
+                } else {
+                    result = ["ok": false, "status": c, "error": String(data: data, encoding: .utf8) ?? "The voice helper did not return audio."]
+                }
+            }
+            Owned.noteActivity(engine: "kokoro", token: "speak", begin: false)
+            return result
         case "docInfo": return DocStore.info(d["path"] as? String ?? "")
         case "docRead": return DocReader.start(d["path"] as? String ?? "", first: d["first"] as? Int ?? 1, last: d["last"] as? Int ?? 0)
         case "docStatus": return DocReader.status()
@@ -267,6 +284,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         launchLog("Switchboard quitting; Ask My Mac or another Switchboard open: \(others)")
         // Nov 2: the 3D Coder is Switchboard-only (Ask My Mac never uses it), so it stops on quit even while Ask My Mac is open.
         if !switchboardWindowOpen() && Owned.startedIds().contains("little3d") { stopLittle3d(); Owned.forget("little3d") }
+        // Nov 10: Read aloud (Kokoro) is Switchboard-only too.
+        if !switchboardWindowOpen() && Owned.startedIds().contains("kokoro") { stopKokoro(); Owned.forget("kokoro") }
         if others || Owned.isEmpty { return .terminateNow }
         window?.orderOut(nil)
         DispatchQueue.global().async {

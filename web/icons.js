@@ -33,6 +33,8 @@ const ICONS={
  star:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
  copy:'<rect x="9" y="9" width="11" height="11" rx="3"/><path d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>',
  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+ speaker:'<path d="M4 9h4l6-5v16l-6-5H4z"/><path d="M16 9.5c1.2 1 1.8 2.2 1.8 2.5s-.6 1.5-1.8 2.5"/>',
+ stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
  shield:'<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
  bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
 };

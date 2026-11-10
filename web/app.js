@@ -16,7 +16,7 @@ const ENGINES=[
  {id:'little3d',name:'Qwen3.5 4B 3D Coder',base:'http://127.0.0.1:8117/v1'}, // Nov 1: 3D scenes as one HTML page; thinking off; one alias
  {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
-const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false};
+const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false,readAloudVoice:'af_heart'};
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
@@ -218,8 +218,32 @@ async function copyText(t){t=String(t==null?'':t);
  try{await navigator.clipboard.writeText(t);return true}catch{}
  try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0;left:-9999px;top:0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok}catch{return false}}
 function rawOf(d){if(d._raw!=null)return d._raw;const c=d.cloneNode(true);c.querySelectorAll('.via,.mtime,.cpy,.attrow,.play,.frow').forEach(x=>x.remove());return c.textContent}
-function decorate(d,ts,raw){d.querySelectorAll(':scope>.mtime,:scope>.cpy').forEach(x=>x.remove());if(raw!=null)d._raw=raw;
+// ---- Read aloud (Nov 10): Kokoro-82M on 127.0.0.1:8123, started on demand, skipped code blocks, sentence chunks ----
+const RA={gen:0,audio:null,btn:null};
+function speakableText(t){t=String(t||'');t=stripThink(t);t=t.replace(/```[\s\S]*?```/g,' ');t=t.replace(/`[^`]+`/g,' ');t=t.replace(/\s+/g,' ').trim();return t}
+function speakChunks(t){const max=600,parts=[];const sents=String(t||'').split(/(?<=[.!?])\s+/);let buf='';
+ for(const s of sents){if(!s)continue;const next=buf?buf+' '+s:s;if(next.length<=max){buf=next;continue}if(buf)parts.push(buf);
+  if(s.length<=max){buf=s;continue}for(let i=0;i<s.length;i+=max)parts.push(s.slice(i,i+max));buf=''}if(buf)parts.push(buf);return parts.filter(x=>x.trim())}
+function stopReadAloud(){RA.gen++;if(RA.audio){try{RA.audio.pause();RA.audio.src=''}catch{}RA.audio=null}if(RA.btn){RA.btn.classList.remove('on');RA.btn.title='Read aloud';RA.btn.setAttribute('aria-label','Read aloud');RA.btn.innerHTML=IC('speaker',15);RA.btn=null}}
+async function ensureKokoro(){const ready=async()=>{const j=await getJSON('http://127.0.0.1:8123/models',2);return !!(j&&j.ready)};
+ if(await ready()){try{await act('touch','kokoro')}catch{}return true}
+ status('Loading the read-aloud voice…');await act('start','kokoro');
+ for(let i=0;i<60;i++){if(await ready()){status('');try{await act('touch','kokoro')}catch{}return true}await sleep(1000)}
+ status('');return false}
+function playWavB64(b64,gen){return new Promise(res=>{const a=new Audio('data:audio/wav;base64,'+b64);RA.audio=a;const done=()=>{if(RA.audio===a)RA.audio=null;res()};a.onended=done;a.onerror=done;if(gen!==RA.gen){done();return}a.play().catch(done)})}
+async function toggleReadAloud(btn,d){if(RA.btn===btn){stopReadAloud();return}stopReadAloud();
+ const text=speakableText(rawOf(d)||d._raw||'');if(!text){status('There is nothing I can read in that reply.');setTimeout(()=>status(''),3000);return}
+ const gen=++RA.gen;RA.btn=btn;btn.classList.add('on');btn.title='Stop reading';btn.setAttribute('aria-label','Stop reading');btn.innerHTML=IC('stop',15);
+ if(!(await ensureKokoro())){if(gen===RA.gen){stopReadAloud();addMsg('err','The read-aloud voice would not start.')}return}
+ if(gen!==RA.gen)return;const voice=S.readAloudVoice||'af_heart';const chunks=speakChunks(text);
+ for(const chunk of chunks){if(gen!==RA.gen)return;let r=null;try{r=await act('kokoroSpeak','',{text:chunk,voice})}catch(e){r={ok:false,error:String(e&&e.message||e)}}
+  if(gen!==RA.gen)return;if(!r||!r.ok||!r.wav){status((r&&r.error)||'Could not read that part aloud.');setTimeout(()=>status(''),4000);break}
+  await playWavB64(r.wav,gen)}
+ if(gen===RA.gen)stopReadAloud()}
+function decorate(d,ts,raw){d.querySelectorAll(':scope>.mtime,:scope>.cpy,:scope>.raloud').forEach(x=>x.remove());if(raw!=null)d._raw=raw;
  const tm=fmtMsgTime(ts);if(tm){const t=document.createElement('div');t.className='mtime';t.textContent=tm;t.title=new Date(ts).toLocaleString();d.appendChild(t)}
+ if(d.classList.contains('assistant')){const s=document.createElement('button');s.type='button';s.className='raloud';s.title='Read aloud';s.setAttribute('aria-label','Read aloud');s.innerHTML=IC('speaker',15);
+  s.onclick=e=>{e.stopPropagation();toggleReadAloud(s,d)};d.appendChild(s)}
  const b=document.createElement('button');b.type='button';b.className='cpy';b.title='Copy';b.setAttribute('aria-label','Copy this message');b.innerHTML=IC('copy',15);
  b.onclick=async e=>{e.stopPropagation();if(await copyText(rawOf(d))){b.classList.add('done');b.innerHTML=IC('check',15);b.title='Copied';setTimeout(()=>{b.classList.remove('done');b.innerHTML=IC('copy',15);b.title='Copy'},1400)}};d.appendChild(b)}
 function stripThink(t){t=String(t||'').replace(/<think>[\s\S]*?<\/think>\s*/gi,'');const k=t.toLowerCase().lastIndexOf('</think>');return k>=0?t.slice(k+8).replace(/^\s+/,''):t} // Nov 1: closed <think>…</think> was left in the reply before
@@ -425,7 +449,7 @@ window.__selftest_auto=async(qs)=>{await boot;const out=[];
   // auto-approve nothing: file tasks here are read-only questions
   reply=await p;out.push({q,picked:S.lastAuto&&S.lastAuto.name,why:S.lastAuto&&S.lastAuto.why,engine:S.sel&&S.sel.e,agent:$('agent').checked,label:(document.querySelector('#chat .msg.assistant .via')||{}).textContent||null,reply:String(reply).slice(0,160),ms:Date.now()-t})}
  return JSON.stringify(out,null,1)};
-const boot=(async()=>{try{const p=await act('prefsGet','',{key:'collapsed'});if(Array.isArray(p.value))S.collapsed=new Set(p.value)}catch{}await loadChats();newChat();await refresh()})();
+const boot=(async()=>{try{const p=await act('prefsGet','',{key:'collapsed'});if(Array.isArray(p.value))S.collapsed=new Set(p.value)}catch{}try{const v=await act('prefsGet','',{key:'readAloudVoice'});if(v&&(v.value==='af_heart'||v.value==='am_michael'))S.readAloudVoice=v.value}catch{}await loadChats();newChat();await refresh()})();
 setInterval(()=>{if(!S.switching&&!S.busy)refresh()},6000);
 
 // ---------- Agent mode ----------
@@ -619,11 +643,15 @@ async function openSettings(){const b=$('sbody');$('settings').hidden=false;
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
   +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Photo Reader is stopped (only used as a last resort). Picture-capable models handle photos.')+'</div>'
   +'<h3>Voice</h3><div class="note">Click the mic button to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
+  +'<h3>Read aloud</h3><div class="note">Each reply has a Read aloud button. It uses the Kokoro voice on this Mac and skips code blocks. Click the button again to stop. Nothing is sent to the internet.</div>'
+  +'<div class="row"><label><input type="radio" name="raVoice" value="af_heart" '+(S.readAloudVoice!=='am_michael'?'checked':'')+'> Female (Heart)</label></div>'
+  +'<div class="row"><label><input type="radio" name="raVoice" value="am_michael" '+(S.readAloudVoice==='am_michael'?'checked':'')+'> Male (Michael)</label></div>'
   +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first, unless <b>Auto approve</b> is ON. Then file edits and other steps (copy, move, rename, new folder, adding a calendar event) run without asking, and each one is logged in the chat. Moving to the Trash always asks. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>'
   +'<h3>Saving memory</h3><div class="note">Switchboard\'s own models (LFM3, Bonsai, Spark, Apple) stop by themselves after 15 minutes with no messages, and start again when you next use them. Osaurus, Ollama, LM Studio, Magnitude and your other apps are never stopped by this.</div>';
  b.innerHTML=h;
  $('sCopyAddr').onclick=async e=>{const b=e.currentTarget;if(await copyText('http://127.0.0.1:7777/v1')){b.innerHTML=IC('check',14)+' Copied';setTimeout(()=>{b.innerHTML=IC('copy',14)+' Copy'},1400)}};
  $('sAuto').onchange=e=>{S.auto=e.target.checked;if(S.chat){S.chat.auto=S.auto}if(S.auto)$('cur').textContent=AUTOCUR;render()};
+ b.querySelectorAll('input[name=raVoice]').forEach(x=>x.onchange=()=>{S.readAloudVoice=x.value;act('prefsSet','',{key:'readAloudVoice',value:x.value})});
  const cal=await act('calList','');const box=$('calBox');if(!box)return;
  if(cal.denied){box.textContent=cal.text;return}
  let c='<div class="note">Only ticked calendars are read, and new events go into a ticked calendar that allows changes.</div>';
@@ -1205,3 +1233,18 @@ const _stsb=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='sidebar'&
 const _stag=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='agentask')return _stag(m,e,x);await boot;await sleep(1500);const out={};const [eid,mid]=e.split('@');
  S.chat=null;newChat();await pick(eid,mid);out.agentAllowed=!$('agent').disabled;$('agent').checked=true;agentUI();const t=Date.now();out.reply=String(await send(x)).slice(0,600);out.ms=Date.now()-t;
  out.model=S.sel&&S.sel.m;out.lastBody=S.lastBody||'';out.steps=S.chat.messages.filter(z=>z.role==='step').map(z=>z.text+' -> '+String(z.result).slice(0,160));return JSON.stringify(out,null,1)};
+
+// selftest readaloud (Nov 10): puts one assistant reply on screen, checks the Read aloud button, speaks a short line (real Kokoro WAV).
+const _stRA=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='readaloud')return _stRA(m,e,x);await boot;await sleep(800);
+ const sample=x||'Hello, this is a short read aloud test.';
+ S.chat=null;newChat();const mo={role:'assistant',content:sample+'\n\n```js\nconsole.log(1)\n```',ts:Date.now()};
+ const d=addMsg('assistant',mo.content,'Read aloud selftest',mo);const btn=d&&d.querySelector('.raloud');
+ const out={hasButton:!!btn,label:btn&&btn.getAttribute('aria-label'),speakable:speakableText(mo.content),chunks:speakChunks(speakableText(mo.content))};
+ out.skippedCode=!/console\.log/.test(out.speakable||'');
+ const started=await ensureKokoro();out.helperStarted=!!started;
+ if(started){const r=await act('kokoroSpeak','',{text:out.chunks[0]||sample,voice:S.readAloudVoice||'af_heart'});
+  out.okSpeak=!!(r&&r.ok);out.bytes=r&&r.bytes;out.wavPrefix=r&&r.wav?String(r.wav).slice(0,8):'';out.error=r&&r.error;
+  // A real WAV's base64 starts with "UklGR" (the letters RIFF). Anything shorter than ~2 KB is not speech.
+  out.riff=!!(r&&typeof r.wav==='string'&&r.wav.indexOf('UklGR')===0);out.ok=!!(out.hasButton&&out.skippedCode&&out.okSpeak&&out.riff&&(out.bytes||0)>2000)}
+ else {out.ok=false;out.error='helper would not start'}
+ d&&d.scrollIntoView({block:'end'});await sleep(400);return JSON.stringify(out,null,1)};

@@ -7,6 +7,7 @@ let LMS = home + "/.lmstudio/bin/lms"
 let BONSAI = home + "/Models/bonsai2/start.sh"
 let LFM3 = home + "/Models/lfm3/start.sh"   // LFM3 text (port 8110) and VL (port 8111) via its own llama.cpp copy; started only when picked
 let LITTLE3D_START = home + "/Models/little-3d/switchboard-start.sh"   // Nov 1: Qwen3.5 4B 3D Coder; installed copy of mac/little3d-start.sh
+let KOKORO_START = home + "/Models/switchboard-kokoro/start.sh"   // Nov 10: Read aloud (Kokoro-82M) on 8123; installed copy of mac/kokoro-engine/
 /// Apple Brain: serves Apple's built-in on-device model on 8100 (Tech Demos, Oct 22). Only started when "Apple (built-in)" is picked.
 let APPLE_BRAIN = [home + "/Applications/Apple Brain.app/Contents/MacOS/AppleBrain", home + "/Projects/apple-brain/.build/release/AppleBrain"].first { FileManager.default.isExecutableFile(atPath: $0) } ?? ""
 let APPLE_OWNER_TAG = "--owner"   // Switchboard's copy runs with "--owner switchboard", so stopping it never touches Apple Brain.app
@@ -55,6 +56,7 @@ let ENGINE_DEFS = [
     EngineDef(id: "ocr", name: "LightOnOCR-3 (document reader)", port: 8114, path: "/v1"),   // Oct 29: reads PDF pages; started only while reading, never listed as a chat model
     EngineDef(id: "notes", name: "Underdog Bark 3.0 Clean (Notes speech-to-text)", port: 8115, path: "/v1"),
     EngineDef(id: "search", name: "EmbeddingGemma 2 (Search my files)", port: 8116, path: "/v1"),   // Oct 29: meaning search; never a chat model   // Oct 29: Notes tab; started when a recording needs text, never a chat model
+    EngineDef(id: "kokoro", name: "Kokoro-82M (Read aloud)", port: 8123, path: ""),   // Nov 10: speaks chat replies; started on the first Read aloud click, never a chat model
 ]
 
 /// Blocking GET/POST helper (used off the main thread).
@@ -86,6 +88,7 @@ func freeMemoryForBig() {
     stopBuiltin("spark"); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"])
     _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8110"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"]); _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"]); _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
     stopLittle3d()   // Nov 1: our little3d copy only; never a bare --port 8117
+    stopKokoro()     // Nov 10: our 8123 helper only; never Woof TTS Lab on 8121
     if let (c, d) = syncHTTP("http://127.0.0.1:11434/api/ps", timeout: 2), c == 200,
        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let ms = j["models"] as? [[String: Any]] {
         for m in ms { if let n = m["name"] as? String { _ = syncHTTP("http://127.0.0.1:11434/api/generate", method: "POST", body: try? JSONSerialization.data(withJSONObject: ["model": n, "keep_alive": 0]), timeout: 10) } } }
@@ -118,6 +121,8 @@ func offlineLines(_ id: String) -> [String] {
 }
 /// Model ids of one engine (live list if running, else what is installed on disk).
 func modelIds(_ e: EngineDef) -> [String] {
+    // Never listed as a chat model (started only for their own job: PDF read, notes, search, read aloud).
+    if ["ocr", "notes", "search", "kokoro"].contains(e.id) { return [] }
     if let (c, d) = syncHTTP(e.base + "/models", timeout: 2), c == 200,
        let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
         var ids = ((j["data"] as? [[String: Any]]) ?? (j["models"] as? [[String: Any]]) ?? []).compactMap { $0["id"] as? String ?? $0["name"] as? String }
@@ -161,6 +166,10 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
     case ("stop", "notes"): _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"]); Owned.forget(eng)
     case ("start", "search"): _ = runCmd("/bin/bash", [SEARCH_START], detach: true); Owned.noteStarted(eng)
     case ("stop", "search"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"]); Owned.forget(eng)
+    case ("start", "kokoro"):   // Nov 10: start our 8123 helper only when it is down; never touch Woof on 8121
+        if let e = ENGINE_DEFS.first(where: { $0.id == eng }), !engineUp(e) { _ = runCmd("/bin/bash", [KOKORO_START], detach: true); Owned.noteStarted(eng) }
+    case ("stop", "kokoro"): stopKokoro(); Owned.forget(eng)
+    case ("touch", "kokoro"): Owned.noteActivity(engine: "kokoro", token: "speak", begin: false)
     case ("stop", "bonsai4b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8097"]); Owned.forget(eng)
     case ("stop", "bonsai9b"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8098"]); Owned.forget(eng)
     case ("start", "spark"), ("start", "bonsai27b"):

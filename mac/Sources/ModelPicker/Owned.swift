@@ -72,6 +72,7 @@ enum Owned {
                 case "notes": _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
                 case "little3d": stopLittle3d()   // Nov 2: pid file + alias marker; never the Scene Maker process
+                case "kokoro": stopKokoro()       // Nov 10: pid file + switchboard-kokoro marker; never Woof on 8121
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
@@ -94,7 +95,7 @@ enum Owned {
 /// and start again on the next pick or message (the window and the 7777 helper both start an engine that is off).
 /// Only these. Never Osaurus, Ollama, LM Studio, Magnitude, Bark (8099), One Space (8080/8081), Photo Reader (8093).
 /// Only engines Switchboard itself started (listed under "started" in owned-engines.json) are ever stopped.
-let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "little3d", "spark", "bonsai27b", "apple", "ocr", "notes", "search"]
+let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "little3d", "spark", "bonsai27b", "apple", "ocr", "notes", "search", "kokoro"]
 let IDLE_STOP_SECONDS: Double = 15 * 60
 /// Nov 2: the 3D Coder (8117, about 3.2 GB) stops after 10 min. For a test, a number of seconds (30 or more) in
 /// Model Picker/little3d-idle-seconds overrides it; that file normally holds 600.
@@ -113,6 +114,16 @@ func stopLittle3d() {
         if cmd.contains("--alias switchboard-little3d") { kill(pid, SIGTERM); launchLog("little3d: stopped pid \(pid) (ours)") }
     }
     _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--alias switchboard-little3d"])   // marker only, in case the pid file is stale
+}
+/// Nov 10: stop Switchboard's own Kokoro read-aloud helper on 8123. Uses the pid file the start script writes,
+/// and only kills that pid if its command line carries the switchboard-kokoro marker (so Woof TTS Lab on 8121 is never stopped).
+let KOKORO_PID = SUPPORT + "/kokoro.pid"
+func stopKokoro() {
+    if let t = try? String(contentsOfFile: KOKORO_PID, encoding: .utf8), let pid = Int32(t.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 {
+        let cmd = runCmd("/bin/ps", ["-o", "command=", "-p", "\(pid)"]).1
+        if cmd.contains("switchboard-kokoro") { kill(pid, SIGTERM); launchLog("kokoro: stopped pid \(pid) (ours)") }
+    }
+    _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-kokoro/server.py"])   // marker only, in case the pid file is stale
 }
 extension Owned {
     static let activityQ = DispatchQueue(label: "owned.activity")   // keeps begin/end of one request in order
@@ -159,6 +170,7 @@ extension Owned {
                 case "notes": _ = runCmd("/usr/bin/pkill", ["-f", "switchboard-notes/stt_server.py"])
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
                 case "little3d": stopLittle3d()   // Nov 2: pid file + alias marker; never the Scene Maker process
+                case "kokoro": stopKokoro()       // Nov 10: pid file + switchboard-kokoro marker; never Woof on 8121
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "apple": stopAppleBrain()   // only Switchboard's own copy
                 default: continue }
