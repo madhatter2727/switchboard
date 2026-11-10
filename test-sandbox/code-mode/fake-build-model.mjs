@@ -1,8 +1,12 @@
 // Fake OpenAI-compatible model for Code mode's Big change / New project tests (no real model). Port 18931.
 // Plan prompt -> 3 steps (a step containing "FAIL" if the idea says "partway"). Split prompt -> 2 smaller steps.
 // Step prompt -> creates src/<slug>.js (empty SEARCH = new file); a step with FAIL in it gets an edit that never applies.
-// MODE=slow waits 60 s on step edits (tests Stop). Every call is logged to stdout.
+// MODE=slow: the first step is quick, later step edits wait 60 s (tests Stop with a finished step kept). Every call is logged to stdout.
 import http from 'http';
+import fs from 'fs';
+// FAIL_FLAG=path: FAIL steps fail only while that file exists (delete it, then Run again finishes). Unset = they always fail.
+const failing = () => !process.env.FAIL_FLAG || fs.existsSync(process.env.FAIL_FLAG);
+let stepCalls = 0;
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'step';
 let n = 0;
 http.createServer((req, res) => {
@@ -18,10 +22,11 @@ http.createServer((req, res) => {
       console.log(`call ${n}: split`);
     } else {
       const ask = (u.match(/Change request: (.*)/) || [])[1] || 'step';
-      if (/FAIL/.test(ask)) content = '*** UPDATE: src/nope.js\n<<<<<<< SEARCH\nthis line is not there\n=======\nx\n>>>>>>> REPLACE';
+      stepCalls++;
+      if (/FAIL/.test(ask) && failing()) content = '*** UPDATE: src/nope.js\n<<<<<<< SEARCH\nthis line is not there\n=======\nx\n>>>>>>> REPLACE';
       else content = `*** UPDATE: src/${slug(ask)}.js\n<<<<<<< SEARCH\n=======\n// ${ask}\nexport const done = true;\n>>>>>>> REPLACE`;
-      slow = process.env.MODE === 'slow';
-      console.log(`call ${n}: step "${ask}"${/FAIL/.test(ask) ? ' (bad edit)' : ''}`);
+      slow = process.env.MODE === 'slow' && stepCalls > 1;
+      console.log(`call ${n}: step "${ask}"${/FAIL/.test(ask) && failing() ? ' (bad edit)' : ''}${slow ? ' (slow)' : ''}`);
     }
     setTimeout(() => res.end(JSON.stringify({ choices: [{ message: { content }, finish_reason: 'stop' }] })), slow ? 60000 : 300);
   });
