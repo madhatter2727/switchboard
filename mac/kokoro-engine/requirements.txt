@@ -1,0 +1,4 @@
+# Installed in the Python 3.12 venv used by Woof TTS Lab (not auto-installed here).
+# kokoro-onnx does not support Python 3.14 or 3.15.
+numpy>=1.24
+kokoro-onnx>=0.6.1
