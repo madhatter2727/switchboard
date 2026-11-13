@@ -55,6 +55,7 @@ enum AgentTools {
     static func run(_ name: String, _ argText: String) -> [String: Any] {
         let a = args(argText); let fm = FileManager.default
         if let r = PortTools.run(name, a) { return r }
+        if let r = WebTools.run(name, a) { return r }   // Nov 13: read-only web_search / read_web_page
         switch name {
         case "list_folder":
             guard let p = guardPath(a["path"] as? String ?? ""), let items = try? fm.contentsOfDirectory(atPath: p) else { return ["text": "Cannot open that folder (it must be inside your home folder, not Library or hidden)."] }
