@@ -296,6 +296,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if !switchboardWindowOpen() && Owned.startedIds().contains("little3d") { stopLittle3d(); Owned.forget("little3d") }
         // Nov 10: Read aloud (Kokoro) is Switchboard-only too.
         if !switchboardWindowOpen() && Owned.startedIds().contains("kokoro") { stopKokoro(); Owned.forget("kokoro") }
+        // Nov 13: Big Brain (Gemma 4 26B) is Switchboard-only too (hand-pick, never Auto).
+        if !switchboardWindowOpen() && Owned.startedIds().contains("bigbrain") { stopBigBrain(); Owned.forget("bigbrain") }
         if others || Owned.isEmpty { return .terminateNow }
         window?.orderOut(nil)
         DispatchQueue.global().async {

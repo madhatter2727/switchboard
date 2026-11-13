@@ -15,6 +15,8 @@ rsync -a --exclude "*.bak*" ../web/ "$APP/Contents/Resources/web/"   # Nov 2: ne
 mkdir -p "$HOME/Models/switchboard-kokoro"
 rsync -a --delete --exclude ".venv*" --exclude "__pycache__" --exclude "*.pyc" --exclude "*.log" --exclude "*.pid"   "$(cd .. && pwd)/mac/kokoro-engine/" "$HOME/Models/switchboard-kokoro/"
 chmod +x "$HOME/Models/switchboard-kokoro/start.sh" "$HOME/Models/switchboard-kokoro/check-wav.py"
+# Nov 13: Big Brain (Gemma 4 26B via TurboFieldfare on 8124). Script only; the runtime and model stay in ~/Projects/turbo-fieldfare.
+mkdir -p "$HOME/Models/switchboard-bigbrain"; cp bigbrain-start.sh "$HOME/Models/switchboard-bigbrain/start.sh"; chmod +x "$HOME/Models/switchboard-bigbrain/start.sh"
 P="$APP/Contents/Info.plist"; cp Resources/Info.plist "$P"
 pb(){ /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$P"; }
 cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"; pb CFBundleIconFile AppIcon   # app icon (source: AppIcon-1024.png)

@@ -73,6 +73,7 @@ enum Owned {
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
                 case "little3d": stopLittle3d()   // Nov 2: pid file + alias marker; never the Scene Maker process
                 case "kokoro": stopKokoro()       // Nov 10: pid file + switchboard-kokoro marker; never Woof on 8121
+                case "bigbrain": stopBigBrain()   // Nov 13: our pid only; never the demo's server, never while the demo page is open
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
@@ -95,7 +96,7 @@ enum Owned {
 /// and start again on the next pick or message (the window and the 7777 helper both start an engine that is off).
 /// Only these. Never Osaurus, Ollama, LM Studio, Magnitude, Bark (8099), One Space (8080/8081), Photo Reader (8093).
 /// Only engines Switchboard itself started (listed under "started" in owned-engines.json) are ever stopped.
-let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "little3d", "spark", "bonsai27b", "apple", "ocr", "notes", "search", "kokoro"]
+let IDLE_STOP_ENGINES: Set<String> = ["bonsai4b", "bonsai9b", "lfm3text", "lfm3vl", "little3d", "spark", "bonsai27b", "apple", "ocr", "notes", "search", "kokoro", "bigbrain"]
 let IDLE_STOP_SECONDS: Double = 15 * 60
 /// Nov 2: the 3D Coder (8117, about 3.2 GB) stops after 10 min. For a test, a number of seconds (30 or more) in
 /// Model Picker/little3d-idle-seconds overrides it; that file normally holds 600.
@@ -117,6 +118,18 @@ func stopLittle3d() {
 }
 /// Nov 10: stop Switchboard's own Kokoro read-aloud helper on 8123. Uses the pid file the start script writes,
 /// and only kills that pid if its command line carries the switchboard-kokoro marker (so Woof TTS Lab on 8121 is never stopped).
+/// Nov 13: stop Switchboard's own Big Brain server (TurboFieldfare, 8124). Only the pid our start script wrote, only if it
+/// is still TurboFieldfareServer on 8124, and never while the Big Brain demo page (8125) is open (it shares that server).
+let BIGBRAIN_PID = SUPPORT + "/bigbrain.pid"
+func portListening(_ port: Int) -> Bool { !runCmd("/usr/sbin/lsof", ["-nP", "-iTCP:\(port)", "-sTCP:LISTEN", "-t"]).1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+func stopBigBrain() {
+    guard let t = try? String(contentsOfFile: BIGBRAIN_PID, encoding: .utf8), let pid = Int32(t.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 else { return }
+    let cmd = runCmd("/bin/ps", ["-o", "command=", "-p", "\(pid)"]).1
+    guard cmd.contains("TurboFieldfareServer"), cmd.contains("--port 8124") else { return }
+    if portListening(8125) { launchLog("bigbrain: left running (the Big Brain demo page is open and uses it)"); return }
+    kill(pid, SIGTERM); launchLog("bigbrain: stopped pid \(pid) (ours)")
+    try? FileManager.default.removeItem(atPath: BIGBRAIN_PID)
+}
 let KOKORO_PID = SUPPORT + "/kokoro.pid"
 func stopKokoro() {
     if let t = try? String(contentsOfFile: KOKORO_PID, encoding: .utf8), let pid = Int32(t.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 {
@@ -171,6 +184,7 @@ extension Owned {
                 case "search": _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8116"])
                 case "little3d": stopLittle3d()   // Nov 2: pid file + alias marker; never the Scene Maker process
                 case "kokoro": stopKokoro()       // Nov 10: pid file + switchboard-kokoro marker; never Woof on 8121
+                case "bigbrain": stopBigBrain()   // Nov 13: our pid only; never the demo's server, never while the demo page is open
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "apple": stopAppleBrain()   // only Switchboard's own copy
                 default: continue }

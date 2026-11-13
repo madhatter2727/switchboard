@@ -7,6 +7,8 @@ let LMS = home + "/.lmstudio/bin/lms"
 let BONSAI = home + "/Models/bonsai2/start.sh"
 let LFM3 = home + "/Models/lfm3/start.sh"   // LFM3 text (port 8110) and VL (port 8111) via its own llama.cpp copy; started only when picked
 let LITTLE3D_START = home + "/Models/little-3d/switchboard-start.sh"   // Nov 1: Qwen3.5 4B 3D Coder; installed copy of mac/little3d-start.sh
+let BIGBRAIN_START = home + "/Models/switchboard-bigbrain/start.sh"   // Nov 13: Gemma 4 26B (TurboFieldfare) on 8124; installed copy of mac/bigbrain-start.sh
+let BIGBRAIN_MODEL = home + "/Projects/turbo-fieldfare/scratch/gemma4.gturbo"
 let KOKORO_START = home + "/Models/switchboard-kokoro/start.sh"   // Nov 10: Read aloud (Kokoro-82M) on 8123; installed copy of mac/kokoro-engine/
 /// Apple Brain: serves Apple's built-in on-device model on 8100 (Tech Demos, Oct 22). Only started when "Apple (built-in)" is picked.
 let APPLE_BRAIN = [home + "/Applications/Apple Brain.app/Contents/MacOS/AppleBrain", home + "/Projects/apple-brain/.build/release/AppleBrain"].first { FileManager.default.isExecutableFile(atPath: $0) } ?? ""
@@ -53,6 +55,7 @@ let ENGINE_DEFS = [
     EngineDef(id: "lfm3vl", name: "LFM3-VL 2B", port: 8111, path: "/v1"),
     EngineDef(id: "little3d", name: "Qwen3.5 4B 3D Coder", port: 8117, path: "/v1"),   // Nov 1: 3D scenes as one HTML page (three.js); reuses 8117 if already up
     EngineDef(id: "apple", name: "Apple (built-in)", port: 8100, path: "/v1"),
+    EngineDef(id: "bigbrain", name: "TurboFieldfare (Big Brain)", port: 8124, path: "/v1"),   // Nov 13: Gemma 4 26B, hand-pick only; shares 8124 with the Big Brain demo
     EngineDef(id: "ocr", name: "LightOnOCR-3 (document reader)", port: 8114, path: "/v1"),   // Oct 29: reads PDF pages; started only while reading, never listed as a chat model
     EngineDef(id: "notes", name: "Underdog Bark 3.0 Clean (Notes speech-to-text)", port: 8115, path: "/v1"),
     EngineDef(id: "search", name: "EmbeddingGemma 2 (Search my files)", port: 8116, path: "/v1"),   // Oct 29: meaning search; never a chat model   // Oct 29: Notes tab; started when a recording needs text, never a chat model
@@ -73,7 +76,7 @@ func syncHTTP(_ url: String, method: String = "GET", body: Data? = nil, timeout:
 func engineUp(_ e: EngineDef) -> Bool { if let (c, _) = syncHTTP(e.base + "/models", timeout: 2), c == 200 { return true }; return false }
 
 /// Engines that serve exactly one model; the picker shows a friendly alias for it.
-let SINGLE_ALIAS = ["bonsai4b": "bonsai-2-4b", "bonsai9b": "bonsai-2-9b", "spark": "spark-x2.5-4b-mlx", "bonsai27b": "bonsai-2-27b", "apple": "apple-builtin", "lfm3text": "lfm3-1.7b", "lfm3vl": "lfm3-vl-2b", "little3d": "qwen3.5-4b-3d-coder"]
+let SINGLE_ALIAS = ["bonsai4b": "bonsai-2-4b", "bonsai9b": "bonsai-2-9b", "spark": "spark-x2.5-4b-mlx", "bonsai27b": "bonsai-2-27b", "apple": "apple-builtin", "lfm3text": "lfm3-1.7b", "lfm3vl": "lfm3-vl-2b", "little3d": "qwen3.5-4b-3d-coder", "bigbrain": "gemma-4-26b-a4b-it"]
 /// What the engine itself calls the model in requests.
 func upstreamModel(_ e: EngineDef, _ alias: String) -> String {
     if e.id == "spark" { return home + "/MLXModels/Spark-X2.5-4B-MLX-4bit" }
@@ -116,6 +119,7 @@ func offlineLines(_ id: String) -> [String] {
     case "lfm3text": return FileManager.default.fileExists(atPath: home + "/Models/lfm3/text/LFM3-1.7B-Q4_K_M.gguf") && FileManager.default.isExecutableFile(atPath: home + "/src/llama.cpp-lfm3/build/bin/llama-server") && FileManager.default.isExecutableFile(atPath: LFM3) ? ["lfm3-1.7b"] : []
     case "lfm3vl": return FileManager.default.fileExists(atPath: home + "/Models/lfm3/vl/LFM3-VL-2B-Q4_K_M.gguf") && FileManager.default.fileExists(atPath: home + "/Models/lfm3/vl/mmproj-LFM3-VL-2B-Q8_0.gguf") && FileManager.default.isExecutableFile(atPath: home + "/src/llama.cpp-lfm3/build/bin/llama-server") && FileManager.default.isExecutableFile(atPath: LFM3) ? ["lfm3-vl-2b"] : []
     case "little3d": return FileManager.default.fileExists(atPath: home + "/Models/little-3d/Qwen3.5-4B-3D-Coder-Q4_K_M.gguf") && FileManager.default.isExecutableFile(atPath: LITTLE3D_START) ? ["qwen3.5-4b-3d-coder"] : []   // Nov 1: shown while off; reads only, starts nothing
+    case "bigbrain": return FileManager.default.fileExists(atPath: BIGBRAIN_MODEL + "/manifest.json") && FileManager.default.isExecutableFile(atPath: BIGBRAIN_START) ? ["gemma-4-26b-a4b-it"] : []   // Nov 13: shown while off; reads only
     default: return []
     }
 }
@@ -133,7 +137,7 @@ func modelIds(_ e: EngineDef) -> [String] {
     }
     let L = offlineLines(e.id).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     switch e.id {
-    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama", "apple", "lfm3text", "lfm3vl", "little3d", "ocr": return L.filter { !isEmbedName($0) }
+    case "osaurus", "bonsai4b", "bonsai9b", "spark", "bonsai27b", "ollama", "apple", "lfm3text", "lfm3vl", "little3d", "bigbrain", "ocr": return L.filter { !isEmbedName($0) }
     case "lmstudio": return L.filter { !isEmbedName($0) }
     case "magnitude": return L   // saved ids of the models Magnitude can run (the live /models list leaves out the ones it can't)
     default: return []
@@ -159,7 +163,10 @@ func engineAct(_ op: String, _ eng: String, _ d: [String: Any] = [:]) -> [String
     case ("stop", "lfm3vl"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8111"]); Owned.forget(eng)
     case ("start", "little3d"):   // Nov 1: start our copy only when 8117 is down; an already-up server is not ours
         if let e = ENGINE_DEFS.first(where: { $0.id == eng }), !engineUp(e) { _ = runCmd("/bin/bash", [LITTLE3D_START], detach: true); Owned.noteStarted(eng) }
-    case ("stop", "little3d"): stopLittle3d(); Owned.forget(eng)   // Nov 1: marker alias; never the Scene Maker process
+    case ("stop", "little3d"): stopLittle3d(); Owned.forget(eng)
+    case ("start", "bigbrain"):   // Nov 13: start our copy only when 8124 is down; a demo server already on 8124 is used as is, never ours
+        if let e = ENGINE_DEFS.first(where: { $0.id == eng }), !engineUp(e), !portListening(8124) { _ = runCmd("/bin/bash", [BIGBRAIN_START], detach: true); Owned.noteStarted(eng) }
+    case ("stop", "bigbrain"): stopBigBrain(); Owned.forget(eng)   // Nov 1: marker alias; never the Scene Maker process
     case ("start", "ocr"): _ = runCmd("/bin/bash", [OCR_START], detach: true); Owned.noteStarted(eng)
     case ("stop", "ocr"): _ = runCmd("/usr/bin/pkill", ["-f", "llama-server.*--port 8114"]); Owned.forget(eng)
     case ("start", "notes"): _ = runCmd("/bin/bash", [NOTES_START], detach: true); Owned.noteStarted(eng)

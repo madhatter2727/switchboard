@@ -14,10 +14,16 @@ const ENGINES=[
  {id:'lfm3text',name:'LFM3 1.7B (Liquid AI)',base:'http://127.0.0.1:8110/v1'}, // Oct 28: own llama.cpp copy; started only when picked; thinking off; long documents up to ~100K tokens
  {id:'lfm3vl',name:'LFM3-VL 2B (Liquid AI)',base:'http://127.0.0.1:8111/v1'}, // sees pictures; Auto's FIRST picture reader since Oct 28 (see visionRoute), Bonsai 4B is the backup
  {id:'little3d',name:'Qwen3.5 4B 3D Coder',base:'http://127.0.0.1:8117/v1'}, // Nov 1: 3D scenes as one HTML page; thinking off; one alias
+ {id:'bigbrain',name:'TurboFieldfare (Big Brain)',base:'http://127.0.0.1:8124/v1'}, // Nov 13: Gemma 4 26B-A4B, hand-pick only (Auto never picks it); sees pictures; started on pick, stops after 15 min idle
  {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
 const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false,readAloudVoice:'af_heart',readAloudSpeed:1,readAloudUsed:false};
-const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder'};
+const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder',bigbrain:'gemma-4-26b-a4b-it'};
+const LABEL={'gemma-4-26b-a4b-it':'Gemma 4 26B (Big Brain)'}; // Nov 13: friendly names in the model list
+let BIGBRAIN_AGENT=true; // Nov 13: passed the tool-call test (Desktop/Downloads lists, web search with links); see the M4 report
+// Big Brain is agent-capable but starts with Agent mode OFF (an agent turn re-reads ~6-8K tokens, about 2-3 minutes on this Mac);
+// it switches Agent mode on by itself when a message is about the Mac or the web (needMac/needWeb), like Auto does.
+const agentDefault=m=>isAgent(m)&&!/gemma-4-26b-a4b/i.test(m||'');
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
 // Nov 2 (Tara, 4:51 PM ET): a lean model list. These are hidden from the list only: their files stay on disk, the 7777 helper still serves them
@@ -25,7 +31,7 @@ const up=(e,m)=>UPSTREAM[e]||m;
 const HIDDEN_ENGINES=new Set(['lmstudio','magnitude','ollama','spark','bonsai27b']);
 const HIDDEN_MODELS=/^(?:qwen3\.5-9b-heretic-mlx-mxfp4|spark-x2\.5-4b-mlx-4bit|bonsai-2-27b-jang-crack-1\.75bit|qwen2\.5-1\.5b-instruct-4bit|bark_mlx_fp16)$/i;
 const MANUAL_ONLY_RX=/^qwen3\.5-9b-mlx-4bit$/i; // Nov 2 (Tara): Osaurus Qwen3.5 9B, picked by hand only; sees pictures and can use the file/folder tools; never chosen by Auto
-const isAgent=m=>!/3d-coder/i.test(m)&&(MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)|twil|ornith/i.test(m)); // Nov 13 (Tara): TwIL (twil-8b-mlx-4bit) and Ornith (ornith-1.5-9b-mlx-4bit) are agent-capable too. badge = passed >=4 of 5 in bench/. Nov 1: 3d-coder is chat only. Nov 2: the Ollama/Magnitude models were removed from disk, so their names are gone here
+const isAgent=m=>!/3d-coder/i.test(m)&&((BIGBRAIN_AGENT&&/gemma-4-26b-a4b/i.test(m||''))||MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)|twil|ornith/i.test(m)); // Nov 13 (Tara): TwIL (twil-8b-mlx-4bit) and Ornith (ornith-1.5-9b-mlx-4bit) are agent-capable too. badge = passed >=4 of 5 in bench/. Nov 1: 3d-coder is chat only. Nov 2: the Ollama/Magnitude models were removed from disk, so their names are gone here
 const isEmbed=m=>/embed/i.test(m)||m==='foundation';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -35,11 +41,11 @@ async function refresh(){
   if(HIDDEN_ENGINES.has(e.id)){S.up[e.id]=false;S.models[e.id]=[];return} // Nov 2: hidden engines are not checked or listed
   const j=await getJSON(e.base+'/models');
   if(j&&j.data){S.up[e.id]=true;let ids=j.data.map(m=>m.id).filter(m=>!isEmbed(m)&&!HIDDEN_MODELS.test(m));
-    if(ALIAS[e.id])ids=[ALIAS[e.id]];S.models[e.id]=ids.map(m=>({id:m,label:m}));
+    if(ALIAS[e.id])ids=[ALIAS[e.id]];S.models[e.id]=ids.map(m=>({id:m,label:LABEL[m]||m}));
     // Magnitude: remember its list while it runs so the models still show (and can be picked) when it is off. Saved only when the list changes.
     if(e.id==='magnitude'){const k=ids.join('|');if(k&&S.magSaved!==k){S.magSaved=k;act('list','magnitude')}}}
   else{S.up[e.id]=false;if(e.id==='magnitude')S.magLoaded=null; // Magnitude stopped: whatever was loaded is gone, so load again on the next pick
-   const r=await act('list',e.id);S.models[e.id]=(Array.isArray(r&&r.lines)?r.lines:[]).filter(m=>!HIDDEN_MODELS.test(m)).map(m=>({id:m,label:m}))} // Nov 2: an engine with no models came back as a non-array and stopped the whole refresh
+   const r=await act('list',e.id);S.models[e.id]=(Array.isArray(r&&r.lines)?r.lines:[]).filter(m=>!HIDDEN_MODELS.test(m)).map(m=>({id:m,label:LABEL[m]||m}))} // Nov 2: an engine with no models came back as a non-array and stopped the whole refresh
  }));
  S.proxy=!!(await getJSON('http://127.0.0.1:7777/v1/models',2));
  render()}
@@ -50,9 +56,11 @@ function agentUI(){if(S.auto){$('agent').disabled=true;const L=S.chat&&S.chat.lo
  $('agentNote').textContent=!S.sel?'':ok?(($('agent').checked)?'Agent mode is on: the model can look at your files. Anything that changes files asks you first. It cannot delete.':''):'Agent mode needs an agent-capable model (like Raptor). This one is chat-only.'}
 $('agent').onchange=()=>{if(S.chat&&!S.auto){S.chat.agent=$('agent').checked;if(S.chat.messages.length)saveChat(S.chat)}agentUI()};
 const L3_THINK_BUDGET=10000; // Nov 1: thinking capped so ~20K tokens stay for the page (a 30K think-only run wrote no page)
-const thinkOff=(eid,body)=>{if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid)){const th=eid==='little3d'&&!!S.think3d&&body.stream===true;body.chat_template_kwargs={enable_thinking:th};if(th)body.thinking_budget_tokens=L3_THINK_BUDGET}if(/raptor/i.test(body.model||''))body.reasoning_effort='none';if(MANUAL_ONLY_RX.test(body.model||''))body.chat_template_kwargs={enable_thinking:false};return body}; // Nov 1: little3d thinking off
+const thinkOff=(eid,body)=>{if(eid==='bigbrain'){delete body.reasoning_effort;delete body.chat_template_kwargs;delete body.thinking_budget_tokens;return body} // Nov 13: TurboFieldfare refuses unknown/unsupported fields (HTTP 400)
+ if(['bonsai4b','bonsai9b','spark','bonsai27b','lfm3text','lfm3vl','little3d'].includes(eid)){const th=eid==='little3d'&&!!S.think3d&&body.stream===true;body.chat_template_kwargs={enable_thinking:th};if(th)body.thinking_budget_tokens=L3_THINK_BUDGET}if(/raptor/i.test(body.model||''))body.reasoning_effort='none';if(MANUAL_ONLY_RX.test(body.model||''))body.chat_template_kwargs={enable_thinking:false};return body}; // Nov 1: little3d thinking off
 // ---- context sizes (tokens) per engine; Bonsai runs with -c 65536 -np 1, Ollama with OLLAMA_CONTEXT_LENGTH=65536 ----
 function ctxFor(eid,m){m=m||'';if(eid==='ollama')return 65536;if(eid==='bonsai4b'||eid==='bonsai9b')return 65536;
+ if(eid==='bigbrain')return 16384; // Nov 13: TurboFieldfareServer default --max-context
  if(eid==='lfm3text')return 114688;if(eid==='lfm3vl'||eid==='little3d')return 32768; // LFM3: llama-server -c 114688 (text) / 32768 (VL); Nov 1: little3d --ctx-size 32768
  if(eid==='bonsai27b'||/27b/i.test(m))return 16384;if(eid==='osaurus'||eid==='spark')return 32768;return 8192}
 const tok=x=>Math.ceil((typeof x==='string'?x.length:JSON.stringify(x).replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+\/=]+/g,'#'.repeat(S.sel&&S.sel.e==='lfm3vl'?12000:2400)).length)/3); // a picture counts as ~800 tokens (LFM3-VL: ~4,000 at full size), not its base64 size
@@ -86,7 +94,7 @@ const BRANDS=[[/apple/i,'apple','#8DB8F0'],[/bonsai/i,'bonsai','#86CFAE'],[/rapt
  [/lfm3|liquid/i,'chip','#9CCBF0'],[/gemma/i,'gem','#F2D58A'],[/qwen/i,'qwen','#F0B0D2'],[/llama/i,'llama','#C9DC96'],[/ornith/i,'bird','#9ADBE0'],[/magnitude/i,'magnet','#E7C29A']];
 const BRAND_DEFAULT='#DDD3C0';
 function brandOf(t){t=String(t||'');for(const b of BRANDS)if(b[0].test(t))return{icon:b[1],c1:b[2]};return{icon:'chip',c1:BRAND_DEFAULT}}
-const goodFor=m=>/apple/i.test(m)?'quick chat':/3d-coder/i.test(m)?'3D scenes':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':/lfm3-1\.7b/i.test(m)?'long documents':''; // Nov 1: 3d-coder before coder
+const goodFor=m=>/apple/i.test(m)?'quick chat':/gemma-4-26b/i.test(m)?'biggest brain':/3d-coder/i.test(m)?'3D scenes':/coder/i.test(m)?'codes':/bonsai-2-27b/i.test(m)?'heaviest thinker':/lfm3-1\.7b/i.test(m)?'long documents':''; // Nov 1: 3d-coder before coder
 function render(){agentUI();
  $('engines').innerHTML='';
  const ad=document.createElement('div');ad.className='eng';ad.innerHTML='<div class="eh"><span class="dot on"></span>Auto</div><div class="sub">picks the best model for each message</div>';
@@ -154,7 +162,7 @@ function dialog(text,{input=null,yes='OK',no='Cancel'}={}){return new Promise(re
 async function loadChats(){const r=await act('listChats','');S.chats=(r.chats||[]).map(t=>{try{return JSON.parse(t)}catch{return null}}).filter(Boolean).sort((a,b)=>b.updated-a.updated)}
 function saveChat(c){c.updated=Date.now();act('saveChat','',{id:c.id,json:JSON.stringify(c)});
  if(!S.chats.find(x=>x.id===c.id))S.chats.unshift(c);S.chats.sort((a,b)=>b.updated-a.updated);renderChats()}
-function newChat(){S.chat={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:'New chat',created:Date.now(),updated:Date.now(),engine:S.sel?.e||null,model:S.sel?.m||null,auto:S.auto,lock:null,agent:S.sel?isAgent(S.sel.m):undefined,messages:[],saved:false};if(S.auto)$('cur').textContent=AUTOCUR;if(!S.auto&&S.sel)$('agent').checked=isAgent(S.sel.m);showChat();agentUI()}
+function newChat(){S.chat={id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title:'New chat',created:Date.now(),updated:Date.now(),engine:S.sel?.e||null,model:S.sel?.m||null,auto:S.auto,lock:null,agent:S.sel?agentDefault(S.sel.m):undefined,messages:[],saved:false};if(S.auto)$('cur').textContent=AUTOCUR;if(!S.auto&&S.sel)$('agent').checked=isAgent(S.sel.m);showChat();agentUI()}
 function showChat(){const c=$('chat');c.innerHTML='';
  if(!S.chat||!S.chat.messages.length)c.innerHTML='<div class="empty"><div class="wlogo">'+LOGO(64)+'</div><h2>What shall we do today?</h2><p>'+(S.auto?'Ready. Just type what you want. Auto picks the right model for you.':S.sel?'Ready. Say hi to '+esc(S.sel.m)+'.':'Pick a model on the left, then say hi.')+'</p></div>';
  else{S.hist=true;try{S.chat.messages.forEach(m=>m.role==='step'?addStep(m):addMsg(m.role==='user'?'user':'assistant',m.content,m.via,m))}finally{S.hist=false}}renderChats();updateChip()}
@@ -170,18 +178,19 @@ function openChat(id){if(S.busy)return;const c=S.chats.find(x=>x.id===id);if(!c)
  if(S.auto&&!c.lock&&c.messages.length&&c.engine&&c.model)c.lock={e:c.engine,m:c.model,name:c.model,why:'earlier chat',agent:isAgent(c.model)};
  if(S.auto)$('cur').textContent=c.lock?('Auto · locked to '+c.lock.name+' for this chat'):AUTOCUR;
  if(S.auto&&c.lock)S.sel={e:c.lock.e,m:c.lock.m};
- if(!S.auto&&c.model)$('agent').checked=typeof c.agent==='boolean'?c.agent:isAgent(c.model);
- if(!S.auto&&c.engine&&c.model){S.sel={e:c.engine,m:c.model};writeState();const e=ENGINES.find(x=>x.id===c.engine);$('cur').textContent=(e?e.name:c.engine)+' · '+c.model}
+ if(!S.auto&&c.model)$('agent').checked=typeof c.agent==='boolean'?c.agent:agentDefault(c.model);
+ if(!S.auto&&c.engine&&c.model){S.sel={e:c.engine,m:c.model};writeState();const e=ENGINES.find(x=>x.id===c.engine);$('cur').textContent=LABEL[c.model]||((e?e.name:c.engine)+' · '+c.model)}
  showChat()}
 function writeState(){if(S.sel)act('state','',{json:JSON.stringify(S.sel)})}
 
+function bbLoadNote(){const n=document.createElement('div');n.className='attnote';n.textContent='Warming up Gemma 4 26B (Big Brain)… it was off to save memory. The first answer after warming up is slower.';const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight;return n} // Nov 13
 function l3LoadNote(){const n=document.createElement('div');n.className='attnote';n.textContent='Loading 3D Coder… (it was off to save memory; this takes about a minute)';const c=$('chat');if(c.querySelector('.empty'))c.innerHTML='';c.appendChild(n);c.scrollTop=c.scrollHeight;return n} // Nov 2
 async function waitUp(e,sec=300){for(let i=0;i<sec;i++){const j=await getJSON(e.base+'/models',2);if(j&&j.data)return true;await new Promise(r=>setTimeout(r,1000))}return false}
 async function ensureEngine(eid,mid){
  const e=ENGINES.find(x=>x.id===eid);
- if(!(await getJSON(e.base+'/models'))){const l3=eid==='little3d',t0=Date.now();status(l3?'Loading 3D Coder…':'Starting '+e.name+'…');const note=l3?l3LoadNote():null;await act('start',eid);S.startedByUs.add(eid);
-   const ok=await waitUp(e,l3?180:(eid==='lfm3vl'||eid==='lfm3text')?60:300);S.lastColdStart={eid,ok,secs:Math.round((Date.now()-t0)/1000)};
-   if(note)note.textContent=ok?'3D Coder loaded in '+S.lastColdStart.secs+' s.':'The 3D Coder did not start within 3 minutes.';
+ if(!(await getJSON(e.base+'/models'))){const l3=eid==='little3d',bb=eid==='bigbrain',t0=Date.now();status(l3?'Loading 3D Coder…':bb?'Warming up Big Brain…':'Starting '+e.name+'…');const note=l3?l3LoadNote():bb?bbLoadNote():null;await act('start',eid);S.startedByUs.add(eid);
+   const ok=await waitUp(e,l3?180:bb?240:(eid==='lfm3vl'||eid==='lfm3text')?60:300);S.lastColdStart={eid,ok,secs:Math.round((Date.now()-t0)/1000)};
+   if(note)note.textContent=bb?(ok?'Big Brain warmed up in '+S.lastColdStart.secs+' s.':'Big Brain did not start within 4 minutes.'):ok?'3D Coder loaded in '+S.lastColdStart.secs+' s.':'The 3D Coder did not start within 3 minutes.';
    if(!ok){status('');return false}} // Nov 1: little3d 180s. Nov 2: on demand; 'Loading 3D Coder…' shown in the chat while it starts
  if(eid==='magnitude'&&S.magLoaded!==mid){status('Loading model into Magnitude…');await act('load','magnitude',{model:mid});S.magLoaded=mid}
  status('');return true}
@@ -196,8 +205,8 @@ async function pick(eid,mid,keepAuto){
   if(!(await ensureEngine(eid,mid))){if(!(eid==='lfm3vl'&&keepAuto))addMsg('err','Could not start '+e.name+'. Try opening it yourself once.');return}
   S.sel={e:eid,m:mid};writeState();
   if(!S.chat||S.chat.messages.length===0)newChat();
-  if(!S.auto){$('cur').textContent=e.name+' · '+mid+(isAgent(mid)?'  (agent-capable)':'');
-   const keep=S.chat&&S.chat.model===mid&&typeof S.chat.agent==='boolean';$('agent').checked=keep?S.chat.agent:isAgent(mid);if(S.chat)S.chat.agent=$('agent').checked}
+  if(!S.auto){$('cur').textContent=(LABEL[mid]||(e.name+' · '+mid))+(isAgent(mid)?'  (agent-capable)':'');
+   const keep=S.chat&&S.chat.model===mid&&typeof S.chat.agent==='boolean';$('agent').checked=keep?S.chat.agent:agentDefault(mid);if(S.chat)S.chat.agent=$('agent').checked}
   if(S.chat.messages.length===0){showChat()}
   S.chat.engine=eid;S.chat.model=mid;if(S.chat.messages.length)saveChat(S.chat);
   await refresh();
@@ -456,6 +465,7 @@ async function send(text){warmKokoro();
  S.via=via;
  if(!S.sel){addMsg('err','Pick a model first.');return ''}
  if(S.needTools){S.needTools=false;if(isAgent(S.sel.m)){$('agent').checked=true;agentUI()}}
+ if(!S.auto&&S.sel.e==='bigbrain'&&isAgent(S.sel.m)&&!$('agent').checked&&(needMac(text)||needWeb(text))){$('agent').checked=true;if(S.chat)S.chat.agent=true;agentUI()} // Nov 13: Big Brain turns Agent mode on only when the message needs the Mac or the web
  if($('agent').checked&&isAgent(S.sel.m))return sendAgent(text);
  S.busy=true;$('send').hidden=true;$('stop').hidden=false;
  if(!(await ensureEngine(S.sel.e,S.sel.m))){S.busy=false;$('send').hidden=false;$('stop').hidden=true;
@@ -557,7 +567,7 @@ const AUTO_OK=['edit_file','copy_items','create_folder','move_items','rename_ite
 const CHANGING=['move_items','rename_item','copy_items','create_folder','trash_items','create_calendar_event','edit_file'];
 // Nov 13 (Tara's notes, item 1): chat first. Agent models answer normal questions in plain conversation and only reach for
 // Mac tools when the user clearly asks for something on this Mac; web tools for recent things or links.
-function sysPrompt(){return 'You are a friendly, helpful assistant in Switchboard. You run privately on this Mac.\nNow: '+new Date().toString()+'.\n'
+function sysPrompt(){return 'You are a friendly, helpful assistant in Switchboard. You run privately on this Mac.\nNow: '+(S.sel&&S.sel.e==='bigbrain'?new Date().toDateString():new Date().toString())+'.\n'
  +'CHAT FIRST. Most messages are normal conversation: questions, explanations, how things work, ideas, advice, writing help, maths, coding help, small talk. Answer those directly in plain words from your own knowledge, like a normal chat. Do NOT call any tool for them.\n'
  +'Use a Mac tool ONLY when the user clearly asks you to look at or do something on this Mac: their files, folders or documents, their calendar or reminders, opening a file, app or link, or making or changing a file. Then you MUST call the tool and answer only from its result: never guess file names, events or contents, and never say a folder is empty without a tool result. If you are not sure, just answer in words. Never call a tool only to look busy.\n'
  +'Examples. NO tool: "how does Starlink work?", "explain recursion", "write me a short poem", "what should I cook tonight?". Mac tool: "list the files on my Desktop" (list_folder Desktop), "what is on my calendar today?" (list_calendar_events), "find my resume" (search_files), "open Safari" (open_item). Web tool: "what happened with SpaceX this week?" (web_search), "summarize https://example.com/article" (read_web_page).\n'
@@ -1451,3 +1461,23 @@ const _stM3=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='m3auto'&&
  const msgs=S.chat.messages.slice(n0).filter(z=>z.role==='user'||z.role==='assistant').map(z=>z.role+': '+String(z.content).slice(0,300));const r=S.lastAuto||{};
  await sleep(500);$('chat').scrollTop=1e9;
  return JSON.stringify({ms:Date.now()-t,states:TALK.log,route:{model:r.name,why:r.why,agentMode:!!r.agent},messages:msgs,lastSpokenStartMs:RA.lastStartMs,talkButtonOn:$('talk').classList.contains('on'),barHidden:$('talkBar').hidden},null,1)};
+
+// selftest m4 (Nov 13): Gemma 4 26B (Big Brain) by hand in the ONE "Switchboard test" chat.
+// e = plain | agent | talk ; x = question (plain/agent; "IMG:/path::question" attaches a picture) or audio files a|b (talk).
+const _stM4=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='m4')return _stM4(m,e,x);await boot;await sleep(1500);
+ if(e==='list'){S.collapsed.delete('other');render();await sleep(300);const row=document.querySelector('#engines .m[data-eid="bigbrain"]');if(row)row.scrollIntoView({block:'center'});
+  const tags=row?[...row.querySelectorAll('.badge')].map(b=>b.textContent):[];return JSON.stringify({shown:!!row,label:row&&row.querySelector('.mn').textContent,sub:row&&(row.querySelector('.msub')||{}).textContent,tags,autoWouldPick:['Explain how Starlink works','What is in this picture?','List the files on my Desktop','news this week','write a python script'].map(t=>autoRoute(t).e)},null,1)}
+ await _stTestChat(false);if(e==='agent')BIGBRAIN_AGENT=true;const wasUp=!!(await getJSON('http://127.0.0.1:8124/v1/models',2));
+ const tp=Date.now();await pick('bigbrain',ALIAS.bigbrain);const pickMs=Date.now()-tp;
+ if(e==='agent'){$('agent').checked=true;S.chat.agent=true;agentUI()}else if(e==='noswitch'){$('agent').checked=false;S.chat.agent=false;agentUI()}else{$('agent').checked=false;if(S.chat)S.chat.agent=false;agentUI()}
+ const n0=S.chat.messages.length,out={mode:e,serverWasUp:wasUp,pickMs,coldStart:S.lastColdStart||null,model:S.sel&&S.sel.m,label:(S.models.bigbrain||[])[0]?.label,agentCapableShown:isAgent(ALIAS.bigbrain),seesPictures:isVision(ALIAS.bigbrain)};
+ if(e==='talk'){S.talkFiles=x.split('|');const seen=new Set();const snapper=setInterval(()=>{const st=TALK.state;if(['listening','thinking','speaking'].includes(st)&&!seen.has(st)&&(st!=='listening'||TALK.text)){seen.add(st);window.__snapReq='m4talk-'+st}},300);
+  const t=Date.now();talkToggle();const until=Date.now()+300000;while((TALK.on||TALK.state!=='off')&&Date.now()<until)await sleep(300);clearInterval(snapper);if(TALK.on)talkEnd('test timeout');
+  Object.assign(out,{ms:Date.now()-t,states:TALK.log.map(z=>z.state+'@'+z.ms+(z.heard?' “'+z.heard+'”':'')),speakStartMs:RA.lastStartMs})}
+ else{let q=x;if(q.startsWith('IMG:')){const [p,qq]=q.slice(4).split('::');addAtt(await act('attachPath','',{path:p}));q=qq;await sleep(300)}
+  const t=Date.now();const reply=String(await send(q)||'');out.ms=Date.now()-t;
+  const steps=S.chat.messages.slice(n0).filter(z=>z.role==='step');Object.assign(out,{neededRetryNudge:!!S.macNudged,question:q,tools:steps.map(z=>z.tool),steps:steps.map(z=>z.text+' -> '+String(z.result).slice(0,140)),reply:reply.slice(0,900),links:(reply.match(/https?:\/\/[^\s)\]]+/g)||[]).slice(0,6)});
+  window.__snapReq='m4-'+e;await sleep(900);
+  if(e==='plain'&&!q.startsWith('IMG')&&reply.trim()){await speakText(speakableText(reply).slice(0,200),null);out.readAloudStartMs=RA.lastStartMs}}
+ _stKeepTitle();const msgs=S.chat.messages.slice(n0).filter(z=>z.role==='user'||z.role==='assistant');out.messages=msgs.map(z=>z.role+': '+String(typeof z.content==='string'?z.content:JSON.stringify(z.content)).slice(0,240));
+ await sleep(400);$('chat').scrollTop=1e9;return JSON.stringify(out,null,1)};
