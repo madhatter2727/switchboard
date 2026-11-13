@@ -266,14 +266,17 @@ function speakChunks(t){const parts=[];const sents=String(t||'').split(/(?<=[.!?
  if(buf)parts.push(buf);return parts.filter(x=>x&&x.trim())}
 function stopReadAloud(){RA.gen++;if(RA.audio){try{RA.audio.pause();RA.audio.src=''}catch{}RA.audio=null}if(RA.btn){RA.btn.classList.remove('on');RA.btn.title='Read aloud';RA.btn.setAttribute('aria-label','Read aloud');RA.btn.innerHTML=IC('speaker',15);RA.btn=null}}
 const kokoroReady=async()=>{const j=await getJSON('http://127.0.0.1:8123/models',2);return !!(j&&j.ready)};
-async function ensureKokoro(quiet){
- if(await kokoroReady()){try{await act('touch','kokoro')}catch{}return true}
- if(RA.warming)return RA.warming.then(async ok=>ok||ensureKokoro(quiet));
+async function startKokoro(quiet){
  if(!quiet)status('Loading the read-aloud voice…');await act('start','kokoro');
  for(let i=0;i<240;i++){if(await kokoroReady()){if(!quiet)status('');try{await act('touch','kokoro')}catch{}return true}await sleep(250)}
  if(!quiet)status('');return false}
+async function ensureKokoro(quiet){
+ if(await kokoroReady()){try{await act('touch','kokoro')}catch{}return true}
+ if(RA.warming){if(!quiet)status('Loading the read-aloud voice…');const ok=await RA.warming;if(!quiet)status('');if(ok)return true}   // a warm-up is already starting it
+ return startKokoro(quiet)}
 // Quiet warm-up. force=true for hovering a Read aloud button; otherwise only once Read aloud has been used on this Mac.
-function warmKokoro(force){if(!force&&!S.readAloudUsed)return;if(RA.warming)return;RA.warming=ensureKokoro(true).catch(()=>false).finally(()=>{RA.warming=null})}
+function warmKokoro(force){if(!force&&!S.readAloudUsed)return;if(RA.warming)return;
+ RA.warming=(async()=>{if(await kokoroReady()){try{await act('touch','kokoro')}catch{}return true}return startKokoro(true)})().catch(()=>false).finally(()=>{RA.warming=null})}
 function playWavB64(b64,gen,onStart){return new Promise(res=>{const a=new Audio('data:audio/wav;base64,'+b64);if(RA.mute)a.volume=0;RA.audio=a;const done=()=>{if(RA.audio===a)RA.audio=null;res()};a.onended=done;a.onerror=done;if(gen!==RA.gen){done();return}a.play().then(()=>{if(onStart)onStart()}).catch(done)})}
 const raSpeak=(text,voice,speed)=>act('kokoroSpeak','',{text,voice,speed}).catch(e=>({ok:false,error:String(e&&e.message||e)}));
 async function toggleReadAloud(btn,d){if(RA.btn===btn){stopReadAloud();return}stopReadAloud();const t0=performance.now();RA.lastStartMs=null;
