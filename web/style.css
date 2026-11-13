@@ -332,3 +332,20 @@ body.search main>header,body.search #agentNote,body.search #autoNote,body.search
 #thinkBox[hidden]{display:none}
 #thinkBox.on{background:#C5D4F8;color:#3A3F5C;box-shadow:2px 2px 0 var(--shadow)}
 .r3d .fix3d{white-space:nowrap;flex:none}
+
+/* Nov 13: Talk mode + small Markdown */
+#talk.talkbtn{width:auto;padding:0 12px 0 9px;gap:5px;border-radius:20px;display:inline-flex;align-items:center;font:800 13px var(--font)}
+#talk.on{background:#E8685A;color:#fff}
+#talkBar{display:flex;align-items:center;gap:10px;margin:0 16px 8px;padding:8px 12px;border:2px solid var(--line);border-radius:14px;background:var(--card);font:700 13.5px var(--font);color:var(--ink);box-shadow:2px 2px 0 var(--shadow)}
+#talkBar[hidden]{display:none}
+#talkBar .tdot{width:12px;height:12px;border-radius:50%;background:#9AA0B8;flex:none}
+#talkBar[data-state=listening] .tdot{background:#E8685A;animation:pulse 1s ease-in-out infinite}
+#talkBar[data-state=thinking] .tdot{background:#F2C14E}
+#talkBar[data-state=speaking] .tdot{background:#5BBF8A;animation:pulse 1s ease-in-out infinite}
+#talkHeard{flex:1;color:var(--muted);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#talkEnd{border:2px solid var(--line);border-radius:12px;padding:3px 10px;background:var(--bg);font:800 12px var(--font);cursor:pointer}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.msg a.mdlink{color:#3B6FD8;text-decoration:underline;cursor:pointer;word-break:break-word}
+.msg code.mdcode{font-family:ui-monospace,Menlo,monospace;font-size:.92em;background:var(--hover);padding:0 4px;border-radius:5px}
+.msg strong.mdh{display:inline-block;margin-top:4px}
+@media (prefers-reduced-motion:reduce){#talkBar .tdot{animation:none!important}}

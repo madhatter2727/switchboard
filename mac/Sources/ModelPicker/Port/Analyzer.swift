@@ -113,6 +113,8 @@ final class LiveTranscriber: @unchecked Sendable {
         for b in held { c.yield(b) }
     }
     private var pending: [AnalyzerInput] = []
+    /// Nov 13: Talk mode gets the loudness (RMS) and length in seconds of every buffer, to notice the end of speech.
+    var levelHook: (@Sendable (Float, Double) -> Void)?
     var simulated = false
 
     /// Test hook: make the current recognizer quit by itself, as if the system ended it.
@@ -134,6 +136,10 @@ final class LiveTranscriber: @unchecked Sendable {
         lock.lock(); let c = cont; let fmt = outFmt; let natural = inFmt; let conv = converter; let stop = stopping; lock.unlock()
         guard !stop, let fmt, let natural else { return }
         buffers += 1
+        if let h = levelHook, let ch = buf.floatChannelData, buf.frameLength > 0 {   // Nov 13: Talk mode's pause detector
+            var sum: Float = 0; let n = Int(buf.frameLength); for i in 0..<n { let v = ch[0][i]; sum += v * v }
+            h((sum / Float(n)).squareRoot(), Double(buf.frameLength) / buf.format.sampleRate)
+        }
         var item: AnalyzerInput?
         if let conv {
             let ratio = fmt.sampleRate / natural.sampleRate

@@ -207,6 +207,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     func selftest() {
         let a = CommandLine.arguments; let i = a.firstIndex(of: "--selftest")!
         let mode = a.count > i + 1 ? a[i + 1] : "chat", eng = a.count > i + 2 ? a[i + 2] : "", model = a.count > i + 3 ? a[i + 3] : ""
+        // Nov 13: a test can ask for a mid-run screenshot by setting window.__snapReq = "name" (saved as selftest-name.png).
+        Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+            MainActor.assumeIsolated {
+                self.web.evaluateJavaScript("(()=>{const n=window.__snapReq||'';window.__snapReq='';return n})()") { v, _ in
+                    guard let n = v as? String, !n.isEmpty, n.range(of: "^[a-z0-9-]{1,40}$", options: .regularExpression) != nil else { return }
+                    self.web.takeSnapshot(with: WKSnapshotConfiguration()) { img, _ in if let img = img, let t = img.tiffRepresentation, let rep = NSBitmapImageRep(data: t), let png = rep.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: NSHomeDirectory() + "/Projects/model-picker/selftest-\(n).png")) } }
+                }
+            }
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
             self.web.callAsyncJavaScript("return await window.__selftest('\(mode)','\(eng)','\(model)')", arguments: [:], in: nil, in: .page) { r in
                 var out = ""

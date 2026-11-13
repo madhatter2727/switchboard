@@ -183,6 +183,11 @@ enum PortTools {
                     "pages": FileWrite.pagesPermission()]
         case "speechDown": mainSync { Speech.shared.input.holdDown(currentDraft: d["draft"] as? String ?? "") }; return ["ok": true]
         case "speechUp": mainSync { Speech.shared.input.holdUp() }; return ["ok": true]
+        case "talkStart": return Talk.shared.start(file: (d["file"] as? String).flatMap { $0.isEmpty ? nil : $0 })   // Nov 13: Talk mode
+        case "talkStop": return Talk.shared.stop()
+        case "openLink":   // Nov 13: clickable links in replies open in the default browser (http/https only)
+            if let s = d["url"] as? String, let u = URL(string: s), let sc = u.scheme?.lowercased(), sc == "http" || sc == "https" { DispatchQueue.main.async { NSWorkspace.shared.open(u) }; return ["ok": true] }
+            return ["ok": false]
         case "speechInfo": return mainSync { ["available": Speech.shared.input.available, "hint": Speech.shared.input.hint] }
         case "toolApplyId": return apply(pendingId: d["pendingId"] as? String ?? "")
         case "toolCancelId": cancel(pendingId: d["pendingId"] as? String ?? ""); return ["ok": true]
