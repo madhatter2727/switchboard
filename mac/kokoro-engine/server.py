@@ -26,6 +26,8 @@ HOST = "127.0.0.1"
 PORT = 8123
 MAX_CHARS = 800
 SAMPLE_RATE = 24000
+MIN_SPEED = 0.5
+MAX_SPEED = 2.0
 
 KOKORO_VOICE_GROUPS = (
     (
@@ -201,7 +203,11 @@ def preload():
         _ready = True
         return
     try:
-        get_kokoro()
+        tts = get_kokoro()
+        # Nov 13: one tiny warm-up line so the first real Read aloud does not pay the
+        # first-run cost (ONNX graph setup + espeak load). Ready only after this.
+        with _lock:
+            tts.create("Hi.", voice=KOKORO_DEFAULT, lang="en-us")
         _ready = True
         _load_error = None
         print("kokoro: ready", flush=True)
@@ -212,12 +218,13 @@ def preload():
         print(f"kokoro: load failed: {exc}", flush=True)
 
 
-def synthesize(text, voice):
+def synthesize(text, voice, speed=1.0):
     if MOCK:
         return mock_wav(text)
     with _lock:
         tts = get_kokoro()
-        audio, sr = tts.create(text, voice=voice, lang=kokoro_lang(voice))
+        # Nov 13: Kokoro's own speed setting (1x-2x in Switchboard), not a sped-up recording.
+        audio, sr = tts.create(text, voice=voice, speed=speed, lang=kokoro_lang(voice))
         return audio_to_wav(audio, sr)
 
 
@@ -240,7 +247,15 @@ def parse_speak(payload):
         voice = KOKORO_DEFAULT
     if voice not in KOKORO_VOICES:
         return None, "Voice is not a Kokoro English voice."
-    return (text, voice), None
+    speed = payload.get("speed", 1.0)
+    if speed is None:
+        speed = 1.0
+    if isinstance(speed, bool) or not isinstance(speed, (int, float)):
+        return None, "Speed must be a number."
+    speed = float(speed)
+    if not (MIN_SPEED <= speed <= MAX_SPEED):
+        return None, f"Speed must be between {MIN_SPEED} and {MAX_SPEED}."
+    return (text, voice, speed), None
 
 
 def status_payload():
@@ -251,6 +266,7 @@ def status_payload():
         "model": "kokoro-82m",
         "model_dir": kokoro_label(),
         "default_voice": KOKORO_DEFAULT,
+        "speeds": [MIN_SPEED, MAX_SPEED],
         "voices": voice_catalog(),
         "mock": MOCK,
         "port": PORT,
@@ -326,9 +342,9 @@ class Handler(BaseHTTPRequestHandler):
         if err:
             self._json(400, {"error": err})
             return
-        text, voice = parsed
+        text, voice, speed = parsed
         try:
-            wav = synthesize(text, voice)
+            wav = synthesize(text, voice, speed)
         except Exception as exc:
             traceback.print_exc()
             self._json(500, {"error": str(exc)})

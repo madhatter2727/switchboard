@@ -82,9 +82,10 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply, WKScriptMessageHa
         case "kokoroSpeak":   // Nov 10: ask the 8123 helper to speak one chunk; returns a base64 WAV (binary would break the text net bridge)
             let text = d["text"] as? String ?? ""
             let voice = d["voice"] as? String ?? "af_heart"
+            let speed = min(2.0, max(0.5, (d["speed"] as? NSNumber)?.doubleValue ?? 1.0))   // Nov 13: Kokoro's own speed (1x / 1.25x / 1.5x / 2x)
             guard !text.isEmpty, text.count <= 800 else { return ["ok": false, "error": "Text is empty or too long."] }
             Owned.noteActivity(engine: "kokoro", token: "speak", begin: true)
-            let payload: [String: Any] = ["text": text, "voice": voice]
+            let payload: [String: Any] = ["text": text, "voice": voice, "speed": speed]
             let body = try? JSONSerialization.data(withJSONObject: payload)
             var result: [String: Any] = ["ok": false, "error": "The voice helper did not answer."]
             if let (c, data) = syncHTTP("http://127.0.0.1:8123/speak", method: "POST", body: body, timeout: 90) {

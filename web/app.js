@@ -16,7 +16,7 @@ const ENGINES=[
  {id:'little3d',name:'Qwen3.5 4B 3D Coder',base:'http://127.0.0.1:8117/v1'}, // Nov 1: 3D scenes as one HTML page; thinking off; one alias
  {id:'apple',name:'Apple (built-in)',base:'http://127.0.0.1:8100/v1'}, // Apple's on-device model via Apple Brain; Auto uses it only for plain, short chat (see appleCheck)
 ];
-const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false,readAloudVoice:'af_heart'};
+const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false,readAloudVoice:'af_heart',readAloudSpeed:1,readAloudUsed:false};
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder'};
 const UPSTREAM={spark:'/Users/madhatter2727/MLXModels/Spark-X2.5-4B-MLX-4bit'};
 const up=(e,m)=>UPSTREAM[e]||m;
@@ -25,7 +25,7 @@ const up=(e,m)=>UPSTREAM[e]||m;
 const HIDDEN_ENGINES=new Set(['lmstudio','magnitude','ollama','spark','bonsai27b']);
 const HIDDEN_MODELS=/^(?:qwen3\.5-9b-heretic-mlx-mxfp4|spark-x2\.5-4b-mlx-4bit|bonsai-2-27b-jang-crack-1\.75bit|qwen2\.5-1\.5b-instruct-4bit|bark_mlx_fp16)$/i;
 const MANUAL_ONLY_RX=/^qwen3\.5-9b-mlx-4bit$/i; // Nov 2 (Tara): Osaurus Qwen3.5 9B, picked by hand only; sees pictures and can use the file/folder tools; never chosen by Auto
-const isAgent=m=>!/3d-coder/i.test(m)&&(MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)/i.test(m)); // badge = passed >=4 of 5 in bench/. Nov 1: 3d-coder is chat only. Nov 2: the Ollama/Magnitude models were removed from disk, so their names are gone here
+const isAgent=m=>!/3d-coder/i.test(m)&&(MANUAL_ONLY_RX.test(m||'')||/raptor|spark|bonsai-2-(4b|9b|27b)|twil|ornith/i.test(m)); // Nov 13 (Tara): TwIL (twil-8b-mlx-4bit) and Ornith (ornith-1.5-9b-mlx-4bit) are agent-capable too. badge = passed >=4 of 5 in bench/. Nov 1: 3d-coder is chat only. Nov 2: the Ollama/Magnitude models were removed from disk, so their names are gone here
 const isEmbed=m=>/embed/i.test(m)||m==='foundation';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -218,32 +218,86 @@ async function copyText(t){t=String(t==null?'':t);
  try{await navigator.clipboard.writeText(t);return true}catch{}
  try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0;left:-9999px;top:0';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok}catch{return false}}
 function rawOf(d){if(d._raw!=null)return d._raw;const c=d.cloneNode(true);c.querySelectorAll('.via,.mtime,.cpy,.attrow,.play,.frow').forEach(x=>x.remove());return c.textContent}
-// ---- Read aloud (Nov 10): Kokoro-82M on 127.0.0.1:8123, started on demand, skipped code blocks, sentence chunks ----
-const RA={gen:0,audio:null,btn:null};
-function speakableText(t){t=String(t||'');t=stripThink(t);t=t.replace(/```[\s\S]*?```/g,' ');t=t.replace(/`[^`]+`/g,' ');t=t.replace(/\s+/g,' ').trim();return t}
-function speakChunks(t){const max=600,parts=[];const sents=String(t||'').split(/(?<=[.!?])\s+/);let buf='';
- for(const s of sents){if(!s)continue;const next=buf?buf+' '+s:s;if(next.length<=max){buf=next;continue}if(buf)parts.push(buf);
-  if(s.length<=max){buf=s;continue}for(let i=0;i<s.length;i+=max)parts.push(s.slice(i,i+max));buf=''}if(buf)parts.push(buf);return parts.filter(x=>x.trim())}
+// ---- Read aloud (Nov 10, Nov 13): Kokoro-82M on 127.0.0.1:8123, started on demand ----
+// Nov 13 (Tara's notes, item 3): 28 English voices with a sample button, speed 1x-2x (Kokoro's own speed setting),
+// markdown symbols stripped so it never says "asterisk", a short first sentence first, the next part made while one plays,
+// and the voice warmed up early (app open / sending a message, once Read aloud has been used; hovering the button).
+const RA={gen:0,audio:null,btn:null,warming:null,lastStartMs:null,mute:false};
+const RA_VOICES=[['US female',[['af_heart','Heart'],['af_bella','Bella'],['af_alloy','Alloy'],['af_aoede','Aoede'],['af_jessica','Jessica'],['af_kore','Kore'],['af_nicole','Nicole'],['af_nova','Nova'],['af_river','River'],['af_sarah','Sarah'],['af_sky','Sky']]],
+ ['US male',[['am_michael','Michael'],['am_adam','Adam'],['am_echo','Echo'],['am_eric','Eric'],['am_fenrir','Fenrir'],['am_liam','Liam'],['am_onyx','Onyx'],['am_puck','Puck'],['am_santa','Santa']]],
+ ['UK female',[['bf_alice','Alice'],['bf_emma','Emma'],['bf_isabella','Isabella'],['bf_lily','Lily']]],
+ ['UK male',[['bm_daniel','Daniel'],['bm_fable','Fable'],['bm_george','George'],['bm_lewis','Lewis']]]];
+const RA_VOICE_IDS=new Set(RA_VOICES.flatMap(g=>g[1].map(v=>v[0])));
+const RA_SPEEDS=[1,1.25,1.5,2];
+const raVoiceName=id=>{for(const [g,vs] of RA_VOICES)for(const [v,n] of vs)if(v===id)return n+' ('+g+')';return id};
+// Markdown -> plain words. Code blocks are skipped; short inline code keeps its words without the backticks.
+function speakableText(t){t=stripThink(String(t||''));
+ t=t.replace(/```[\s\S]*?(?:```|$)/g,'\n').replace(/~~~[\s\S]*?(?:~~~|$)/g,'\n');
+ t=t.replace(/`([^`\n]{1,40})`/g,'$1').replace(/`[^`\n]*`/g,' ');
+ t=t.replace(/<\/?[a-z][^>]*>/gi,' ');
+ t=t.replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1').replace(/\[([^\]]+)\]\((?:[^()]|\([^)]*\))*\)/g,'$1').replace(/\[([^\]]+)\]\[[^\]]*\]/g,'$1');
+ t=t.replace(/^\s*\[[^\]]+\]:\s*\S+.*$/gm,'');
+ t=t.replace(/<?https?:\/\/[^\s)>]+>?/g,'').replace(/\bwww\.[^\s)]+/g,'');
+ const out=[];
+ for(let l of t.split('\n')){
+  if(/^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(l)&&/-/.test(l))continue;          // table divider row
+  if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l))continue;                       // horizontal rule
+  if(/^\s*\|/.test(l)||/\|.*\|/.test(l))l=l.split('|').map(x=>x.trim()).filter(Boolean).join(', '); // table cells
+  l=l.replace(/^\s*#{1,6}\s+/,'').replace(/\s+#+\s*$/,'');               // headings
+  l=l.replace(/^\s*(?:>\s*)+/,'');                                        // quotes
+  l=l.replace(/^\s*(?:[-*+•▪◦]|\d{1,3}[.)])\s+/,'');                      // bullets and numbered items
+  l=l.replace(/^\[[ xX]\]\s+/,'');                                        // task boxes
+  l=l.replace(/(\*\*|__)(?=\S)([\s\S]*?\S)\1/g,'$2').replace(/~~(?=\S)([\s\S]*?\S)~~/g,'$1');
+  l=l.replace(/\*(?=\S)([^*]*?\S)\*/g,'$1').replace(/(^|[^\w])_(?=\S)([^_]*?\S)_(?=[^\w]|$)/g,'$1$2');
+  l=l.replace(/(\d)\s*[*×]\s*(?=\d)/g,'$1 times ').replace(/#(?=\d)/g,'number ').replace(/[*#`~|>^]+/g,' ').replace(/_/g,' ').replace(/\\/g,'');
+  l=l.replace(/\s+/g,' ').trim();
+  if(!l||!/[\p{L}\p{N}]/u.test(l))continue;
+  if(!/[.!?:;,…]["')\]]?$/.test(l))l+='.';                               // a list item or heading ends like a sentence
+  out.push(l)}
+ return out.join(' ').replace(/\s+([.,!?;:])/g,'$1').replace(/\s+/g,' ').trim()}
+// First chunk = the first sentence (cut at a comma if it is long), so the voice starts quickly; the second up to 180 characters, then up to 320.
+function speakChunks(t){const parts=[];const sents=String(t||'').split(/(?<=[.!?…])\s+/).filter(x=>x.trim());
+ const cut=(s,max)=>{const out=[];while(s.length>max){let k=-1;for(const sep of [/[,;:]\s/g,/\s/g]){let m;sep.lastIndex=0;while((m=sep.exec(s))&&m.index<max)k=m.index+1;if(k>40)break}
+   if(k<=0)k=max;out.push(s.slice(0,k).trim());s=s.slice(k).trim()}if(s)out.push(s);return out};
+ if(!sents.length)return parts;
+ const first=cut(sents.shift(),140);parts.push(first.shift());let buf=first.join(' ');
+ for(const s of sents){const lim=parts.length<2?180:320;const next=buf?buf+' '+s:s;if(next.length<=lim){buf=next;continue}if(buf)parts.push(buf);
+  if(s.length<=320){buf=s;continue}const c=cut(s,320);buf=c.pop();parts.push(...c)}
+ if(buf)parts.push(buf);return parts.filter(x=>x&&x.trim())}
 function stopReadAloud(){RA.gen++;if(RA.audio){try{RA.audio.pause();RA.audio.src=''}catch{}RA.audio=null}if(RA.btn){RA.btn.classList.remove('on');RA.btn.title='Read aloud';RA.btn.setAttribute('aria-label','Read aloud');RA.btn.innerHTML=IC('speaker',15);RA.btn=null}}
-async function ensureKokoro(){const ready=async()=>{const j=await getJSON('http://127.0.0.1:8123/models',2);return !!(j&&j.ready)};
- if(await ready()){try{await act('touch','kokoro')}catch{}return true}
- status('Loading the read-aloud voice…');await act('start','kokoro');
- for(let i=0;i<60;i++){if(await ready()){status('');try{await act('touch','kokoro')}catch{}return true}await sleep(1000)}
- status('');return false}
-function playWavB64(b64,gen){return new Promise(res=>{const a=new Audio('data:audio/wav;base64,'+b64);RA.audio=a;const done=()=>{if(RA.audio===a)RA.audio=null;res()};a.onended=done;a.onerror=done;if(gen!==RA.gen){done();return}a.play().catch(done)})}
-async function toggleReadAloud(btn,d){if(RA.btn===btn){stopReadAloud();return}stopReadAloud();
+const kokoroReady=async()=>{const j=await getJSON('http://127.0.0.1:8123/models',2);return !!(j&&j.ready)};
+async function ensureKokoro(quiet){
+ if(await kokoroReady()){try{await act('touch','kokoro')}catch{}return true}
+ if(RA.warming)return RA.warming.then(async ok=>ok||ensureKokoro(quiet));
+ if(!quiet)status('Loading the read-aloud voice…');await act('start','kokoro');
+ for(let i=0;i<240;i++){if(await kokoroReady()){if(!quiet)status('');try{await act('touch','kokoro')}catch{}return true}await sleep(250)}
+ if(!quiet)status('');return false}
+// Quiet warm-up. force=true for hovering a Read aloud button; otherwise only once Read aloud has been used on this Mac.
+function warmKokoro(force){if(!force&&!S.readAloudUsed)return;if(RA.warming)return;RA.warming=ensureKokoro(true).catch(()=>false).finally(()=>{RA.warming=null})}
+function playWavB64(b64,gen,onStart){return new Promise(res=>{const a=new Audio('data:audio/wav;base64,'+b64);if(RA.mute)a.volume=0;RA.audio=a;const done=()=>{if(RA.audio===a)RA.audio=null;res()};a.onended=done;a.onerror=done;if(gen!==RA.gen){done();return}a.play().then(()=>{if(onStart)onStart()}).catch(done)})}
+const raSpeak=(text,voice,speed)=>act('kokoroSpeak','',{text,voice,speed}).catch(e=>({ok:false,error:String(e&&e.message||e)}));
+async function toggleReadAloud(btn,d){if(RA.btn===btn){stopReadAloud();return}stopReadAloud();const t0=performance.now();RA.lastStartMs=null;
  const text=speakableText(rawOf(d)||d._raw||'');if(!text){status('There is nothing I can read in that reply.');setTimeout(()=>status(''),3000);return}
  const gen=++RA.gen;RA.btn=btn;btn.classList.add('on');btn.title='Stop reading';btn.setAttribute('aria-label','Stop reading');btn.innerHTML=IC('stop',15);
+ if(!S.readAloudUsed){S.readAloudUsed=true;act('prefsSet','',{key:'readAloudUsed',value:true})}
  if(!(await ensureKokoro())){if(gen===RA.gen){stopReadAloud();addMsg('err','The read-aloud voice would not start.')}return}
- if(gen!==RA.gen)return;const voice=S.readAloudVoice||'af_heart';const chunks=speakChunks(text);
- for(const chunk of chunks){if(gen!==RA.gen)return;let r=null;try{r=await act('kokoroSpeak','',{text:chunk,voice})}catch(e){r={ok:false,error:String(e&&e.message||e)}}
-  if(gen!==RA.gen)return;if(!r||!r.ok||!r.wav){status((r&&r.error)||'Could not read that part aloud.');setTimeout(()=>status(''),4000);break}
-  await playWavB64(r.wav,gen)}
+ if(gen!==RA.gen)return;const voice=S.readAloudVoice||'af_heart',speed=S.readAloudSpeed||1;const chunks=speakChunks(text);
+ let next=raSpeak(chunks[0],voice,speed);
+ for(let i=0;i<chunks.length;i++){const r=await next;if(gen!==RA.gen)return;
+  if(!r||!r.ok||!r.wav){status((r&&r.error)||'Could not read that part aloud.');setTimeout(()=>status(''),4000);break}
+  next=i+1<chunks.length?raSpeak(chunks[i+1],voice,speed):null;   // make the next part while this one plays
+  await playWavB64(r.wav,gen,i===0?()=>{RA.lastStartMs=Math.round(performance.now()-t0)}:null)}
  if(gen===RA.gen)stopReadAloud()}
+// Settings sample: one short line in the chosen voice and speed.
+async function playVoiceSample(btn){stopReadAloud();const gen=++RA.gen;const old=btn.innerHTML;btn.disabled=true;btn.innerHTML='Loading…';
+ try{if(!(await ensureKokoro(true))){btn.innerHTML='Voice would not start';setTimeout(()=>{btn.innerHTML=old;btn.disabled=false},2500);return}
+  const v=S.readAloudVoice||'af_heart';const r=await raSpeak('Hi, I am '+raVoiceName(v).replace(/ \(.*/,'')+'. This is how I will read your replies.',v,S.readAloudSpeed||1);
+  if(gen!==RA.gen)return;if(r&&r.ok&&r.wav){btn.innerHTML='Playing…';await playWavB64(r.wav,gen)}}
+ finally{if(btn.isConnected){btn.innerHTML=old;btn.disabled=false}}}
 function decorate(d,ts,raw){d.querySelectorAll(':scope>.mtime,:scope>.cpy,:scope>.raloud').forEach(x=>x.remove());if(raw!=null)d._raw=raw;
  const tm=fmtMsgTime(ts);if(tm){const t=document.createElement('div');t.className='mtime';t.textContent=tm;t.title=new Date(ts).toLocaleString();d.appendChild(t)}
  if(d.classList.contains('assistant')){const s=document.createElement('button');s.type='button';s.className='raloud';s.title='Read aloud';s.setAttribute('aria-label','Read aloud');s.innerHTML=IC('speaker',15);
-  s.onclick=e=>{e.stopPropagation();toggleReadAloud(s,d)};d.appendChild(s)}
+  s.onclick=e=>{e.stopPropagation();toggleReadAloud(s,d)};s.onmouseenter=()=>warmKokoro(true);d.appendChild(s)}
  const b=document.createElement('button');b.type='button';b.className='cpy';b.title='Copy';b.setAttribute('aria-label','Copy this message');b.innerHTML=IC('copy',15);
  b.onclick=async e=>{e.stopPropagation();if(await copyText(rawOf(d))){b.classList.add('done');b.innerHTML=IC('check',15);b.title='Copied';setTimeout(()=>{b.classList.remove('done');b.innerHTML=IC('copy',15);b.title='Copy'},1400)}};d.appendChild(b)}
 function stripThink(t){t=String(t||'').replace(/<think>[\s\S]*?<\/think>\s*/gi,'');const k=t.toLowerCase().lastIndexOf('</think>');return k>=0?t.slice(k+8).replace(/^\s+/,''):t} // Nov 1: closed <think>…</think> was left in the reply before
@@ -375,7 +429,7 @@ async function pictureGate(cam){
 const LITTLE3D_SYS='Use only the Three.js core ES module from\nhttps://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js.\nDo not import addons or legacy examples/js paths;\nimplement any camera controls directly inside the HTML.';
 function l3UserMsg(d){return 'Please create one self-contained HTML file with Three.js from cdnjs showing '+d+'\n\nMake it look good, with lighting, gentle animation, and simple mouse-drag orbit controls written by hand.'}
 const L3_SAMPLING={temperature:0.7,top_p:0.95,top_k:20,repeat_penalty:1.0};
-async function send(text){
+async function send(text){warmKokoro();
  if(!S.chat)newChat();
  if(!S.busy&&!S.switching&&!S.att.length){const lc=await localCommand(text);if(lc!==null)return lc}
  if(!(await pictureGate(S.camSend)))return '';
@@ -449,7 +503,7 @@ window.__selftest_auto=async(qs)=>{await boot;const out=[];
   // auto-approve nothing: file tasks here are read-only questions
   reply=await p;out.push({q,picked:S.lastAuto&&S.lastAuto.name,why:S.lastAuto&&S.lastAuto.why,engine:S.sel&&S.sel.e,agent:$('agent').checked,label:(document.querySelector('#chat .msg.assistant .via')||{}).textContent||null,reply:String(reply).slice(0,160),ms:Date.now()-t})}
  return JSON.stringify(out,null,1)};
-const boot=(async()=>{try{const p=await act('prefsGet','',{key:'collapsed'});if(Array.isArray(p.value))S.collapsed=new Set(p.value)}catch{}try{const v=await act('prefsGet','',{key:'readAloudVoice'});if(v&&(v.value==='af_heart'||v.value==='am_michael'))S.readAloudVoice=v.value}catch{}await loadChats();newChat();await refresh()})();
+const boot=(async()=>{try{const p=await act('prefsGet','',{key:'collapsed'});if(Array.isArray(p.value))S.collapsed=new Set(p.value)}catch{}try{const v=await act('prefsGet','',{key:'readAloudVoice'});if(v&&RA_VOICE_IDS.has(v.value))S.readAloudVoice=v.value}catch{}try{const v=await act('prefsGet','',{key:'readAloudSpeed'});if(v&&RA_SPEEDS.includes(v.value))S.readAloudSpeed=v.value}catch{}try{const v=await act('prefsGet','',{key:'readAloudUsed'});S.readAloudUsed=!!(v&&v.value===true)}catch{}warmKokoro();await loadChats();newChat();await refresh()})();
 setInterval(()=>{if(!S.switching&&!S.busy)refresh()},6000);
 
 // ---------- Agent mode ----------
@@ -643,15 +697,16 @@ async function openSettings(){const b=$('sbody');$('settings').hidden=false;
   +'<h3>Calendars to read</h3><div id="calBox" class="note">Checking calendar access… (if macOS asks, click Allow Full Access)</div>'
   +'<h3>Photo Reader</h3><div class="row">'+(ph?'Running on this Mac (port 8093)':'Photo Reader is stopped (only used as a last resort). Picture-capable models handle photos.')+'</div>'
   +'<h3>Voice</h3><div class="note">Click the mic button to start talking and click it again when you are done (or press Esc). There is no time limit. Words go into the box; nothing is sent until you press Send. macOS asks once for Microphone and Speech Recognition. Everything stays on this Mac.</div>'
-  +'<h3>Read aloud</h3><div class="note">Each reply has a Read aloud button. It uses the Kokoro voice on this Mac and skips code blocks. Click the button again to stop. Nothing is sent to the internet.</div>'
-  +'<div class="row"><label><input type="radio" name="raVoice" value="af_heart" '+(S.readAloudVoice!=='am_michael'?'checked':'')+'> Female (Heart)</label></div>'
-  +'<div class="row"><label><input type="radio" name="raVoice" value="am_michael" '+(S.readAloudVoice==='am_michael'?'checked':'')+'> Male (Michael)</label></div>'
+  +'<h3>Read aloud</h3><div class="note">Each reply has a Read aloud button. It uses the Kokoro voice on this Mac, skips code blocks and never reads out symbols like asterisks. Click the button again to stop. Nothing is sent to the internet.</div>'
+  +'<div class="row"><label for="raVoiceSel">Voice</label> <select id="raVoiceSel">'+RA_VOICES.map(([g,vs])=>'<optgroup label="'+g+'">'+vs.map(([v,n])=>'<option value="'+v+'"'+(S.readAloudVoice===v?' selected':'')+'>'+n+'</option>').join('')+'</optgroup>').join('')+'</select> <button type="button" id="raSample" class="smallcopy" title="Hear a short sample">'+IC('speaker',14)+' Play sample</button></div>'
+  +'<div class="row">Speed: '+RA_SPEEDS.map(x=>'<label class="raspd"><input type="radio" name="raSpeed" value="'+x+'" '+((S.readAloudSpeed||1)===x?'checked':'')+'> '+x+'x</label>').join(' ')+'</div>'
   +'<h3>Safety</h3><div class="note">Anything that changes files or your calendar asks you first, unless <b>Auto approve</b> is ON. Then file edits and other steps (copy, move, rename, new folder, adding a calendar event) run without asking, and each one is logged in the chat. Moving to the Trash always asks. Nothing is ever permanently deleted (Trash only). Undo Last Action is in the Edit menu, the menu bar icon, or just type “undo”.</div>'
   +'<h3>Saving memory</h3><div class="note">Switchboard\'s own models (LFM3, Bonsai, Spark, Apple) stop by themselves after 15 minutes with no messages, and start again when you next use them. Osaurus, Ollama, LM Studio, Magnitude and your other apps are never stopped by this.</div>';
  b.innerHTML=h;
  $('sCopyAddr').onclick=async e=>{const b=e.currentTarget;if(await copyText('http://127.0.0.1:7777/v1')){b.innerHTML=IC('check',14)+' Copied';setTimeout(()=>{b.innerHTML=IC('copy',14)+' Copy'},1400)}};
  $('sAuto').onchange=e=>{S.auto=e.target.checked;if(S.chat){S.chat.auto=S.auto}if(S.auto)$('cur').textContent=AUTOCUR;render()};
- b.querySelectorAll('input[name=raVoice]').forEach(x=>x.onchange=()=>{S.readAloudVoice=x.value;act('prefsSet','',{key:'readAloudVoice',value:x.value})});
+ $('raVoiceSel').onchange=e=>{S.readAloudVoice=e.target.value;act('prefsSet','',{key:'readAloudVoice',value:e.target.value})};$('raSample').onclick=e=>playVoiceSample(e.currentTarget);$('raSample').onmouseenter=()=>warmKokoro(true);
+ b.querySelectorAll('input[name=raSpeed]').forEach(x=>x.onchange=()=>{const v=Number(x.value);S.readAloudSpeed=v;act('prefsSet','',{key:'readAloudSpeed',value:v})});
  const cal=await act('calList','');const box=$('calBox');if(!box)return;
  if(cal.denied){box.textContent=cal.text;return}
  let c='<div class="note">Only ticked calendars are read, and new events go into a ticked calendar that allows changes.</div>';
@@ -1248,3 +1303,17 @@ const _stRA=window.__selftest;window.__selftest=async(m,e,x)=>{if(m!=='readaloud
   out.riff=!!(r&&typeof r.wav==='string'&&r.wav.indexOf('UklGR')===0);out.ok=!!(out.hasButton&&out.skippedCode&&out.okSpeak&&out.riff&&(out.bytes||0)>2000)}
  else {out.ok=false;out.error='helper would not start'}
  d&&d.scrollIntoView({block:'end'});await sleep(400);return JSON.stringify(out,null,1)};
+
+// selftests ra2 / rasettings / labels (Nov 13): VOICE SPEED [cold]. Markdown reply -> speakable text, real playback through the button (muted), time to first sound.
+const _stRA2=window.__selftest;window.__selftest=async(m,e,x)=>{if(!['ra2','rasettings','labels'].includes(m))return _stRA2(m,e,x);await boot;await sleep(800);
+ if(m==='labels'){await refresh();S.collapsed.clear();render();await sleep(300);const rows=[...document.querySelectorAll('#engines .m')].map(r=>({model:(r.querySelector('.mn')||{}).textContent,label:(r.querySelector('.badge.agent,.badge.chat')||{}).textContent}));
+  const tw=[...document.querySelectorAll('#engines .m .mn')].find(n=>/twil/i.test(n.textContent));if(tw)tw.closest('.m').scrollIntoView({block:'end'});await sleep(300);return JSON.stringify(rows,null,1)}
+ if(m==='rasettings'){await openSettings();await sleep(600);const h=[...document.querySelectorAll('#settings h3')].find(z=>/Read aloud/.test(z.textContent));if(h)h.scrollIntoView({block:'start'});
+  const sel=$('raVoiceSel');return JSON.stringify({voices:sel?sel.options.length:0,groups:sel?[...sel.querySelectorAll('optgroup')].map(g=>g.label+': '+g.children.length):[],speeds:[...document.querySelectorAll('input[name=raSpeed]')].map(z=>z.value),selected:sel&&sel.value},null,1)}
+ const md='## Quick tips for a better morning\n\n**Start the night before.** Lay out your clothes and pack your bag so there is less to think about when you wake up.\n- *Drink a glass of water* first thing, before coffee.\n- Open the curtains and get some daylight for a few minutes.\n- Check [the weather](https://weather.com) so you dress right.\n\n```sh\necho hi\n```\nFinally, keep your phone out of reach for the first ten minutes. You will feel calmer and more in control of the day ahead, and the small wins add up over a week.';
+ if(e)S.readAloudVoice=e;if(x)S.readAloudSpeed=Number(x)||1;RA.mute=true;
+ S.chat=null;newChat();const mo={role:'assistant',content:md,ts:Date.now()};const d=addMsg('assistant',md,'Read aloud selftest',mo);const btn=d&&d.querySelector('.raloud');
+ const sp=speakableText(md);const out={voice:S.readAloudVoice,speed:S.readAloudSpeed,speakable:sp,chunks:speakChunks(sp),symbolsLeft:(sp.match(/[*#`\[\]_|>~]/g)||[]).length,readyBefore:await kokoroReady()};
+ const t=performance.now();await toggleReadAloud(btn,d);out.totalMs=Math.round(performance.now()-t);out.firstSoundMs=RA.lastStartMs;
+ const r=await raSpeak('Speed check.',S.readAloudVoice,S.readAloudSpeed);out.sampleBytes=r&&r.bytes;out.ok=!!(btn&&out.symbolsLeft===0&&out.firstSoundMs!=null&&r&&r.ok);RA.mute=false;
+ d&&d.scrollIntoView({block:'end'});await sleep(300);return JSON.stringify(out,null,1)};
