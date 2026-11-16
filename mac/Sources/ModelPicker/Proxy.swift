@@ -179,7 +179,7 @@ func autoRouteForProxy(_ j: [String: Any], ids: (String) -> [String]) -> (eng: S
     let pic = users.contains { hasImg($0["content"]) }
     let tools = !((j["tools"] as? [Any]) ?? []).isEmpty
     func have(_ e: String) -> Bool { !ids(e).isEmpty }
-    let raptor = ids("osaurus").first { $0.lowercased().contains("raptor") } ?? "raptor-0.6-4b-jang_6m"
+    let raptor = pickRaptor(ids("osaurus"))   // Nov 16: newest Raptor (0.7 over 0.6), not whichever is listed first
     if pic {
         if tools { if have("bonsai4b") { return ("bonsai4b", "bonsai-2-4b", "picture + tools") }; if have("bonsai9b") { return ("bonsai9b", "bonsai-2-9b", "picture + tools") } }
         if have("lfm3vl") { return ("lfm3vl", "lfm3-vl-2b", "picture") }

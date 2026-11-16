@@ -1,7 +1,15 @@
 import Foundation
 
 let home = NSHomeDirectory()
-let OSAURUS = "/Applications/osaurus.app/Contents/Helpers/osaurus"
+// Nov 16: Osaurus 1.0.5 installed as Osaurus.app (capital O). The helper path is resolved so both names work.
+let OSAURUS: String = {
+    let cands = [
+        "/Applications/Osaurus.app/Contents/Helpers/osaurus",
+        "/Applications/osaurus.app/Contents/Helpers/osaurus",
+    ]
+    return cands.first { FileManager.default.isExecutableFile(atPath: $0) } ?? cands[0]
+}()
+let OSAURUS_PROC = "[Oo]saurus.app/Contents/MacOS/osaurus"
 let MAGNITUDE = home + "/Applications/Magnitude.app/Contents/Resources/magnitude"
 let LMS = home + "/.lmstudio/bin/lms"
 let BONSAI = home + "/Models/bonsai2/start.sh"
@@ -220,7 +228,7 @@ func engineMutex(_ id: String) -> NSLock { _mutexLock.lock(); defer { _mutexLock
 func pgrepAny(_ pats: [String]) -> Bool { pats.contains { runCmd("/usr/bin/pgrep", ["-f", $0]).0 == 0 } }
 func appRunning(_ id: String) -> Bool {
     switch id {
-    case "osaurus": return pgrepAny(["osaurus.app/Contents/MacOS/osaurus"])
+    case "osaurus": return pgrepAny([OSAURUS_PROC])
     case "ollama": return pgrepAny(["ollama serve", "Ollama.app/Contents/MacOS/Ollama"])
     case "lmstudio": return pgrepAny(["LM Studio.app/Contents/MacOS/LM Studio"])
     case "magnitude": return pgrepAny(["magnitude serve", "Magnitude.app/Contents/MacOS"])
@@ -293,3 +301,22 @@ func lmstudioDiskModels() -> [String] {
     return out.filter { !isEmbedName($0) }.sorted()
 }
 func isRaptor(_ m: String) -> Bool { m.lowercased().contains("raptor") }
+/// Prefer the newest Raptor (0.7 over 0.6). Used by Auto and the 7777 helper.
+func raptorVersion(_ m: String) -> [Int] {
+    guard let r = m.lowercased().range(of: #"raptor-(\d+(?:\.\d+)*)"#, options: .regularExpression) else { return [] }
+    let s = String(m.lowercased()[r]).replacingOccurrences(of: "raptor-", with: "")
+    return s.split(separator: ".").compactMap { Int($0) }
+}
+func raptorVerCompare(_ a: [Int], _ b: [Int]) -> Int {
+    let n = max(a.count, b.count)
+    for i in 0..<n {
+        let av = i < a.count ? a[i] : 0, bv = i < b.count ? b[i] : 0
+        if av != bv { return av < bv ? -1 : 1 }
+    }
+    return 0
+}
+func pickRaptor(_ ids: [String]) -> String {
+    let rs = ids.filter { isRaptor($0) }
+    if rs.isEmpty { return "raptor-0.7-4b-jang_6m" }
+    return rs.max { raptorVerCompare(raptorVersion($0), raptorVersion($1)) < 0 } ?? rs[0]
+}

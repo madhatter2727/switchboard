@@ -77,7 +77,7 @@ enum Owned {
                 case "spark", "bonsai27b": stopBuiltin(id)
                 case "osaurus":
                     _ = runCmd(OSAURUS, ["stop"])
-                    if kind == "app" { _ = runCmd("/usr/bin/pkill", ["-f", "osaurus.app/Contents/MacOS/osaurus"]) }   // we launched the app, so we close it
+                    if kind == "app" { _ = runCmd("/usr/bin/pkill", ["-f", OSAURUS_PROC]) }   // we launched the app, so we close it
                 case "lmstudio": _ = runCmd(LMS, ["server", "stop"])   // the LM Studio app itself is left as it was
                 case "magnitude": _ = runCmd(MAGNITUDE, ["models", "stop"]); if kind == "app" { _ = runCmd("/usr/bin/pkill", ["-f", "magnitude serve"]) }
                 case "apple": stopAppleBrain()   // only Switchboard's own copy; Apple Brain.app is left alone

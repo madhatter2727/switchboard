@@ -19,7 +19,7 @@ const ENGINES=[
 ];
 const S={collapsed:new Set(),auto:true,lastAuto:null,models:{},up:{},sel:null,startedByUs:new Set(),chat:null,chats:[],busy:false,switching:false,proxy:false,readAloudVoice:'af_heart',readAloudSpeed:1,readAloudUsed:false};
 const ALIAS={bonsai4b:'bonsai-2-4b',bonsai9b:'bonsai-2-9b',spark:'spark-x2.5-4b-mlx',bonsai27b:'bonsai-2-27b',apple:'apple-builtin',lfm3text:'lfm3-1.7b',lfm3vl:'lfm3-vl-2b',little3d:'qwen3.5-4b-3d-coder',bigbrain:'gemma-4-26b-a4b-it'};
-const LABEL={'gemma-4-26b-a4b-it':'Gemma 4 26B (Big Brain)'}; // Nov 13: friendly names in the model list
+const LABEL={'gemma-4-26b-a4b-it':'Gemma 4 26B (Big Brain)','raptor-0.7-4b-jang_6m':'Raptor 0.7','raptor-0.6-4b-jang_6m':'Raptor 0.6'}; // Nov 13: Big Brain; Nov 16: both Raptors, Auto uses the newest
 let BIGBRAIN_AGENT=true; // Nov 13: passed the tool-call test (Desktop/Downloads lists, web search with links); see the M4 report
 // Big Brain is agent-capable but starts with Agent mode OFF (an agent turn re-reads ~6-8K tokens, about 2-3 minutes on this Mac);
 // it switches Agent mode on by itself when a message is about the Mac or the web (needMac/needWeb), like Auto does.
@@ -108,7 +108,7 @@ function render(){agentUI();
   x.onclick=()=>pick(e.id,m.id);return x};
  for(const e of ENGINES){
   if(singleIds.has(e.id)||HIDDEN_ENGINES.has(e.id))continue;
-  const d=document.createElement('div');d.className='eng';d.dataset.eid=e.id;const up=S.up[e.id];const ms=S.models[e.id]||[];
+  const d=document.createElement('div');d.className='eng';d.dataset.eid=e.id;const up=S.up[e.id];const ms=(e.id==='osaurus'?(S.models[e.id]||[]).slice().sort((a,b)=>/raptor/i.test(a.id)&&/raptor/i.test(b.id)?raptorCmp(b.id,a.id):0):(S.models[e.id]||[]));
   const col=S.collapsed.has(e.id);const inUse=!S.auto&&S.sel&&S.sel.e===e.id;if(col)d.classList.add('collapsed');
   d.innerHTML=`<div class="eh" title="${col?'Show':'Hide'} these models"><button type="button" class="tog" aria-label="${col?'Expand':'Collapse'}">${IC(col?'chevR':'chevD',14,2.6)}</button><span class="dot ${up?'on':''}"></span>${e.name}${col?`<span class="cnt">${ms.length} model${ms.length===1?'':'s'}</span>`:''}</div><div class="sub">${up?'running':'off (starts when you pick a model)'}${col&&inUse?' · in use: '+esc(S.sel.m):''}</div>`;
   d.querySelector('.eh').onclick=()=>{if(S.collapsed.has(e.id))S.collapsed.delete(e.id);else S.collapsed.add(e.id);act('prefsSet','',{key:'collapsed',value:[...S.collapsed]});render()};
@@ -355,11 +355,15 @@ function visionRoute(){
 const WEB_RX=/\b(?:news|headlines?|latest|this (?:week|weekend|month|morning|evening)|today(?:'|’)?s|tonight|yesterday|right now|currently|at the moment|recent(?:ly)?|look (?:it |this |that )?up|look up|search (?:the )?(?:web|internet|online)|search for|google|on the (?:web|internet)|online|weather|forecast|stock price|price of|how much (?:is|does|are) .{0,30}cost|scores?|who won|release date|came out|announced|election results?)\b/i;
 const needWeb=t=>URL_RX.test(t)||WEB_RX.test(t);
 const needMac=t=>MAC_RX.test(t);
+function raptorVer(id){const m=String(id||'').match(/raptor-(\d+(?:\.\d+)*)/i);return m?m[1].split('.').map(n=>+n):[]}
+function raptorCmp(a,b){const A=raptorVer(a),B=raptorVer(b);for(let i=0;i<Math.max(A.length,B.length);i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}return 0}
+// Nov 16: Auto uses the newest Raptor (0.7 over 0.6), not whichever Osaurus lists first.
+function pickRaptor(models){const rs=(models||[]).filter(m=>/raptor/i.test(m.id));if(!rs.length)return{id:'raptor-0.7-4b-jang_6m',label:'Raptor 0.7'};return rs.slice().sort((a,b)=>raptorCmp(b.id,a.id))[0]}
 function autoRoute(text){
  if(hasPic()){const v=visionRoute();if(v)return v} // no picture-capable model: fall through to the usual pick; Photo Reader describes the picture (autoSwitch adds a note)
  if(THREE_D_RX.test(text)&&haveModel('little3d'))return {e:'little3d',m:ALIAS.little3d,name:'3D Coder',agent:false,why:'3D scene'}; // Nov 1: after pictures, before coding
- const raptor=(S.models.osaurus||[]).find(m=>/raptor/i.test(m.id));
- const R={e:'osaurus',m:raptor?raptor.id:'raptor-0.6-4b-jang_6m',name:'Raptor',agent:false};
+ const raptor=pickRaptor(S.models.osaurus||[]);
+ const R={e:'osaurus',m:raptor.id,name:raptor.label||LABEL[raptor.id]||'Raptor',agent:false};
  if(needMac(text))return {...R,agent:true,why:'files or calendar'}; // Nov 13: before coding words, so "open my notes app" etc. get tools
  if(needWeb(text))return {...R,agent:true,web:true,why:URL_RX.test(text)?'a link':'web search'}; // Nov 13: Raptor has the web tools
  if(CODE_RX.test(text)){

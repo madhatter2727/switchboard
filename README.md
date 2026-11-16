@@ -24,7 +24,7 @@ Switchboard is a Mac app for chatting with AI models that run **on your own comp
 | Bonsai 2 4B (Auto's usual quick-chat pick, picture backup) | Switchboard server, port 8097 | Yes |
 | Bonsai 2 9B | Switchboard server, port 8098 | Yes |
 | Qwen3.5 4B 3D Coder (Auto's 3D pick) | shared with Little 3D Scene Maker, port 8117, started on demand | No |
-| Raptor 0.6 4B (Auto's files/calendar pick), Qwen3.5 9B (hand pick only) | Osaurus (port 1337) | Qwen 9B yes |
+| Raptor 0.7 4B (Auto's files/calendar/web pick; newest Raptor), Raptor 0.6 4B (still listed), Qwen3.5 9B (hand pick only) | Osaurus 1.0.5 (port 1337) | Qwen 9B yes |
 | Apple (built-in), `apple-builtin` | Apple Brain helper, port 8100 ([apple-brain](https://github.com/madhatter2727/apple-brain)). Started only when you or Auto pick it, stopped when Switchboard quits. Auto uses it only for plain, short chat: no attachments, files, app control, coding or long reasoning, and the chat plus reply under ~2,500 tokens. If it won't start or errors, Auto falls back once to its usual pick. Chat only. | No |
 
 Hidden from the list since Nov 2 (files kept, easy to undo in `web/app.js` `HIDDEN_ENGINES` / `HIDDEN_MODELS`): Spark, Bonsai 2 27B, Heretic 9B, the Osaurus duplicates and non-chat entries, and the LM Studio, Magnitude and Ollama engines. The 7777 helper still serves them (Ask My Mac uses Spark).
